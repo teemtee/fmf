@@ -1,0 +1,23 @@
+/test:
+    description: Check basic download options
+    tags: [Tier1, TierSecurity]
+    test: runtest.sh
+    time: 3 min
+
+/requirements:
+    requirement: Various download options working correctly
+    priority: low
+    /get-file:
+        coverage: wget/download
+    /output-document:
+        coverage: wget/download
+    /continue:
+    /timestamping:
+    /tries:
+    /no-clobber:
+        coverage: wget/download
+    /progress:
+    /quota:
+    /server-response:
+    /bind-address:
+    /spider:

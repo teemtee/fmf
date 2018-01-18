@@ -1,0 +1,12 @@
+test: runtest.sh
+tags: [Tier1]
+time: 1 min
+
+/ftp:
+    description: Test file download using the ftp protocol.
+
+/http:
+    description: Test file download using the http protocol.
+
+/https:
+    description: Test file download using the https protocol.
