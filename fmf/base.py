@@ -23,7 +23,7 @@ MAIN = "main" + SUFFIX
 
 class Tree(object):
     """ Metadata Tree """
-    def __init__(self, data, name=None, parent=None, options=None):
+    def __init__(self, data, name=None, parent=None):
         """
         Initialize data dictionary, optionally update data
 
@@ -33,7 +33,6 @@ class Tree(object):
 
         # Family relations and name (identifier)
         self.parent = parent
-        self.options = options or parent.options
         self.children = dict()
         self.data = dict()
         if name is None:
@@ -106,8 +105,6 @@ class Tree(object):
         # Check every metadata file and load data
         for filename in filenames:
             fullpath = os.path.join(dirpath, filename)
-            if self.options.verbose:
-                utils.info("Parsing file {0}".format(fullpath))
             log.info("Checking file {0}".format(fullpath))
             with open(fullpath) as datafile:
                 data = yaml.load(datafile)

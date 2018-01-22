@@ -89,9 +89,11 @@ def main(cmdline=None):
         utils.log.setLevel(utils.LOG_DEBUG)
 
     # Show metadata for each path given
-    forest = [fmf.Tree(path, options=options) for path in arguments]
     counter = 0
-    for tree in forest:
+    for path in arguments:
+        if options.verbose:
+            utils.info("Checking {0} for metadata.".format(path))
+        tree = fmf.Tree(path)
         for node in tree.climb(options.whole):
             # Select only nodes with key content
             if not all([key in node.data for key in options.keys]):
