@@ -21,6 +21,7 @@ Table of Contents
     Features <features>
     Examples <examples>
     Modules <modules>
+    Contribute <contribute>
 
 Indices and Tables
 ==================

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Git pre-commit hook check for package sanity
+# Make sure that tests pass and rpm build works
+
+separator="\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+
+# Run tests
+if ! make smoke &> /dev/null ; then
+    echo -e $separator Test suite failed $separator
+    make smoke
+    exit 1
+fi
+
+# Build rpm
+if ! make rpm &> /dev/null; then
+    echo -e $separator Building rpm failed $separator
+    make rpm
+    exit 1
+fi
+
+# Everything seems fine
+exit 0

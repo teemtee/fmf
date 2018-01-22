@@ -25,10 +25,6 @@
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-"""
-TODO: Three-line description.
-"""
-
 import sys
 
 import fmf.cli
