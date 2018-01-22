@@ -102,7 +102,8 @@ Install
 
 Install from the Copr repository::
 
-    yum install fmf
+    dnf copr enable psss/fmf
+    dnf install fmf
 
 or use PIP (sudo required if not in a virtualenv)::
 
@@ -131,6 +132,12 @@ http://copr.fedoraproject.org/coprs/psss/fmf
 
 PIP:
 https://pypi.python.org/pypi/fmf
+
+Travis:
+https://travis-ci.org/psss/fmf
+
+Coveralls:
+https://coveralls.io/github/psss/fmf
 
 
 Authors
