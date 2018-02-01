@@ -50,7 +50,7 @@ class Tree(object):
             self.grow(data)
 
     def update(self, data):
-        """ Update metadata, handle virtual hiearchy """
+        """ Update metadata, handle virtual hierarchy """
         # Nothing to do if no data
         if data is None:
             return

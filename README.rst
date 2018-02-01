@@ -12,7 +12,7 @@ Description
 The ``fmf`` Python module and command line tool implement a
 flexible format for defining metadata in plain text files which
 can be stored close to the source code and structured in a
-hiearchical way with support for inheritance.
+hierarchical way with support for inheritance.
 
 Although the proposal initially originated from user stories
 centered around test execution, the format is general and thus
@@ -20,7 +20,7 @@ can be used in broader scenarios, e.g. test coverage mapping.
 
 Using this approach it's also possible to combine both test
 execution metadata and test coverage information. Thanks to
-elasticity and hiearchy it provides ability to organize data
+elasticity and hierarchy it provides ability to organize data
 into well-sized text documents while preventing duplication.
 
 
@@ -43,9 +43,26 @@ Show all test metadata (with 'test' attribute defined)::
 
     fmf --key test
 
+List test names only::
+
+    fmf --key test --brief
+
+Show metddata for all tree nodes (not only leaves)::
+
+    fmf --key test --whole --brief
+
 List all attributes for the ``wget/recursion`` tests::
 
-    fmf --name wget/recursion
+    fmf --key test --name wget/recursion
+
+Show all covered requirements::
+
+    fmf --key requirement --key coverage
+
+Search for all tests with the ``Tier1`` tag defined and show a
+brief summary of what was found::
+
+    fmf --key test --filter tags:Tier1 --verbose
 
 See ``fmf --help`` for complete list of available options.
 

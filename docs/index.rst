@@ -5,7 +5,7 @@
 
 The ``fmf`` Python module and command line tool implement a
 flexible format for defining metadata in plain text files which
-can be stored close to the source code. Thanks to hiearchical
+can be stored close to the source code. Thanks to hierarchical
 structure with support for inheritance and elasticity it provides
 an efficient way to organize data into well-sized text documents.
 

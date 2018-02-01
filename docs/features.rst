@@ -29,10 +29,10 @@ metadata for a single test look like this::
     time: 3 min
 
 
-Hiearchy
+Hierarchy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Hiearchy is defined by directory structure (see example above) and
+Hierarchy is defined by directory structure (see example above) and
 explicit nesting using attributes starting with ``/``.  Defining
 metadata for several tests in a single file is straightforward::
 
@@ -74,7 +74,7 @@ This nicely prevents unnecessary duplication.
 Elasticity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Use a single file or scatter metadata across the hiearchy,
+Use a single file or scatter metadata across the hierarchy,
 whatever is more desired for the project.
 
 File ``wget/main.fmf``::

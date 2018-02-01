@@ -9,7 +9,7 @@ which define some aspects of how the test coverage is executed.
 
 This tool implements a flexible format for defining metadata in
 plain text files which can be stored close to the test code and
-structured in a hiearchical way with support for inheritance.
+structured in a hierarchical way with support for inheritance.
 
 Although the proposal initially originated from user stories
 centered around test execution, the format is general and thus
@@ -17,7 +17,7 @@ can be used in broader scenarios, e.g. test coverage mapping.
 
 Using this approach it's also possible to combine both test
 execution metadata and test coverage information. Thanks to
-elasticity and hiearchy it provides ability to organize data
+elasticity and hierarchy it provides ability to organize data
 into well-sized text documents while preventing duplication.
 
 
@@ -28,7 +28,7 @@ These are essential corner stones for the design:
 
 * Text files under version control
 * Keep common uses cases simple
-* Use hiearchy to organize content
+* Use hierarchy to organize content
 * Prevent duplication where possible
 * Metadata close to the test code
 * Solution should be open source
