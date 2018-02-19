@@ -102,8 +102,10 @@ class Tree(object):
             filenames.insert(0, filenames.pop(filenames.index(MAIN)))
         except ValueError:
             pass
-        # Check every metadata file and load data
+        # Check every metadata file and load data (ignore hidden)
         for filename in filenames:
+            if filename.startswith("."):
+                continue
             fullpath = os.path.join(dirpath, filename)
             log.info("Checking file {0}".format(fullpath))
             with open(fullpath) as datafile:
@@ -113,8 +115,10 @@ class Tree(object):
                 self.update(data)
             else:
                 self.child(os.path.splitext(filename)[0], data)
-        # Explore every child directory
+        # Explore every child directory (ignore hidden)
         for dirname in sorted(dirnames):
+            if dirname.startswith("."):
+                continue
             self.child(dirname, os.path.join(path, dirname))
 
     def climb(self, whole=False):
