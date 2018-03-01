@@ -72,7 +72,7 @@ class Tree(object):
 
     def get(self, name=None):
         """ Get desired attribute """
-        if name is not None:
+        if name is None:
             return self.data
         return self.data[name]
 
