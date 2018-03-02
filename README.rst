@@ -160,7 +160,7 @@ https://coveralls.io/github/psss/fmf
 Authors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Petr Šplíchal
+Petr Šplíchal and Jakub Krysl.
 
 
 Copyright
