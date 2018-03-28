@@ -3,11 +3,14 @@
 from __future__ import unicode_literals, absolute_import
 
 import pytest
-from fmf.utils import filter, FilterError
+from fmf.utils import filter, FilterError, FileError, TypeError
+from fmf.base import Tree
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Filter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def test_filter():
     """ Function filter() """
@@ -63,3 +66,56 @@ def test_filter():
     filter("tag: ťip", data) == False
     filter("tag: ťip", {"tag": ["ťip"]}) == True
     filter("tag: -ťop", {"tag": ["ťip"]}) == True
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Tree
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+def test_tree():
+    """ Class tree() """
+
+    with pytest.raises(FileError):
+        Tree("")
+
+    tree = Tree("tests/")
+
+    tree.update(None)
+    assert(".hidden" not in tree.children)
+    assert(".test" not in tree.children)
+
+    data = tree.data
+    assert(data["tag"] != "TIPpass")
+    assert(data["tag"] == "Tier1")
+    tree.update({"tag": ["Tier1", "TIPpass"], "time": 1, "desc": "Desc"})
+    data = tree.data
+    assert('TIPpass' in data['tag'])
+
+    # adding to attributes using '+'
+    tree.update({"tag+": ["test"], "time+": 2, "desc+": "some", "new+": "New"})
+    data = tree.data
+    assert("new+" not in data)
+    assert (data["new"] == "New")
+    assert("time+" not in data)
+    assert (data["time"] != 1)
+    assert (data["time"] == 3)
+    assert("desc+" not in data)
+    assert (data["desc"] != "Desc")
+    assert (data["desc"] == "Descsome")
+    assert("tag+" not in data)
+    assert("Add" not in data["tag"])
+    assert("Tier1" in data["tag"])
+    with pytest.raises(TypeError):
+        tree.update({"time+": "string"})
+
+    # tree.get()
+    isinstance(tree.get(), dict)
+    assert(not isinstance(tree.get("time"), type("")))
+    assert(isinstance(tree.get("time"), int))
+
+    # tree.show()
+    assert(not isinstance(tree.show(brief=True), dict))
+    assert(isinstance(tree.show(brief=True), type("")))
+    assert(not isinstance(tree.show(), dict))
+    assert(isinstance(tree.show(), type("")))

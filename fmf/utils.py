@@ -43,6 +43,9 @@ class FileError(GeneralError):
 class FilterError(GeneralError):
     """ Missing data when filtering """
 
+class TypeError(GeneralError):
+    """ Wrong data type between parent and child """
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Utils
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

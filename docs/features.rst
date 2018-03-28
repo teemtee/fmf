@@ -70,6 +70,18 @@ Metadata is inherited from parent objects::
 
 This nicely prevents unnecessary duplication.
 
+It is possible to add to existing metadata using '+'. This adds both values together.
+This operation is possible only on the same types, raises utils.TypeError if types are different.
+In these examples the values of 'time' attribute at 'download' are equal (time = 4)::
+
+    time: 1
+    /download:
+        time+: 3
+
+::
+
+    /download:
+        time: 4
 
 Elasticity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

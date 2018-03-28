@@ -59,6 +59,15 @@ class Tree(object):
         for key, value in sorted(data.iteritems()):
             if key.startswith('/'):
                 children[key.lstrip('/')] = value
+            elif key.endswith('+'):
+                # Warning: running three.grow() including the same path with attribute+ leads to adding the value twice!
+                try:
+                    if key.rstrip('+') in self.data:
+                        value = self.data[key.rstrip('+')] + value
+                    self.data[key.rstrip('+')] = value
+                except TypeError as e:
+                    raise utils.TypeError(
+                        "TypeError at '{0}': {1}.".format(self.name, e.message))
             else:
                 self.data[key] = value
 
