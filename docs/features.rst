@@ -68,20 +68,18 @@ Metadata is inherited from parent objects::
         description: Check recursive download options
         time: 20 min
 
-This nicely prevents unnecessary duplication.
-
-It is possible to add to existing metadata using '+'. This adds both values together.
-This operation is possible only on the same types, raises utils.TypeError if types are different.
-In these examples the values of 'time' attribute at 'download' are equal (time = 4)::
+This nicely prevents unnecessary duplication. Redefining an
+attribute in a child object will by default overwrite value
+inherited from the parent. It is also possible to use a "+"
+appended to the attribute name to add given value instead::
 
     time: 1
     /download:
         time+: 3
 
-::
+This operation is possible only for attributes of the same type.
+Exception ``MergeError`` is raised if types are different.
 
-    /download:
-        time: 4
 
 Elasticity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

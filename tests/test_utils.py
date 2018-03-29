@@ -2,15 +2,25 @@
 
 from __future__ import unicode_literals, absolute_import
 
+import os
 import pytest
-from fmf.utils import filter, FilterError, FileError, TypeError
+from fmf.utils import filter, FilterError, FileError, MergeError
 from fmf.base import Tree
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Constants
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Prepare path to examples
+PATH = os.path.dirname(os.path.realpath(__file__))
+WGET = PATH + "/../examples/wget"
+MERGE = PATH + "/../examples/merge"
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Filter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 def test_filter():
     """ Function filter() """
@@ -72,50 +82,41 @@ def test_filter():
 #  Tree
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
 def test_tree():
     """ Class tree() """
 
+    # No directory path given
     with pytest.raises(FileError):
         Tree("")
 
-    tree = Tree("tests/")
+    # Load examples
+    wget = Tree(WGET)
+    merge = Tree(MERGE)
 
-    tree.update(None)
-    assert(".hidden" not in tree.children)
-    assert(".test" not in tree.children)
+    # Hidden files and directories should be ignored
+    assert(".hidden" not in wget.children)
 
-    data = tree.data
-    assert(data["tag"] != "TIPpass")
-    assert(data["tag"] == "Tier1")
-    tree.update({"tag": ["Tier1", "TIPpass"], "time": 1, "desc": "Desc"})
-    data = tree.data
-    assert('TIPpass' in data['tag'])
+    # Check inheritance and data types on the wget/recursion/deep object
+    deep = [node for node in wget.climb() if 'deep' in node.name][0]
+    assert(deep.data['depth'] == 1000)
+    assert(deep.data['description'] == 'Check recursive download options')
+    assert(deep.data['tags'] == ['Tier2'])
 
-    # adding to attributes using '+'
-    tree.update({"tag+": ["test"], "time+": 2, "desc+": "some", "new+": "New"})
-    data = tree.data
-    assert("new+" not in data)
-    assert (data["new"] == "New")
-    assert("time+" not in data)
-    assert (data["time"] != 1)
-    assert (data["time"] == 3)
-    assert("desc+" not in data)
-    assert (data["desc"] != "Desc")
-    assert (data["desc"] == "Descsome")
-    assert("tag+" not in data)
-    assert("Add" not in data["tag"])
-    assert("Tier1" in data["tag"])
-    with pytest.raises(TypeError):
-        tree.update({"time+": "string"})
+    # Check attribute adding
+    child = [node for node in merge.climb() if 'child' in node.name][0]
+    assert('General' in child.data['description'])
+    assert('Specific' in child.data['description'])
+    assert(child.data['tags'] == ['Tier1', 'Tier2'])
+    assert(child.data['time'] == 15)
+    assert('time+' not in child.data)
+    with pytest.raises(MergeError):
+        child.update({"time+": "string"})
 
-    # tree.get()
-    isinstance(tree.get(), dict)
-    assert(not isinstance(tree.get("time"), type("")))
-    assert(isinstance(tree.get("time"), int))
+    # Tree.get()
+    assert(isinstance(wget.get(), dict))
+    assert('Petr' in wget.get('tester'))
 
-    # tree.show()
-    assert(not isinstance(tree.show(brief=True), dict))
-    assert(isinstance(tree.show(brief=True), type("")))
-    assert(not isinstance(tree.show(), dict))
-    assert(isinstance(tree.show(), type("")))
+    # Tree.show()
+    assert(isinstance(wget.show(brief=True), type("")))
+    assert(isinstance(wget.show(), type("")))
+    assert('wget' in wget.show())
