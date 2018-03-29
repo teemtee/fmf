@@ -68,7 +68,17 @@ Metadata is inherited from parent objects::
         description: Check recursive download options
         time: 20 min
 
-This nicely prevents unnecessary duplication.
+This nicely prevents unnecessary duplication. Redefining an
+attribute in a child object will by default overwrite value
+inherited from the parent. It is also possible to use a "+"
+appended to the attribute name to add given value instead::
+
+    time: 1
+    /download:
+        time+: 3
+
+This operation is possible only for attributes of the same type.
+Exception ``MergeError`` is raised if types are different.
 
 
 Elasticity

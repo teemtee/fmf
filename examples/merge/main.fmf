@@ -1,0 +1,10 @@
+# Parent defines generic attribute data
+description: General description
+tags: [Tier1]
+time: 10
+
+# Child extends values instead of replacing them
+/child:
+    description+: Specific description
+    tags+: [Tier2]
+    time+: 5

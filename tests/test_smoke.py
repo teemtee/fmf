@@ -11,7 +11,7 @@ import fmf.cli
 #  Constants
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Prepare path and config examples
+# Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
 EXAMPLE = PATH + "/../examples/wget"
 

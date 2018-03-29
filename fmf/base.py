@@ -60,6 +60,16 @@ class Tree(object):
             if key.startswith('/'):
                 children[key.lstrip('/')] = value
             else:
+                # Handle attribute adding
+                if key.endswith('+'):
+                    key = key.rstrip('+')
+                    if key in self.data:
+                        try:
+                            value = self.data[key] + value
+                        except TypeError as error:
+                            raise utils.MergeError(
+                                "MergeError: Key '{0}' in {1} ({2}).".format(
+                                    key, self.name, error.message))
                 self.data[key] = value
 
         # Handle child attributes
@@ -84,7 +94,13 @@ class Tree(object):
             self.children[name] = Tree(data, name, parent=self)
 
     def grow(self, path):
-        """ Grow the metadata tree for the given directory path """
+        """
+        Grow the metadata tree for the given directory path
+
+        Note: For each path, grow() should be run only once. Growing the tree
+        from the same path multiple times with attribute adding using the "+"
+        sign leads to adding the value more than once!
+        """
         if path is None:
             return
         path = path.rstrip("/")

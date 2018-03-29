@@ -43,6 +43,9 @@ class FileError(GeneralError):
 class FilterError(GeneralError):
     """ Missing data when filtering """
 
+class MergeError(GeneralError):
+    """ Unable to merge data between parent and child """
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Utils
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

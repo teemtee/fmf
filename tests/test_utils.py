@@ -2,8 +2,21 @@
 
 from __future__ import unicode_literals, absolute_import
 
+import os
 import pytest
-from fmf.utils import filter, FilterError
+from fmf.utils import filter, FilterError, FileError, MergeError
+from fmf.base import Tree
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Constants
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Prepare path to examples
+PATH = os.path.dirname(os.path.realpath(__file__))
+WGET = PATH + "/../examples/wget"
+MERGE = PATH + "/../examples/merge"
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Filter
@@ -63,3 +76,47 @@ def test_filter():
     filter("tag: ťip", data) == False
     filter("tag: ťip", {"tag": ["ťip"]}) == True
     filter("tag: -ťop", {"tag": ["ťip"]}) == True
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Tree
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def test_tree():
+    """ Class tree() """
+
+    # No directory path given
+    with pytest.raises(FileError):
+        Tree("")
+
+    # Load examples
+    wget = Tree(WGET)
+    merge = Tree(MERGE)
+
+    # Hidden files and directories should be ignored
+    assert(".hidden" not in wget.children)
+
+    # Check inheritance and data types on the wget/recursion/deep object
+    deep = [node for node in wget.climb() if 'deep' in node.name][0]
+    assert(deep.data['depth'] == 1000)
+    assert(deep.data['description'] == 'Check recursive download options')
+    assert(deep.data['tags'] == ['Tier2'])
+
+    # Check attribute adding
+    child = [node for node in merge.climb() if 'child' in node.name][0]
+    assert('General' in child.data['description'])
+    assert('Specific' in child.data['description'])
+    assert(child.data['tags'] == ['Tier1', 'Tier2'])
+    assert(child.data['time'] == 15)
+    assert('time+' not in child.data)
+    with pytest.raises(MergeError):
+        child.update({"time+": "string"})
+
+    # Tree.get()
+    assert(isinstance(wget.get(), dict))
+    assert('Petr' in wget.get('tester'))
+
+    # Tree.show()
+    assert(isinstance(wget.show(brief=True), type("")))
+    assert(isinstance(wget.show(), type("")))
+    assert('wget' in wget.show())
