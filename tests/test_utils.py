@@ -3,12 +3,9 @@
 from __future__ import unicode_literals, absolute_import
 
 import pytest
-from fmf.utils import filter, pluralize, listed, split, FilterError
+import fmf.utils as utils
+from fmf.utils import filter, listed
 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Filter
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class TestFilter(object):
     """ Function filter() """
@@ -18,11 +15,11 @@ class TestFilter(object):
 
     def test_invalid(self):
         """ Invalid filter format """
-        with pytest.raises(FilterError):
+        with pytest.raises(utils.FilterError):
             filter("x & y", self.data)
-        with pytest.raises(FilterError):
+        with pytest.raises(utils.FilterError):
             filter("status:proposed", self.data)
-        with pytest.raises(FilterError):
+        with pytest.raises(utils.FilterError):
             filter("x: 1", None)
 
     def test_basic(self):
@@ -84,22 +81,14 @@ class TestFilter(object):
         assert(filter("tag: -ťop", {"tag": ["ťip"]}) == True)
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Pluralize
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 class TestPluralize(object):
     """ Function pluralize() """
 
     def test_basic(self):
-        assert(pluralize("cloud") == "clouds")
-        assert(pluralize("sky") == "skies")
-        assert(pluralize("boss") == "bosses")
+        assert(utils.pluralize("cloud") == "clouds")
+        assert(utils.pluralize("sky") == "skies")
+        assert(utils.pluralize("boss") == "bosses")
 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Listed
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class TestListed(object):
     """ Function listed() """
@@ -121,14 +110,45 @@ class TestListed(object):
         assert(listed(0, "item") == "0 items")
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Split
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 class TestSplit(object):
     """ Function split() """
 
     def test_basic(self):
-        assert(split('a b c') == ['a', 'b', 'c'])
-        assert(split('a, b, c') == ['a', 'b', 'c'])
-        assert(split(['a, b', 'c']) == ['a', 'b', 'c'])
+        assert(utils.split('a b c') == ['a', 'b', 'c'])
+        assert(utils.split('a, b, c') == ['a', 'b', 'c'])
+        assert(utils.split(['a, b', 'c']) == ['a', 'b', 'c'])
+
+
+class TestLogging(object):
+    """ Logging """
+
+    def test_level(self):
+        for level in [1, 4, 7, 10, 20, 30, 40]:
+            utils.Logging('fmf').set(level)
+            assert(utils.Logging('fmf').get() == level)
+
+    def test_smoke(self):
+        utils.Logging('fmf').set(utils.LOG_ALL)
+        utils.info("something")
+        utils.log.info("info")
+        utils.log.debug("debug")
+        utils.log.cache("cache")
+        utils.log.data("data")
+        utils.log.all("all")
+
+
+class TestColoring(object):
+    """ Coloring """
+
+    def test_invalid(self):
+        with pytest.raises(RuntimeError):
+            utils.Coloring().set(3)
+
+    def test_mode(self):
+        for mode in range(3):
+            utils.Coloring().set(mode)
+            assert(utils.Coloring().get() == mode)
+
+    def test_color(self):
+        utils.Coloring().set()
+        text = utils.color("text", "lightblue", enabled=True)
