@@ -3,37 +3,20 @@
 from __future__ import unicode_literals, absolute_import
 
 import os
-import pytest
-import fmf.base
 import fmf.cli
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Constants
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
-EXAMPLE = PATH + "/../examples/wget"
+WGET = PATH + "/../examples/wget"
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Tests
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class TestSmoke(object):
+    """ Smoke Test """
 
-def test_smoke():
-    """ Smoke test """
-    fmf.cli.main(EXAMPLE)
+    def test_smoke(self):
+        """ Smoke test """
+        fmf.cli.main(WGET)
 
-def test_output():
-    """ There is some output """
-    output = fmf.cli.main(EXAMPLE)
-    assert "wget" in output
-
-def test_recursion():
-    """ Recursion """
-    output = fmf.cli.main(EXAMPLE + " --name recursion/deep")
-    assert "1000" in output
-
-def test_inheritance():
-    """ Inheritance """
-    output = fmf.cli.main(EXAMPLE + " --name protocols/https")
-    assert "psplicha" in output
+    def test_output(self):
+        """ There is some output """
+        output = fmf.cli.main(WGET)
+        assert "wget" in output
