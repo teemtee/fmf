@@ -3,71 +3,132 @@
 from __future__ import unicode_literals, absolute_import
 
 import pytest
-from fmf.utils import filter, FilterError
+from fmf.utils import filter, pluralize, listed, split, FilterError
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Filter
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def test_filter():
+class TestFilter(object):
     """ Function filter() """
-    data = {"tag": ["Tier1", "TIPpass"], "category": ["Sanity"]}
 
-    # Invalid filter format
-    with pytest.raises(FilterError):
-        filter("x & y", data)
-    with pytest.raises(FilterError):
-        filter("status:proposed", data)
+    def setup_method(self):
+        self.data = {"tag": ["Tier1", "TIPpass"], "category": "Sanity"}
 
-    # Basic stuff and negation
-    assert(filter("tag: Tier1", data) == True)
-    assert(filter("tag: -Tier2", data) == True)
-    assert(filter("category: Sanity", data) == True)
-    assert(filter("category: -Regression", data) == True)
-    assert(filter("tag: Tier2", data) == False)
-    assert(filter("tag: -Tier1", data) == False)
-    assert(filter("category: Regression", data) == False)
-    assert(filter("category: -Sanity", data) == False)
+    def test_invalid(self):
+        """ Invalid filter format """
+        with pytest.raises(FilterError):
+            filter("x & y", self.data)
+        with pytest.raises(FilterError):
+            filter("status:proposed", self.data)
+        with pytest.raises(FilterError):
+            filter("x: 1", None)
 
-    # ORs and ANDs
-    assert(filter("tag: Tier1 | tag: Tier2", data) == True)
-    assert(filter("tag: -Tier1 | tag: -Tier2", data) == True)
-    assert(filter("tag: Tier1 | tag: TIPpass", data) == True)
-    assert(filter("tag: Tier1 | category: Regression", data) == True)
-    assert(filter("tag: Tier1 & tag: TIPpass", data) == True)
-    assert(filter("tag: Tier1 & category: Sanity", data) == True)
-    assert(filter("tag: Tier2 | tag: Tier3", data) == False)
-    assert(filter("tag: Tier1 & tag: Tier2", data) == False)
-    assert(filter("tag: Tier2 & tag: Tier3", data) == False)
-    assert(filter("tag: Tier1 & category: Regression", data) == False)
-    assert(filter("tag: Tier2 | category: Regression", data) == False)
+    def test_basic(self):
+        """ Basic stuff and negation """
+        assert(filter("tag: Tier1", self.data) == True)
+        assert(filter("tag: -Tier2", self.data) == True)
+        assert(filter("category: Sanity", self.data) == True)
+        assert(filter("category: -Regression", self.data) == True)
+        assert(filter("tag: Tier2", self.data) == False)
+        assert(filter("tag: -Tier1", self.data) == False)
+        assert(filter("category: Regression", self.data) == False)
+        assert(filter("category: -Sanity", self.data) == False)
 
-    # Syntactic sugar
-    assert(filter("tag: Tier1, Tier2", data) == True)
-    assert(filter("tag: Tier1, TIPpass", data) == True)
-    assert(filter("tag: Tier1; TIPpass", data) == True)
-    assert(filter("tag: -Tier2", data) == True)
-    assert(filter("tag: -Tier1, -Tier2", data) == True)
-    assert(filter("tag: -Tier1, -Tier2", data) == True)
-    assert(filter("tag: -Tier1; -Tier2", data) == False)
-    assert(filter("tag: Tier2, Tier3", data) == False)
-    assert(filter("tag: Tier1; Tier2", data) == False)
-    assert(filter("tag: Tier2; Tier3", data) == False)
-    assert(filter("tag: Tier1; -TIPpass", data) == False)
+    def test_operators(self):
+        """ Operators """
+        assert(filter("tag: Tier1 | tag: Tier2", self.data) == True)
+        assert(filter("tag: -Tier1 | tag: -Tier2", self.data) == True)
+        assert(filter("tag: Tier1 | tag: TIPpass", self.data) == True)
+        assert(filter("tag: Tier1 | category: Regression", self.data) == True)
+        assert(filter("tag: Tier1 & tag: TIPpass", self.data) == True)
+        assert(filter("tag: Tier1 & category: Sanity", self.data) == True)
+        assert(filter("tag: Tier2 | tag: Tier3", self.data) == False)
+        assert(filter("tag: Tier1 & tag: Tier2", self.data) == False)
+        assert(filter("tag: Tier2 & tag: Tier3", self.data) == False)
+        assert(filter("tag: Tier1 & category: Regression", self.data) == False)
+        assert(filter("tag: Tier2 | category: Regression", self.data) == False)
 
-    # Regular expressions
-    assert(filter("tag: Tier.*", data, regexp=True) == True)
-    assert(filter("tag: Tier[123]", data, regexp=True) == True)
-    assert(filter("tag: NoTier.*", data, regexp=True) == False)
-    assert(filter("tag: -Tier.*", data, regexp=True) == False)
+    def test_sugar(self):
+        """ Syntactic sugar """
+        assert(filter("tag: Tier1, Tier2", self.data) == True)
+        assert(filter("tag: Tier1, TIPpass", self.data) == True)
+        assert(filter("tag: Tier1; TIPpass", self.data) == True)
+        assert(filter("tag: -Tier2", self.data) == True)
+        assert(filter("tag: -Tier1, -Tier2", self.data) == True)
+        assert(filter("tag: -Tier1, -Tier2", self.data) == True)
+        assert(filter("tag: -Tier1; -Tier2", self.data) == False)
+        assert(filter("tag: Tier2, Tier3", self.data) == False)
+        assert(filter("tag: Tier1; Tier2", self.data) == False)
+        assert(filter("tag: Tier2; Tier3", self.data) == False)
+        assert(filter("tag: Tier1; -TIPpass", self.data) == False)
 
-    # Case insensitive
-    assert(filter("tag: tier1", data, sensitive=False) == True)
-    assert(filter("tag: tippass", data, sensitive=False) == True)
+    def test_regexp(self):
+        """ Regular expressions """
+        assert(filter("tag: Tier.*", self.data, regexp=True) == True)
+        assert(filter("tag: Tier[123]", self.data, regexp=True) == True)
+        assert(filter("tag: NoTier.*", self.data, regexp=True) == False)
+        assert(filter("tag: -Tier.*", self.data, regexp=True) == False)
 
-    # Unicode support
-    assert(filter("tag: -ťip", data) == True)
-    assert(filter("tag: ťip", data) == False)
-    assert(filter("tag: ťip", {"tag": ["ťip"]}) == True)
-    assert(filter("tag: -ťop", {"tag": ["ťip"]}) == True)
+    def test_case(self):
+        """ Case insensitive """
+        assert(filter("tag: tier1", self.data, sensitive=False) == True)
+        assert(filter("tag: tippass", self.data, sensitive=False) == True)
+
+    def test_unicode(self):
+        """ Unicode support """
+        assert(filter("tag: -ťip", self.data) == True)
+        assert(filter("tag: ťip", self.data) == False)
+        assert(filter("tag: ťip", {"tag": ["ťip"]}) == True)
+        assert(filter("tag: -ťop", {"tag": ["ťip"]}) == True)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Pluralize
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class TestPluralize(object):
+    """ Function pluralize() """
+
+    def test_basic(self):
+        assert(pluralize("cloud") == "clouds")
+        assert(pluralize("sky") == "skies")
+        assert(pluralize("boss") == "bosses")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Listed
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class TestListed(object):
+    """ Function listed() """
+
+    def test_basic(self):
+        assert(listed(range(1)) == '0')
+        assert(listed(range(2)) == '0 and 1')
+
+    def test_quoting(self):
+        assert(listed(range(3), quote='"') == '"0", "1" and "2"')
+
+    def test_max(self):
+        assert(listed(range(4), max=3) == '0, 1, 2 and 1 more')
+        assert(listed(range(5), 'number', max=2) == '0, 1 and 3 more numbers')
+
+    def test_text(self):
+        assert(listed(range(6), 'category') == '6 categories')
+        assert(listed(7, "leaf", "leaves") == '7 leaves')
+        assert(listed(0, "item") == "0 items")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Split
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class TestSplit(object):
+    """ Function split() """
+
+    def test_basic(self):
+        assert(split('a b c') == ['a', 'b', 'c'])
+        assert(split('a, b, c') == ['a', 'b', 'c'])
+        assert(split(['a, b', 'c']) == ['a', 'b', 'c'])
