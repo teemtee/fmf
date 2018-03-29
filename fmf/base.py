@@ -145,6 +145,13 @@ class Tree(object):
             for node in child.climb(whole):
                 yield node
 
+    def find(self, name):
+        """ Find node with given name """
+        for node in self.climb():
+            if node.name == name:
+                return node
+        return None
+
     def show(self, brief=False):
         """ Show metadata """
         # Show the name
@@ -152,17 +159,14 @@ class Tree(object):
         if brief:
             return output
         # List available attributes
-        try:
-            for key, value in sorted(self.data.iteritems()):
-                output += "\n{0}: ".format(utils.color(key, 'yellow'))
-                if isinstance(value, basestring):
-                    output += value
-                elif isinstance(value, list) and all(
-                        [isinstance(item, basestring) for item in value]):
-                    output += utils.listed(value)
-                else:
-                    output += pretty(value)
-                output
-        except AttributeError:
-            output = "No metadata"
+        for key, value in sorted(self.data.iteritems()):
+            output += "\n{0}: ".format(utils.color(key, 'yellow'))
+            if isinstance(value, basestring):
+                output += value
+            elif isinstance(value, list) and all(
+                    [isinstance(item, basestring) for item in value]):
+                output += utils.listed(value)
+            else:
+                output += pretty(value)
+            output
         return output
