@@ -137,7 +137,7 @@ __ https://github.com/dahaic/test-strategist
 Setups
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This example show how to use Flexible Metadata Format to
+This example shows how to use Flexible Metadata Format to
 run tests with different storage setups including cleanup.
 This is simplified metadata, whole example including tools
 can be found at storage_setup__::
@@ -162,14 +162,14 @@ can be found at storage_setup__::
             test: cleanup_vdo.py
     /tests:
         description: Testing 'vdo' command line tool
-        requires_setup: [setups/setup_*]
+        requires_setup: [setups/setup_vdo]
         /create
             description: Testing 'vdo create'
             /ack_threads
             /activate
         /modify
             description: Testing 'vdo modify'
-            requires_setup+: [setups/setup_vdo]
+            requires_setup+: [setups/setup_remote]
             /block_map_cache_size
 
 __ https://github.com/jkrysl/storage_setup
