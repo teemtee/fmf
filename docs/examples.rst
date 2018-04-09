@@ -1,4 +1,3 @@
-
 ======================
     Examples
 ======================
@@ -133,3 +132,47 @@ openscap using the Flexible Metadata Format::
             - openscap/scanning/oval
 
 __ https://github.com/dahaic/test-strategist
+
+
+Setups
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example shows how to use Flexible Metadata Format to
+run tests with different storage setups including cleanup.
+This is simplified metadata, whole example including tools
+can be found at storage_setup__::
+
+    /setups:
+        description: Tests to prepare and clean up devices for tests
+        setup: True
+        /setup_local:
+            test: setup_local.py
+            requires_cleanup: setups/cleanup_local
+        /cleanup_local:
+            test: cleanup_local.py
+        /setup_remote:
+            test: setup_remote.py
+            requires_cleanup: setups/cleanup_remote
+        /cleanup_remote:
+            test: cleanup_remote.py
+        /setup_vdo:
+            test: setup_vdo.py
+            requires_cleanup: setups/cleanup_vdo
+        /cleanup_vdo:
+            test: cleanup_vdo.py
+    /tests:
+        description: Testing 'vdo' command line tool
+        requires_setup: [setups/setup_vdo]
+        /create
+            description: Testing 'vdo create'
+            /ack_threads
+            /activate
+        /modify
+            description: Testing 'vdo modify'
+            requires_setup+: [setups/setup_remote]
+            /block_map_cache_size
+
+__ https://github.com/jkrysl/storage_setup
+You can find here not only how to use FMF for setup/cleanup
+and group tests based on that, but also installing requirements,
+passing values from metadata to tests themself and much more.
