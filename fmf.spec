@@ -4,63 +4,45 @@ Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
 License: GPLv2+
+BuildArch: noarch
 
 URL: https://github.com/psss/fmf
 Source: https://github.com/psss/fmf/archive/%{version}/fmf-%{version}.tar.gz
 
-BuildArch: noarch
-
-
-
 # Depending on the distro, we set some defaults.
 # Note that the bcond macros are named for the CLI option they create.
 # "%%bcond_without" means "ENABLE by default and create a --without option"
+
+# Fedora (py3 executable, py2 & py3 subpackage, auto build requires)
 %if 0%{?fedora}
-# All stable Fedora versions currently behaves (almost) the same:
-# build the python2 subpackage
 %bcond_without python2
-
-# build the python3 subpackage
 %bcond_without python3
-
-# don't put the executable into python2 (but rather 3)
-%bcond_with py2executable
-
-# we don't need to require PyYAML manually, but we can use python2dist BRs
+%bcond_without py2executable # TODO: py2 until code is made py3 compatible
 %bcond_with oldreqs
 
+# RHEL6 and RHEL7 (py2 executable, py2 subpackage, manual build requires)
 %else
 %if 0%{?rhel} <= 7
-# RHEL 7 and 6 with EPEL:
-# build the python2 subpackage
 %bcond_without python2
-
-# build the python3 subpackage (EPEL has it)
-%bcond_without python3
-
-# put the executable into python2 (that's still supposed tho be the "default")
+%bcond_with python3
 %bcond_without py2executable
-
-# we need to require PyYAML manually, also no python2-... yet
 %bcond_without oldreqs
 
+# RHEL8+ (py3 executable, py3 subpackage, auto build requires)
 %else
-# Any newer EL:
-# don't build the python2 subpackage
 %bcond_with python2
-
-# build the python3 subpackage and has the executable in it
 %bcond_without python3
-%bcond_without py2executable
-
-# we don't need to require PyYAML manually (TODO: reality check)
+%bcond_with py2executable
 %bcond_with oldreqs
 %endif
 %endif
 
-
-
-%?python_enable_dependency_generator
+# Main fmf package requires corresponding python module
+%if %{with py2executable}
+Requires: python2-%{name}
+%else
+Requires: python%{python3_pkgversion}-%{name}
+%endif
 
 %description
 The fmf Python module and command line tool implement a flexible
@@ -68,9 +50,12 @@ format for defining metadata in plain text files which can be
 stored close to the source code. Thanks to hierarchical structure
 with support for inheritance and elasticity it provides an
 efficient way to organize data into well-sized text documents.
+This package contains the command line tool.
+
+%?python_enable_dependency_generator
 
 
-
+# Python 2
 %if %{with python2}
 %package -n     python2-%{name}
 Summary:        %{summary}
@@ -83,13 +68,7 @@ BuildRequires: PyYAML
 BuildRequires: python2dist(pytest)
 BuildRequires: python2dist(pyyaml)
 %endif
-
 %{?python_provide:%python_provide python2-%{name}}
-
-%if %{with py2executable}
-Provides:       %{name} == %{version}-%{release}
-%endif
-
 %if %{with oldreqs}
 Requires:       PyYAML
 %endif
@@ -100,10 +79,11 @@ format for defining metadata in plain text files which can be
 stored close to the source code. Thanks to hierarchical structure
 with support for inheritance and elasticity it provides an
 efficient way to organize data into well-sized text documents.
+This package contains the Python 2 module.
 %endif
 
 
-
+# Python 3
 %if %{with python3}
 %package -n     python%{python3_pkgversion}-%{name}
 Summary:        %{summary}
@@ -111,13 +91,7 @@ BuildRequires: python%{python3_pkgversion}-devel
 BuildRequires: python%{python3_pkgversion}-setuptools
 BuildRequires: python%{python3_pkgversion}-pytest
 BuildRequires: python%{python3_pkgversion}-PyYAML
-
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
-
-%if %{without py2executable}
-Provides:       %{name} == %{version}-%{release}
-%endif
-
 %if %{with oldreqs}
 Requires:       python%{python3_pkgversion}-PyYAML
 %endif
@@ -128,6 +102,7 @@ format for defining metadata in plain text files which can be
 stored close to the source code. Thanks to hierarchical structure
 with support for inheritance and elasticity it provides an
 efficient way to organize data into well-sized text documents.
+This package contains the Python 3 module.
 %endif
 
 
@@ -149,23 +124,21 @@ export LANG=en_US.utf-8 # for Python <= 3.6 and EPEL <= 7, but harmless
 %install
 export LANG=en_US.utf-8
 
-%if %{without py2executable} && %{with python2}
+%if %{with python2}
 %py2_install
-rm -f %{buildroot}%{_bindir}/*
 %endif
 
 %if %{with python3}
 %py3_install
 %endif
 
-%if %{with py2executable} && %{with python2}
-rm -f %{buildroot}%{_bindir}/* || :
+%if %{with py2executable} && %{with python3}
+rm -f %{buildroot}%{_bindir}/*
 %py2_install
 %endif
 
-# TODO there is no manpage
-#mkdir -p %{buildroot}%{_mandir}/man1
-#install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
+mkdir -p %{buildroot}%{_mandir}/man1
+install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %check
@@ -182,12 +155,14 @@ export LANG=en_US.utf-8
 
 %{!?_licensedir:%global license %%doc}
 
+
+%files
+%{_mandir}/man1/*
+%{_bindir}/%{name}
+%license LICENSE
+
 %if %{with python2}
 %files -n python2-%{name}
-%if %{with py2executable}
-#{_mandir}/man1/*
-%{_bindir}/%{name}
-%endif
 %{python2_sitelib}/%{name}/
 %{python2_sitelib}/%{name}-*.egg-info
 %doc README.rst examples
@@ -196,10 +171,6 @@ export LANG=en_US.utf-8
 
 %if %{with python3}
 %files -n python%{python3_pkgversion}-%{name}
-%if %{without py2executable}
-#{_mandir}/man1/*
-%{_bindir}/%{name}
-%endif
 %{python3_sitelib}/%{name}/
 %{python3_sitelib}/%{name}-*.egg-info
 %doc README.rst examples
