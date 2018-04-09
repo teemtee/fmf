@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.1
+Version: 0.2
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -179,5 +179,22 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Mon Apr 09 2018 Petr Šplíchal <psplicha@redhat.com> 0.2-1
+- Build a separate fmf package for the executable
+- Add docs example for setting up storage
+- Improve command line test coverage
+- Smoke tests for logging and coloring
+- Tests for pluralize, listed and split
+- Include a simple example of python code
+- Separate base tests, forgotten asserts, cleanup
+- Several adjustments for the attributes adding
+- Adding ability to add value to parent attribute
+- Fix Tree.get() to correctly return data
+- Make the spec do python2 & python3 and EPEL & Fedora
+- Ignore hidden files and directories when searching
+- Add test coverage for the filter function
+- Extend the list of examples, fix hierarchy typos
+- Enable Travis Continuous Integration
+
 * Mon Jan 22 2018 Petr Šplíchal <psplicha@redhat.com> 0.1-1
 - Initial packaging.
