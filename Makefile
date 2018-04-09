@@ -3,8 +3,8 @@ TMP = $(CURDIR)/tmp
 VERSION = $(shell grep ^Version fmf.spec | sed 's/.* //')
 PACKAGE = fmf-$(VERSION)
 FILES = LICENSE README.rst \
-		Makefile fmf.spec \
-		examples fmf bin
+		Makefile fmf.spec setup.py \
+		examples fmf bin tests
 
 # Define special targets
 all: docs packages
@@ -41,7 +41,7 @@ source:
 	mkdir -p $(TMP)/$(PACKAGE)
 	cp -a $(FILES) $(TMP)/$(PACKAGE)
 tarball: source man
-	cd $(TMP) && tar cfj SOURCES/$(PACKAGE).tar.bz2 $(PACKAGE)
+	cd $(TMP) && tar cfz SOURCES/$(PACKAGE).tar.gz $(PACKAGE)
 rpm: tarball
 	rpmbuild --define '_topdir $(TMP)' -bb fmf.spec
 srpm: tarball
