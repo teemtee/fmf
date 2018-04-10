@@ -25,7 +25,7 @@ MERGE = PATH + "/../examples/merge"
 class TestTree(object):
     """ Tree class """
 
-    def setup_method(self):
+    def setup_method(self, method):
         """ Load examples """
         self.wget = Tree(WGET)
         self.merge = Tree(MERGE)

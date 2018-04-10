@@ -10,7 +10,7 @@ from fmf.utils import filter, listed
 class TestFilter(object):
     """ Function filter() """
 
-    def setup_method(self):
+    def setup_method(self, method):
         self.data = {"tag": ["Tier1", "TIPpass"], "category": "Sanity"}
 
     def test_invalid(self):
