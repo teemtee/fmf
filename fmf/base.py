@@ -19,6 +19,7 @@ from pprint import pformat as pretty
 
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
+PATH_KEY = "fmf_config"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Metadata
@@ -26,7 +27,7 @@ MAIN = "main" + SUFFIX
 
 class Tree(object):
     """ Metadata Tree """
-    def __init__(self, data, name=None, parent=None):
+    def __init__(self, data, name=None, parent=None, config_filename=None):
         """
         Initialize data dictionary, optionally update data
 
@@ -48,17 +49,19 @@ class Tree(object):
             self.data = copy.deepcopy(self.parent.data)
         # Update data from dictionary or explore directory
         if isinstance(data, dict):
-            self.update(data)
+            self.update(data, config_filename)
         else:
             self.grow(data)
 
-    def update(self, data):
+    def update(self, data, config_filename=None):
         """ Update metadata, handle virtual hierarchy """
         # Nothing to do if no data
         if data is None:
             return
         # Update data, detect special child attributes
         children = dict()
+        if config_filename:
+            data[PATH_KEY] = config_filename
         for key, value in sorted(data.items()):
             if key.startswith('/'):
                 children[key.lstrip('/')] = value
@@ -89,12 +92,12 @@ class Tree(object):
             return self.data
         return self.data[name]
 
-    def child(self, name, data):
+    def child(self, name, data, config_filename=None):
         """ Create or update child with given data """
         try:
             self.children[name].grow(data)
         except KeyError:
-            self.children[name] = Tree(data, name, parent=self)
+            self.children[name] = Tree(data, name, parent=self, config_filename=config_filename)
 
     def grow(self, path):
         """
@@ -131,9 +134,9 @@ class Tree(object):
                 data = yaml.load(datafile)
             log.data(pretty(data))
             if filename == MAIN:
-                self.update(data)
+                self.update(data, config_filename=fullpath)
             else:
-                self.child(os.path.splitext(filename)[0], data)
+                self.child(os.path.splitext(filename)[0], data, config_filename=fullpath)
         # Explore every child directory (ignore hidden)
         for dirname in sorted(dirnames):
             if dirname.startswith("."):
