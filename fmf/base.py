@@ -154,6 +154,9 @@ class Tree(object):
 
     def show(self, brief=False):
         """ Show metadata """
+        # Show nothing if there's nothing
+        if not self.data:
+            return None
         # Show the name
         output = utils.color(self.name, 'red')
         if brief:

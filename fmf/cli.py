@@ -111,9 +111,10 @@ def main(cmdline=None):
             except utils.FilterError:
                 continue
             show = node.show(brief=options.brief)
-            print(show)
-            output += show + "\n"
-            counter += 1
+            if show is not None:
+                print(show)
+                output += show + "\n"
+                counter += 1
     # Print summary
     if options.verbose:
         utils.info("Found {0}.".format(utils.listed(counter, "object")))
