@@ -66,25 +66,26 @@ def formatstring(nodes, formatstring, values):
     return output
 
 
+def inspect_dirs(directories=None):
+    # TODO: replace this also in cli.py, it is very common case
+    if not directories:
+        directories = ["."]
+    output = list()
+    for one_dir in directories:
+        output.append(base.Tree(one_dir))
+    return output
+
 def main(cmdline=None):
     """ Parse options, gather metadata, print requested data """
 
     # Parse command line arguments
     options, arguments = ExtendOptions().parse(cmdline)
-    if not arguments:
-        arguments = ["."]
-    output = ""
-
-    # Show metadata for each path given
-    counter = 0
-    for path in arguments:
-        if options.verbose:
-            utils.info("Checking {0} for metadata.".format(path))
-        filtered = prune(base.Tree(path),
+    tree_object_list = inspect_dirs(directories=arguments)
+    for tree_object in tree_object_list:
+        filtered = prune(tree_object,
                           whole=options.whole,
                           keys=options.keys,
                           names=options.names,
                           filters=options.filters)
-
         formatted = formatstring(filtered, options.formatstring, options.values)
         print(os.linesep.join(formatted))
