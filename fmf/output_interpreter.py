@@ -27,7 +27,7 @@ class ExtendOptions(Options):
             "--value", dest="values", action="append", default=[],
             help="value to formatting string, position dependent, symbol {} in string")
         group.add_argument(
-            "--formatstring", dest="formatstring", action="store",
+            "--formatstring", dest="formatstring", action="store", required=True,
             help="Basic formatting string, use python syntax like {} or {1} to replacements")
 
 
@@ -77,7 +77,7 @@ def inspect_dirs(directories=None):
 
 def main(cmdline=None):
     """ Parse options, gather metadata, print requested data """
-
+    output = []
     # Parse command line arguments
     options, arguments = ExtendOptions().parse(cmdline)
     tree_object_list = inspect_dirs(directories=arguments)
@@ -88,4 +88,6 @@ def main(cmdline=None):
                           names=options.names,
                           filters=options.filters)
         formatted = formatstring(filtered, options.formatstring, options.values)
-        print(os.linesep.join(formatted))
+        output += formatted
+    print(os.linesep.join(output))
+    return output
