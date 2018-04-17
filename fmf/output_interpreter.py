@@ -25,7 +25,9 @@ class ExtendOptions(Options):
         group = self.parser.add_argument_group("Output Formatter")
         group.add_argument(
             "--value", dest="values", action="append", default=[],
-            help="value to formatting string, position dependent, symbol {} in string")
+            help="""value to formatting string, position dependent, symbol {} in string,
+(possible functions: basename, dirname, curdir, getcwd)"
+usages --value name    , --value 'dirname(data["path"])'""")
         group.add_argument(
             "--formatstring", dest="formatstring", action="store", required=True,
             help="Basic formatting string, use python syntax like {} or {1} to replacements")
@@ -53,6 +55,7 @@ def prune(tree, whole, keys, names, filters):
         output.append(node)
     return output
 
+
 def formatstring(nodes, formatstring, values):
     output = []
     for node in nodes:
@@ -74,6 +77,7 @@ def inspect_dirs(directories=None):
     for one_dir in directories:
         output.append(base.Tree(one_dir))
     return output
+
 
 def main(cmdline=None):
     """ Parse options, gather metadata, print requested data """
