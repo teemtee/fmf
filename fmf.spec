@@ -17,7 +17,7 @@ Source: https://github.com/psss/fmf/archive/%{version}/fmf-%{version}.tar.gz
 %if 0%{?fedora}
 %bcond_without python2
 %bcond_without python3
-%bcond_without py2executable # TODO: py2 until code is made py3 compatible
+%bcond_with py2executable
 %bcond_with oldreqs
 
 # RHEL6 and RHEL7 (py2 executable, py2 subpackage, manual build requires)
@@ -149,7 +149,7 @@ export LANG=en_US.utf-8
 %endif
 
 %if %{with python3}
-%{__python3} -m pytest -vv || : # TODO the test fail here!
+%{__python3} -m pytest -vv
 %endif
 
 
