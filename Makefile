@@ -17,9 +17,11 @@ tmp:
 
 # Run the test suite, optionally with coverage
 test: tmp
-	py.test tests
+	python2 -m pytest tests
+	python3 -m pytest tests
 smoke: tmp
-	py.test tests/test_smoke.py
+	python2 -m pytest tests/test_smoke.py
+	python3 -m pytest tests/test_smoke.py
 coverage: tmp
 	coverage run --source=fmf,bin -m py.test tests
 	coverage report
