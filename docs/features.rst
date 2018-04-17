@@ -175,3 +175,25 @@ easily implemented using leaves inheriting from the same parent::
         time: 3 min
 
 In this way we can efficiently create virtual test cases.
+
+
+Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When investigating metadata using the ``fmf`` command line tool,
+object identifiers and all associated attributes are printed by
+default, each on a separate line. It is also possible to use the
+``--format`` option together with ``--value`` options to generate
+custom output. Python syntax for expansion using ``{}`` is used to
+place values as desired. For example::
+
+    fmf --format 'name: {0}, tester: {1}\n' \
+        --value 'name' --value 'data["tester"]'
+
+Individual attribute values can be access through the ``data``
+dictionary, variable ``name`` contains the object identifier.
+Python modules ``os`` and ``os.path`` as well as other python
+functions are available and can be used for processing attribute
+values as desired::
+
+    fmf --format '{}' --value 'os.dirname(data["path"])'

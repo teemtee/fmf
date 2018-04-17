@@ -98,7 +98,12 @@ Choose the best format for showing the metadata.
     Show object names only (no attributes)
 
 --format=FMT
-    Output format (now: text, future: json, yaml)
+    Custom output format using the {} expansion
+
+--value=VALUES
+    Values for the custom formatting string
+
+See online documentation for details about custom format.
 
 Utils
 -----
