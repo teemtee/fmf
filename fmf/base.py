@@ -5,6 +5,7 @@
 from __future__ import unicode_literals, absolute_import
 
 import os
+import re
 import copy
 import yaml
 
@@ -154,11 +155,41 @@ class Tree(object):
                 return node
         return None
 
-    def show(self, brief=False):
+    def prune(self, whole=False, keys=[], names=[], filters=[]):
+        """ Filter tree nodes based on given criteria """
+        for node in self.climb(whole):
+            # Select only nodes with key content
+            if not all([key in node.data for key in keys]):
+                continue
+            # Select nodes with name matching regular expression
+            if names and not any(
+                    [re.search(name, node.name) for name in names]):
+                continue
+            # Apply advanced filters if given
+            try:
+                if not all([utils.filter(filter, node.data)
+                        for filter in filters]):
+                    continue
+            # Handle missing attribute as if filter failed
+            except utils.FilterError:
+                continue
+            # All criteria met, thus yield the node
+            yield node
+
+    def show(self, brief=False, formatting=None, values=[]):
         """ Show metadata """
         # Show nothing if there's nothing
         if not self.data:
             return None
+
+        # Custom formatting
+        if formatting is not None:
+            formatting = re.sub("\\\\n", "\n", formatting)
+            name = self.name
+            data = self.data
+            evaluated = [eval(value) for value in values]
+            return formatting.format(*evaluated)
+
         # Show the name
         output = utils.color(self.name, 'red')
         if brief:
@@ -174,4 +205,4 @@ class Tree(object):
             else:
                 output += pretty(value)
             output
-        return output
+        return output + "\n"
