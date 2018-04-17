@@ -2,6 +2,8 @@
 
 """ Base Metadata Classes """
 
+from __future__ import unicode_literals, absolute_import
+
 import os
 import copy
 import yaml
@@ -56,7 +58,7 @@ class Tree(object):
             return
         # Update data, detect special child attributes
         children = dict()
-        for key, value in sorted(data.iteritems()):
+        for key, value in sorted(data.items()):
             if key.startswith('/'):
                 children[key.lstrip('/')] = value
             else:
@@ -69,11 +71,11 @@ class Tree(object):
                         except TypeError as error:
                             raise utils.MergeError(
                                 "MergeError: Key '{0}' in {1} ({2}).".format(
-                                    key, self.name, error.message))
+                                    key, self.name, str(error)))
                 self.data[key] = value
 
         # Handle child attributes
-        for name, data in sorted(children.iteritems()):
+        for name, data in sorted(children.items()):
             try:
                 self.children[name].update(data)
             except KeyError:
@@ -141,7 +143,7 @@ class Tree(object):
         """ Climb through the tree (iterate leaf/all nodes) """
         if whole or not self.children:
             yield self
-        for name, child in self.children.iteritems():
+        for name, child in self.children.items():
             for node in child.climb(whole):
                 yield node
 
@@ -162,12 +164,12 @@ class Tree(object):
         if brief:
             return output
         # List available attributes
-        for key, value in sorted(self.data.iteritems()):
+        for key, value in sorted(self.data.items()):
             output += "\n{0}: ".format(utils.color(key, 'yellow'))
-            if isinstance(value, basestring):
+            if isinstance(value, type("")):
                 output += value
             elif isinstance(value, list) and all(
-                    [isinstance(item, basestring) for item in value]):
+                    [isinstance(item, type("")) for item in value]):
                 output += utils.listed(value)
             else:
                 output += pretty(value)

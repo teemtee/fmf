@@ -8,7 +8,6 @@ import os
 import re
 import sys
 import logging
-import unicodedata
 from pprint import pformat as pretty
 
 
@@ -162,7 +161,7 @@ def filter(filter, data, sensitive=True, regexp=False):
 
         data = {tag: ["Tier1", "TIPpass"], category: ["Sanity"]}
 
-    Other types of dictionary values are converted into unicode string.
+    Other types of dictionary values are converted into a string.
     A FilterError exception is raised when a dimension parsed from the
     filter is not found in the data dictionary. Set option 'sensitive'
     to False to enable case-insensitive matching. If 'regexp' option is
@@ -228,24 +227,31 @@ def filter(filter, data, sensitive=True, regexp=False):
             literals.setdefault(dimension, []).extend(values)
         # For each dimension all literals must match given data
         return all([check_dimension(dimension, values)
-            for dimension, values in literals.iteritems()])
+            for dimension, values in literals.items()])
 
     # Default to True if no filter given, bail out if weird data given
     if filter is None or filter == "": return True
     if not isinstance(data, dict):
         raise FilterError("Invalid data type '{0}'".format(type(data)))
 
-    # Make sure that data dictionary contains lists of unicode strings
-    for key in data:
-        if isinstance(data[key], list):
-            data[key] = [unicode(item) for item in data[key]]
-        else:
-            data[key] = [unicode(data[key])]
+    # Make sure that data dictionary contains lists of strings
+    try:
+        for key in data:
+            if isinstance(data[key], list):
+                data[key] = [unicode(item) for item in data[key]]
+            else:
+                data[key] = [unicode(data[key])]
+    except NameError:
+        for key in data:
+            if isinstance(data[key], list):
+                data[key] = [str(item) for item in data[key]]
+            else:
+                data[key] = [str(data[key])]
     # Turn all data into lowercase if sensitivity is off
     if not sensitive:
         filter = filter.lower()
         lowered = dict()
-        for key, values in data.iteritems():
+        for key, values in data.items():
             lowered[key.lower()] = [value.lower() for value in values]
         data = lowered
 
@@ -362,7 +368,7 @@ class Logging(object):
         else:
             try:
                 Logging._level = Logging.MAPPING[int(os.environ["DEBUG"])]
-            except StandardError:
+            except Exception:
                 Logging._level = logging.WARN
         self.logger.setLevel(Logging._level)
 
@@ -448,7 +454,7 @@ class Coloring(object):
             # Detect from the environment variable COLOR
             try:
                 mode = int(os.environ["COLOR"])
-            except StandardError:
+            except Exception:
                 mode = COLOR_AUTO
         elif mode < 0 or mode > 2:
             raise RuntimeError("Invalid color mode '{0}'".format(mode))

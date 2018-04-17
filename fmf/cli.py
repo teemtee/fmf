@@ -7,6 +7,8 @@ This module takes care of processing command line options
 and providing requested output.
 """
 
+from __future__ import unicode_literals, absolute_import
+
 import os
 import re
 import sys
@@ -62,13 +64,15 @@ class Options(object):
 
     def parse(self, cmdline=None):
         """ Parse the options. """
-        # Split command line if given as string
-        if isinstance(cmdline, basestring):
+        # Split command line if given as string (used for testing)
+        if isinstance(cmdline, type("")):
             cmdline = cmdline.split()
-
-        # Otherwise properly decode command line arguments
+        # Otherwise use sys.argv (plus decode unicode for Python 2)
         if cmdline is None:
-            cmdline = [arg.decode("utf-8") for arg in sys.argv[1:]]
+            try:
+                cmdline = [arg.decode("utf-8") for arg in sys.argv[1:]]
+            except AttributeError:
+                cmdline = sys.argv[1:]
         return self.parser.parse_known_args(cmdline)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
