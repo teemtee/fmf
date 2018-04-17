@@ -63,3 +63,23 @@ class TestCommandLine(object):
         output = fmf.cli.main(WGET + " --key depth")
         assert "wget/recursion/deep" in output
         assert "wget/download/test" not in output
+
+    def test_format_basic(self):
+        """ Custom format (basic) """
+        output = fmf.cli.main(WGET + " --format foo")
+        assert "wget" not in output
+        assert "foo" in output
+
+    def test_format_key(self):
+        """ Custom format (find by key, check the name) """
+        output = fmf.cli.main(
+            [WGET, "--key", "depth", "--format", "{}", "--value", "name"])
+        assert "wget/recursion/deep" in output
+
+    def test_format_functions(self):
+        """ Custom format (using python functions) """
+        output = fmf.cli.main(
+            [WGET, "--key", "depth", "--format", "{}",
+            "--value", "os.path.basename(name)"])
+        assert "deep" in output
+        assert "wget/recursion" not in output

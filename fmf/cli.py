@@ -1,14 +1,34 @@
 # coding: utf-8
 
 """
-Command line interface for Flexible Metadata Format
+Command line interface for the Flexible Metadata Format
 
-This module takes care of processing command line options
-and providing requested output.
+Usage: fmf [path...] [options]
+
+By default object identifiers and associated attributes are printed,
+each on a separate line. It is also possible to use the --format option
+together with --value options to generate custom output. Python syntax
+for expansion using {} is used to place values as desired. For example:
+
+    fmf --format 'name: {0}, tester: {1}\\n' \\
+        --value 'name' --value 'data["tester"]'
+
+Individual attribute values can be access through the 'data' dictionary,
+variable 'name' contains the object identifier. Python modules 'os' and
+'os.path' are available as well and can be used for processing attribute
+values as desired:
+
+    fmf --format '{}' --value 'os.dirname(data["path"])'
+
+See online documentation for more details and examples:
+
+    http://fmf.readthedocs.io/
 """
 
+from __future__ import print_function
+
 import os
-import re
+import os.path
 import sys
 import argparse
 
@@ -25,7 +45,7 @@ class Options(object):
     def __init__(self):
         """ Prepare the parser. """
         self.parser = argparse.ArgumentParser(
-            usage="fmf [path...] [options]")
+            usage=__doc__)
 
         # Select
         group = self.parser.add_argument_group("Select")
@@ -48,8 +68,11 @@ class Options(object):
             "--brief", action="store_true",
             help="Show object names only (no attributes)")
         group.add_argument(
-            "--format", default="text",
-            help="Output format (now: text, future: json, yaml)")
+            "--format", dest="formatting", default=None,
+            help="Custom output format using the {} expansion")
+        group.add_argument(
+            "--value", dest="values", action="append", default=[],
+            help="Values for the custom formatting string")
 
         # Utilities
         group = self.parser.add_argument_group("Utils")
@@ -94,26 +117,13 @@ def main(cmdline=None):
         if options.verbose:
             utils.info("Checking {0} for metadata.".format(path))
         tree = fmf.Tree(path)
-        for node in tree.climb(options.whole):
-            # Select only nodes with key content
-            if not all([key in node.data for key in options.keys]):
-                continue
-            # Select nodes with name matching regular expression
-            if options.names and not any(
-                    [re.search(name, node.name) for name in options.names]):
-                continue
-            # Apply advanced filters if given
-            try:
-                if not all([utils.filter(filter, node.data)
-                        for filter in options.filters]):
-                    continue
-            # Handle missing attribute as if filter failed
-            except utils.FilterError:
-                continue
-            show = node.show(brief=options.brief)
+        for node in tree.prune(
+                options.whole, options.keys, options.names, options.filters):
+            show = node.show(
+                options.brief, options.formatting, options.values)
             if show is not None:
-                print(show)
-                output += show + "\n"
+                print(show, end="")
+                output += show
                 counter += 1
     # Print summary
     if options.verbose:
