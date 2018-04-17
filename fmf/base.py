@@ -187,7 +187,9 @@ class Tree(object):
             formatting = re.sub("\\\\n", "\n", formatting)
             name = self.name
             data = self.data
-            evaluated = [eval(value) for value in values]
+            evaluated = []
+            for value in values:
+                evaluated.append(eval(value))
             return formatting.format(*evaluated)
 
         # Show the name
