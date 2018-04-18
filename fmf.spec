@@ -159,13 +159,13 @@ export LANG=en_US.utf-8
 %files
 %{_mandir}/man1/*
 %{_bindir}/%{name}
+%doc README.rst examples
 %license LICENSE
 
 %if %{with python2}
 %files -n python2-%{name}
 %{python2_sitelib}/%{name}/
 %{python2_sitelib}/%{name}-*.egg-info
-%doc README.rst examples
 %license LICENSE
 %endif
 
@@ -173,7 +173,6 @@ export LANG=en_US.utf-8
 %files -n python%{python3_pkgversion}-%{name}
 %{python3_sitelib}/%{name}/
 %{python3_sitelib}/%{name}-*.egg-info
-%doc README.rst examples
 %license LICENSE
 %endif
 
