@@ -196,7 +196,7 @@ Show missing attributes in red::
 
 List all test scripts with full path::
 
-    fmf examples/wget --key test --format "{}/{}/{}\n" \
+    fmf examples --key test --format "{}/{}/{}\n" \
         --value "os.getcwd()" \
         --value "data.get('path') or name" \
         --value "data['test']"
