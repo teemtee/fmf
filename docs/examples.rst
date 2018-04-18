@@ -176,3 +176,27 @@ __ https://github.com/jkrysl/storage_setup
 You can find here not only how to use FMF for setup/cleanup
 and group tests based on that, but also installing requirements,
 passing values from metadata to tests themself and much more.
+
+
+Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Custom format output using ``--format`` and ``value``.
+
+List object name and selected attribute::
+
+    fmf examples/wget --format '{0}: {1}\n' \
+        --value 'name' --value 'data["tester"]'
+
+Show missing attributes in red::
+
+    fmf examples/wget/ --format '{}: {}\n' --value 'name' \
+        --value 'utils.color(str(data.get("priority")),
+        "red" if data.get("priority") is None else "green")'
+
+List all test scripts with full path::
+
+    fmf examples/wget --key test --format "{}/{}/{}\n" \
+        --value "os.getcwd()" \
+        --value "data.get('path') or name" \
+        --value "data['test']"
