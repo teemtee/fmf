@@ -82,6 +82,9 @@ class Options(object):
         group.add_argument(
             "--debug", action="store_true",
             help="Turn on debugging output, do not catch exceptions")
+        group.add_argument(
+            "--config_paths", action="store_true",
+            help="Insert latest FMF config location (key: {})".format(fmf.base.PATH_KEY))
 
     def parse(self, cmdline=None):
         """ Parse the options. """
@@ -118,7 +121,7 @@ def main(cmdline=None):
     for path in arguments:
         if options.verbose:
             utils.info("Checking {0} for metadata.".format(path))
-        tree = fmf.Tree(path)
+        tree = fmf.Tree(path, config_filename=options.config_paths)
         for node in tree.prune(
                 options.whole, options.keys, options.names, options.filters):
             show = node.show(

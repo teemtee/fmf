@@ -27,7 +27,7 @@ PATH_KEY = "fmf_config"
 
 class Tree(object):
     """ Metadata Tree """
-    def __init__(self, data, name=None, parent=None, config_filename=None):
+    def __init__(self, data, name=None, parent=None, config_filename=False):
         """
         Initialize data dictionary, optionally update data
 
@@ -49,18 +49,19 @@ class Tree(object):
             self.data = copy.deepcopy(self.parent.data)
         # Update data from dictionary or explore directory
         if isinstance(data, dict):
-            self.update(data, config_filename)
+            self.update(data, config_filename=config_filename)
         else:
-            self.grow(data)
+            self.grow(data, config_filename=config_filename)
 
-    def update(self, data, config_filename=None):
+    def update(self, data, config_filename=False):
         """ Update metadata, handle virtual hierarchy """
         # Nothing to do if no data
         if data is None:
             return
         # Update data, detect special child attributes
         children = dict()
-        if config_filename:
+
+        if isinstance(config_filename, type("")):
             data[PATH_KEY] = config_filename
         for key, value in sorted(data.items()):
             if key.startswith('/'):
@@ -92,14 +93,14 @@ class Tree(object):
             return self.data
         return self.data[name]
 
-    def child(self, name, data, config_filename=None):
+    def child(self, name, data, config_filename=False):
         """ Create or update child with given data """
         try:
-            self.children[name].grow(data)
+            self.children[name].grow(data, config_filename=config_filename)
         except KeyError:
             self.children[name] = Tree(data, name, parent=self, config_filename=config_filename)
 
-    def grow(self, path):
+    def grow(self, path, config_filename=False):
         """
         Grow the metadata tree for the given directory path
 
@@ -134,14 +135,14 @@ class Tree(object):
                 data = yaml.load(datafile)
             log.data(pretty(data))
             if filename == MAIN:
-                self.update(data, config_filename=fullpath)
+                self.update(data, config_filename=fullpath if config_filename else False)
             else:
-                self.child(os.path.splitext(filename)[0], data, config_filename=fullpath)
+                self.child(os.path.splitext(filename)[0], data, config_filename=fullpath if config_filename else False)
         # Explore every child directory (ignore hidden)
         for dirname in sorted(dirnames):
             if dirname.startswith("."):
                 continue
-            self.child(dirname, os.path.join(path, dirname))
+            self.child(dirname, os.path.join(path, dirname),config_filename=config_filename)
 
     def climb(self, whole=False):
         """ Climb through the tree (iterate leaf/all nodes) """

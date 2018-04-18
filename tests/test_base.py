@@ -5,7 +5,7 @@ from __future__ import unicode_literals, absolute_import
 import os
 import pytest
 from fmf.utils import FileError, MergeError
-from fmf.base import Tree
+from fmf.base import Tree, PATH_KEY
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,3 +77,7 @@ class TestTree(object):
     def test_find(self):
         """ Find node by name """
         assert(self.wget.find("non-existent") == None)
+
+    def test_config_insert(self):
+        wget = Tree(WGET, config_filename=True)
+        assert WGET in wget.data[PATH_KEY]
