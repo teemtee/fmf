@@ -59,11 +59,6 @@ default_setup = dict(
     provides=__provides__,
     scripts=__scripts__,
     version=__version__,
-    entry_points={
-        'console_scripts': [
-            'fmf-output = fmf.output_interpreter:main'
-        ]
-    },
 )
 
 setup(**default_setup)
