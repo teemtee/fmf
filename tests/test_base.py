@@ -65,7 +65,9 @@ class TestTree(object):
     def test_show(self):
         """ Show metadata """
         assert(isinstance(self.wget.show(brief=True), type("")))
+        assert(self.wget.show(brief=True).endswith("\n"))
         assert(isinstance(self.wget.show(), type("")))
+        assert(self.wget.show().endswith("\n"))
         assert('wget' in self.wget.show())
 
     def test_update(self):

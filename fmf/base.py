@@ -198,7 +198,7 @@ class Tree(object):
         # Show the name
         output = utils.color(self.name, 'red')
         if brief:
-            return output
+            return output + "\n"
         # List available attributes
         for key, value in sorted(self.data.items()):
             output += "\n{0}: ".format(utils.color(key, 'yellow'))
