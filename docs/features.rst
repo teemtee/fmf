@@ -191,7 +191,9 @@ place values as desired. For example::
         --value 'name' --value 'data["tester"]'
 
 Individual attribute values can be access through the ``data``
-dictionary, variable ``name`` contains the object identifier.
+dictionary, variable ``name`` contains the object identifier and
+``root`` is assigned to directory where metadata tree is rooted.
+
 Python modules ``os`` and ``os.path`` as well as other python
 functions are available and can be used for processing attribute
 values as desired::

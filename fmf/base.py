@@ -40,8 +40,10 @@ class Tree(object):
         self.data = dict()
         if name is None:
             self.name = os.path.basename(os.path.realpath(data))
+            self.root = os.path.dirname(os.path.realpath(data))
         else:
             self.name = "/".join([self.parent.name, name])
+            self.root = self.parent.root
 
         # Inherit data from parent
         if self.parent is not None:
@@ -187,6 +189,7 @@ class Tree(object):
             formatting = re.sub("\\\\n", "\n", formatting)
             name = self.name
             data = self.data
+            root = self.root
             evaluated = []
             for value in values:
                 evaluated.append(eval(value))
