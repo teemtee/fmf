@@ -124,7 +124,7 @@ def main(cmdline=None):
             show = node.show(
                 options.brief, options.formatting, options.values)
             if show is not None:
-                print(show, end="")
+                print(show.encode('utf-8'), end="")
                 output += show
                 counter += 1
     # Print summary
