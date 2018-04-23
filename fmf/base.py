@@ -204,6 +204,7 @@ class Tree(object):
             name = self.name
             data = self.data
             root = self.root
+            sources = self.sources
             evaluated = []
             for value in values:
                 evaluated.append(eval(value))
