@@ -38,6 +38,7 @@ class Tree(object):
         self.parent = parent
         self.children = dict()
         self.data = dict()
+        self.sources = list()
         if name is None:
             self.name = os.path.basename(os.path.realpath(data))
             self.root = os.path.dirname(os.path.realpath(data))
@@ -48,6 +49,7 @@ class Tree(object):
         # Inherit data from parent
         if self.parent is not None:
             self.data = copy.deepcopy(self.parent.data)
+            self.sources = list(self.parent.sources)
         # Update data from dictionary or explore directory
         if isinstance(data, dict):
             self.update(data)
@@ -99,12 +101,15 @@ class Tree(object):
             return self.data
         return self.data[name]
 
-    def child(self, name, data):
+    def child(self, name, data, source=None):
         """ Create or update child with given data """
         try:
             self.children[name].grow(data)
         except KeyError:
             self.children[name] = Tree(data, name, parent=self)
+        # Save source file
+        if source is not None:
+            self.children[name].sources.append(source)
 
     def grow(self, path):
         """
@@ -117,7 +122,8 @@ class Tree(object):
         if path is None:
             return
         path = path.rstrip("/")
-        log.info("Walking through directory {0}".format(path))
+        log.info("Walking through directory {0}".format(
+            os.path.realpath(path)))
         try:
             dirpath, dirnames, filenames = list(os.walk(path))[0]
         except IndexError:
@@ -134,15 +140,16 @@ class Tree(object):
         for filename in filenames:
             if filename.startswith("."):
                 continue
-            fullpath = os.path.join(dirpath, filename)
+            fullpath = os.path.realpath(os.path.join(dirpath, filename))
             log.info("Checking file {0}".format(fullpath))
             with open(fullpath) as datafile:
                 data = yaml.load(datafile)
             log.data(pretty(data))
             if filename == MAIN:
+                self.sources.append(fullpath)
                 self.update(data)
             else:
-                self.child(os.path.splitext(filename)[0], data)
+                self.child(os.path.splitext(filename)[0], data, fullpath)
         # Explore every child directory (ignore hidden)
         for dirname in sorted(dirnames):
             if dirname.startswith("."):

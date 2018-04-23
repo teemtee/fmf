@@ -123,6 +123,11 @@ def main(cmdline=None):
                 options.whole, options.keys, options.names, options.filters):
             show = node.show(
                 options.brief, options.formatting, options.values)
+            # List source files when in debug mode
+            if options.debug:
+                show += "Sources:\n"
+                for source in node.sources:
+                    show += "{0}\n".format(source)
             if show is not None:
                 print(show.encode('utf-8'), end="")
                 output += show
