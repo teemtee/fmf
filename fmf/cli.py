@@ -18,7 +18,7 @@ variable 'name' contains the object identifier. Python modules 'os' and
 'os.path' are available as well and can be used for processing attribute
 values as desired:
 
-    fmf --format '{}' --value 'os.dirname(data["path"])'
+    fmf --format '{}' --value 'os.path.dirname(data["path"])'
 
 See online documentation for more details and examples:
 
