@@ -115,7 +115,6 @@ class Tree(object):
         except IndexError:
             raise utils.FileError(
                 "Unable to walk through the '{0}' directory.".format(path))
-        children = dict()
         # Investigate main.fmf as the first file (for correct inheritance)
         filenames = sorted(
             [filename for filename in filenames if filename.endswith(SUFFIX)])
