@@ -14,8 +14,7 @@ from fmf.base import Tree
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
-WGET = PATH + "/../examples/wget"
-MERGE = PATH + "/../examples/merge"
+EXAMPLES = PATH + "/../examples/"
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,8 +26,8 @@ class TestTree(object):
 
     def setup_method(self, method):
         """ Load examples """
-        self.wget = Tree(WGET)
-        self.merge = Tree(MERGE)
+        self.wget = Tree(EXAMPLES + "wget")
+        self.merge = Tree(EXAMPLES + "merge")
 
     def test_basic(self):
         """ No directory path given """
@@ -45,6 +44,11 @@ class TestTree(object):
         assert(deep.data['depth'] == 1000)
         assert(deep.data['description'] == 'Check recursive download options')
         assert(deep.data['tags'] == ['Tier2'])
+
+    def test_deep_hierarchy(self):
+        """ Deep hierarchy on one line """
+        deep = Tree(EXAMPLES + "deep")
+        assert len(deep.children) == 1
 
     def test_merge(self):
         """ Attribute merging """

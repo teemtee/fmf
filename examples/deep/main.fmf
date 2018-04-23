@@ -1,0 +1,10 @@
+# Deeper hierarchy can be defined on one line as well.
+# The following two examples are identical:
+
+/one:
+    /two:
+        /three:
+            key: value
+
+/one/two/three:
+    key: value

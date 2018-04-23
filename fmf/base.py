@@ -80,6 +80,13 @@ class Tree(object):
 
         # Handle child attributes
         for name, data in sorted(children.items()):
+            # Handle deeper nesting (e.g. keys like /one/two/three) by
+            # extracting only the first level of the hierarchy as name
+            match = re.search("([^/]+)(/.*)", name)
+            if match:
+                name = match.groups()[0]
+                data = {match.groups()[1]: data}
+            # Update existing child or create a new one
             try:
                 self.children[name].update(data)
             except KeyError:
