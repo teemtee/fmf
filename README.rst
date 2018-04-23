@@ -165,7 +165,7 @@ https://coveralls.io/github/psss/fmf
 Authors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Petr Šplíchal, Jakub Krysl and Jan Ščotka.
+Petr Šplíchal, Jakub Krysl, Jan Ščotka and Alois Mahdal.
 
 
 Copyright
