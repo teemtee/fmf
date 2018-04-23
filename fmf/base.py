@@ -62,20 +62,21 @@ class Tree(object):
         # Update data, detect special child attributes
         children = dict()
         for key, value in sorted(data.items()):
+            # Detect child attributes, we'll handle them separately
             if key.startswith('/'):
                 children[key.lstrip('/')] = value
-            else:
-                # Handle attribute adding
-                if key.endswith('+'):
-                    key = key.rstrip('+')
-                    if key in self.data:
-                        try:
-                            value = self.data[key] + value
-                        except TypeError as error:
-                            raise utils.MergeError(
-                                "MergeError: Key '{0}' in {1} ({2}).".format(
-                                    key, self.name, str(error)))
-                self.data[key] = value
+                continue
+            # Handle attribute adding
+            if key.endswith('+'):
+                key = key.rstrip('+')
+                if key in self.data:
+                    try:
+                        value = self.data[key] + value
+                    except TypeError as error:
+                        raise utils.MergeError(
+                            "MergeError: Key '{0}' in {1} ({2}).".format(
+                                key, self.name, str(error)))
+            self.data[key] = value
 
         # Handle child attributes
         for name, data in sorted(children.items()):
