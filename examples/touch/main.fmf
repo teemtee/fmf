@@ -1,0 +1,6 @@
+summary: Smoke test for the "touch" command.
+description:
+    Make sure that after running the touch command with a single
+    argument a regular file with given name is correctly created
+    in the current working directory.
+test: ./runtest.sh
