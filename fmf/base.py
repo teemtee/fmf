@@ -216,7 +216,7 @@ class Tree(object):
             return output + "\n"
         # List available attributes
         for key, value in sorted(self.data.items()):
-            output += "\n{0}: ".format(utils.color(key, 'yellow'))
+            output += "\n{0}: ".format(utils.color(key, 'green'))
             if isinstance(value, type("")):
                 output += value
             elif isinstance(value, list) and all(

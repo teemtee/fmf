@@ -107,32 +107,33 @@ def main(cmdline=None):
     options, arguments = Options().parse(cmdline)
     if not arguments:
         arguments = ["."]
-    output = ""
 
     # Enable debugging output
     if options.debug:
         utils.log.setLevel(utils.LOG_DEBUG)
 
     # Show metadata for each path given
-    counter = 0
+    output = []
     for path in arguments:
         if options.verbose:
             utils.info("Checking {0} for metadata.".format(path))
         tree = fmf.Tree(path)
         for node in tree.prune(
                 options.whole, options.keys, options.names, options.filters):
-            show = node.show(
-                options.brief, options.formatting, options.values)
+            show = node.show(options.brief, options.formatting, options.values)
             # List source files when in debug mode
             if options.debug:
-                show += "Sources:\n"
                 for source in node.sources:
-                    show += "{0}\n".format(source)
+                    show += utils.color("{0}\n".format(source), "blue")
             if show is not None:
-                print(show.encode('utf-8'), end="")
-                output += show
-                counter += 1
-    # Print summary
+                output.append(show)
+
+    # Print output and summary
+    joined = ("" if options.brief or options.formatting else "\n").join(output)
+    try:
+        print(joined, end="")
+    except UnicodeEncodeError:
+        print(joined.encode('utf-8'), end="")
     if options.verbose:
-        utils.info("Found {0}.".format(utils.listed(counter, "object")))
-    return output
+        utils.info("Found {0}.".format(utils.listed(len(output), "object")))
+    return joined
