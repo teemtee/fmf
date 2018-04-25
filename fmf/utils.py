@@ -148,13 +148,10 @@ def filter(filter, data, sensitive=True, regexp=False):
         tag: Tier1 | tag: Tier2 | tag: Tier3
         category: Sanity, Security & tag: -destructive
 
-    Note that multiple comma-or-semicolon-separated values can be used
-    as a syntactic sugar to shorten the filter notation (these are not
-    to be combined, and the latter is discouraged as it makes the code
-    much less readable. But if you must... you have been warned ;-)::
+    Note that multiple comma-separated values can be used as a syntactic
+    sugar to shorten the filter notation::
 
         tag: A, B, C ---> tag: A | tag: B | tag: C
-        tag: A; B; C ---> tag: A & tag: B & tag: C
 
     Values should be provided as a dictionary of lists each describing
     the values against which the filter is to be matched. For example::
@@ -221,8 +218,7 @@ def filter(filter, data, sensitive=True, regexp=False):
             if not matched:
                 raise FilterError("Invalid filter '{0}'".format(literal))
             dimension, value = matched.groups()
-            # Substitute ';' as a shortcut for AND
-            values = re.split("\s*;\s*", value)
+            values = [value]
             # Append the literal value(s) to corresponding dimension list
             literals.setdefault(dimension, []).extend(values)
         # For each dimension all literals must match given data

@@ -51,15 +51,10 @@ class TestFilter(object):
         """ Syntactic sugar """
         assert(filter("tag: Tier1, Tier2", self.data) == True)
         assert(filter("tag: Tier1, TIPpass", self.data) == True)
-        assert(filter("tag: Tier1; TIPpass", self.data) == True)
         assert(filter("tag: -Tier2", self.data) == True)
         assert(filter("tag: -Tier1, -Tier2", self.data) == True)
         assert(filter("tag: -Tier1, -Tier2", self.data) == True)
-        assert(filter("tag: -Tier1; -Tier2", self.data) == False)
         assert(filter("tag: Tier2, Tier3", self.data) == False)
-        assert(filter("tag: Tier1; Tier2", self.data) == False)
-        assert(filter("tag: Tier2; Tier3", self.data) == False)
-        assert(filter("tag: Tier1; -TIPpass", self.data) == False)
 
     def test_regexp(self):
         """ Regular expressions """

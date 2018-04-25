@@ -1,3 +1,4 @@
 description: Check recursive download options
 tags: [Tier2]
 test: runtest.sh
+path: wget/recursion
