@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.2
+Version: 0.3
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -178,6 +178,30 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Wed Apr 25 2018 Petr Šplíchal <psplicha@redhat.com> 0.3-1
+- Remove the unreliable syntactic sugar [fix #2]
+- Add a simple example of a BeakerLib test
+- Improve the output, fix the encoding issue [#21]
+- Add sources as value for string formatting
+- Show source files in debug mode [fix #15]
+- Allow deeper one-line hierarchy [fix #17]
+- Update the list of supported Python versions
+- Use name 'root' for directory where Tree is rooted
+- Fix the full path custom format example
+- Move documentation to the fmf rpm package
+- Remove entry_points, custom format merged into fmf
+- Add a few custom format examples
+- Update docs with the custom format support
+- Run both Python 2 and Python 3 tests locally
+- Make eval() work with with Python 3 as well
+- Integrate custom formatting into base & cli
+- The first draft of output formatting
+- Enable python3 tests, python3 executable in Fedora
+- Python 3 compatibility changes
+- Show nothing if there are no metadata [fix #12]
+- Clean up before preparing the source files
+- Make setup methods compatible with older pytest
+
 * Mon Apr 09 2018 Petr Šplíchal <psplicha@redhat.com> 0.2-1
 - Build a separate fmf package for the executable
 - Add docs example for setting up storage
