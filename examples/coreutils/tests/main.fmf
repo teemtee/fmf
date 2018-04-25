@@ -1,0 +1,14 @@
+name: coreutils
+tester: noname@redhat.com
+
+/test_basics:
+  summary: basic test touch feature
+  test: ./test-basics
+  path: tests
+
+/readlink-cannot-handle-recursive-symlinks:
+  summary: basic test touch feature
+  test: ./runtest.sh
+  env: 'SPECIAL=value'
+
+

@@ -1,0 +1,54 @@
+PURPOSE of /CoreOS/coreutils/readlink-cannot-handle-recursive-symlinks
+Description: Test for readlink cannot handle recursive symlinks
+Author: Jan Scotka <jscotka@redhat.com>
+Bug summary: readlink cannot handle recursive symlinks
+
+Description:
+
+Description of problem:
+The readlink command fails with an error "Too many levels of symbolic links", even if there are only 2 levels.
+
+The readlink command from RHEL 3 and RHEL 4 and from Fedora 11 all work fine.
+
+Among other changes between RHEL 4 and RHEL 5, RHEL 5's coreutils added calls to cycle_check() in lib/canonicalize.c, but in upstream canonicalize.c (now in gnulib instead of coreutils), we see the comment:
+          /* Detect loops.  We cannot use the cycle-check module here,
+             since it's actually possible to encounter the same symlink
+             more than once in a given traversal.  However, encountering
+             the same symlink,NAME pair twice does indicate a loop.  */
+
+http://git.savannah.gnu.org/gitweb/?p=gnulib.git;a=blob;f=lib/canonicalize.c;h=4f348398fd69ae516396313d18ac294a4ca3dde3;hb=b653eda3ac4864de205419d9f41eec267cb89eeb#l262
+
+The latest canonicalize.c uses seen_triple() instead of cycle_check().
+
+
+Version-Release number of selected component (if applicable):
+coreutils-5.97-19.el5
+
+How reproducible:
+every time
+
+Steps to Reproduce:
+1. Create a directory with a symlink to itself
+       mkdir /tmp/dir
+       cd /tmp/dir
+       ln -s ../dir dirlink
+
+2. Run readlink using the 'dirlink' symlink recursively
+       readlink -v -f dirlink
+       readlink -v -f dirlink/dirlink
+       readlink -v -f dirlink/dirlink/dirlink
+  
+Actual results:
+The first readlink command on just dirlink succeeds, but the 2nd and 3rd commands fail with 
+   readlink: dirlink/dirlink: Too many levels of symbolic links
+
+Expected results:
+$ readlink -v -f dirlink
+/tmp/dir
+$ readlink -v -f dirlink/dirlink
+/tmp/dir
+$ readlink -v -f dirlink/dirlink/dirlink
+/tmp/dir
+
+
+Additional info:

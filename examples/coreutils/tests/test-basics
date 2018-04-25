@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Checks that touch ls rm and foo work
+# https://www.mankier.com/1/beakerlib#Examples
+. /usr/share/beakerlib/beakerlib.sh
+
+# Set the full test name
+TEST="/examples/beakerlib/Sanity/phases"
+
+# Package being tested
+PACKAGE="coreutils"
+
+rlJournalStart
+    # Setup phase: Prepare test directory
+    rlPhaseStartSetup
+        rlAssertRpm $PACKAGE
+        rlRun 'TmpDir=$(mktemp -d)' 0 'Creating tmp directory' # no-reboot
+        rlRun "pushd $TmpDir"
+    rlPhaseEnd
+
+    # Test phase: Testing touch, ls and rm commands
+    rlPhaseStartTest
+        rlRun "touch foo" 0 "Creating the foo test file"
+        rlAssertExists "foo"
+        rlRun "ls -l foo" 0 "Listing the foo test file"
+        rlRun "rm foo" 0 "Removing the foo test file"
+        rlAssertNotExists "foo"
+        rlRun "ls -l foo" 2 "Listing foo should now report an error"
+    rlPhaseEnd
+
+    # Cleanup phase: Remove test directory
+    rlPhaseStartCleanup
+        rlRun "popd"
+        rlRun "rm -r $TmpDir" 0 "Removing tmp directory"
+    rlPhaseEnd
+rlJournalEnd
+
+# Print the test report
+rlJournalPrintText
