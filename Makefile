@@ -34,7 +34,7 @@ docs: man
 man: source
 	cp docs/header.txt $(TMP)/man.rst
 	tail -n+7 README.rst >> $(TMP)/man.rst
-	rst2man $(TMP)/man.rst | gzip > $(TMP)/$(PACKAGE)/fmf.1.gz
+	rst2man $(TMP)/man.rst > $(TMP)/$(PACKAGE)/fmf.1
 
 
 # RPM packaging

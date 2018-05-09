@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.3
+Version: 0.4
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -7,7 +7,8 @@ License: GPLv2+
 BuildArch: noarch
 
 URL: https://github.com/psss/fmf
-Source: https://github.com/psss/fmf/archive/%{version}/fmf-%{version}.tar.gz
+Source: https://github.com/psss/fmf/releases/download/%{version}/fmf-%{version}.tar.gz
+
 
 # Depending on the distro, we set some defaults.
 # Note that the bcond macros are named for the CLI option they create.
@@ -178,6 +179,9 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Wed May 09 2018 Petr Šplíchal <psplicha@redhat.com> 0.4-1
+- Do not gzip the man page, fix the source link [BZ#1575645]
+
 * Wed Apr 25 2018 Petr Šplíchal <psplicha@redhat.com> 0.3-1
 - Remove the unreliable syntactic sugar [fix #2]
 - Add a simple example of a BeakerLib test
