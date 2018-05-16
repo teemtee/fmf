@@ -1,0 +1,4 @@
+# Metadata can be scattered across several files.
+# These will be merged by object name (identifier).
+/object:
+    one: 1

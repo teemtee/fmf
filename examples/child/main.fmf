@@ -1,0 +1,7 @@
+# Children always inherit from their parents.
+# It does not matter where attributes are defined.
+
+eyes: blue
+
+/son/grandson:
+    nose: long

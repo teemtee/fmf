@@ -46,54 +46,56 @@ class Tree(object):
             self.name = "/".join([self.parent.name, name])
             self.root = self.parent.root
 
-        # Inherit data from parent
-        if self.parent is not None:
-            self.data = copy.deepcopy(self.parent.data)
-            self.sources = list(self.parent.sources)
         # Update data from dictionary or explore directory
         if isinstance(data, dict):
             self.update(data)
         else:
             self.grow(data)
 
+    def inherit(self):
+        """ Apply inheritance and attribute merging """
+        if self.parent is not None:
+            data = copy.deepcopy(self.parent.data)
+            self.sources = self.parent.sources + self.sources
+            # Merge child data with parent data
+            for key, value in sorted(self.data.items()):
+                # Handle attribute adding
+                if key.endswith('+'):
+                    key = key.rstrip('+')
+                    if key in data:
+                        try:
+                            value = data[key] + value
+                        except TypeError as error:
+                            raise utils.MergeError(
+                                "MergeError: Key '{0}' in {1} ({2}).".format(
+                                    key, self.name, str(error)))
+                # And finally update the value
+                data[key] = value
+            self.data = data
+        # Apply inheritance to all children
+        for child in self.children.values():
+            child.inherit()
+
     def update(self, data):
         """ Update metadata, handle virtual hierarchy """
         # Nothing to do if no data
         if data is None:
             return
-        # Update data, detect special child attributes
-        children = dict()
         for key, value in sorted(data.items()):
-            # Detect child attributes, we'll handle them separately
+            # Handle child attributes
             if key.startswith('/'):
-                children[key.lstrip('/')] = value
-                continue
-            # Handle attribute adding
-            if key.endswith('+'):
-                key = key.rstrip('+')
-                if key in self.data:
-                    try:
-                        value = self.data[key] + value
-                    except TypeError as error:
-                        raise utils.MergeError(
-                            "MergeError: Key '{0}' in {1} ({2}).".format(
-                                key, self.name, str(error)))
-            self.data[key] = value
-
-        # Handle child attributes
-        for name, data in sorted(children.items()):
-            # Handle deeper nesting (e.g. keys like /one/two/three) by
-            # extracting only the first level of the hierarchy as name
-            match = re.search("([^/]+)(/.*)", name)
-            if match:
-                name = match.groups()[0]
-                data = {match.groups()[1]: data}
-            # Update existing child or create a new one
-            try:
-                self.children[name].update(data)
-            except KeyError:
-                self.children[name] = Tree(
-                    data=data, name=name, parent=self)
+                name = key.lstrip('/')
+                # Handle deeper nesting (e.g. keys like /one/two/three) by
+                # extracting only the first level of the hierarchy as name
+                match = re.search("([^/]+)(/.*)", name)
+                if match:
+                    name = match.groups()[0]
+                    data = {match.groups()[1]: data}
+                # Update existing child or create a new one
+                self.child(name, value)
+            # Update regular attributes
+            else:
+                self.data[key] = value
 
     def get(self, name=None):
         """ Get desired attribute """
@@ -104,7 +106,10 @@ class Tree(object):
     def child(self, name, data, source=None):
         """ Create or update child with given data """
         try:
-            self.children[name].grow(data)
+            if isinstance(data, dict):
+                self.children[name].update(data)
+            else:
+                self.children[name].grow(data)
         except KeyError:
             self.children[name] = Tree(data, name, parent=self)
         # Save source file
@@ -145,9 +150,11 @@ class Tree(object):
             with open(fullpath) as datafile:
                 data = yaml.load(datafile)
             log.data(pretty(data))
+            # Handle main.fmf as data for self
             if filename == MAIN:
                 self.sources.append(fullpath)
                 self.update(data)
+            # Handle other *.fmf files as children
             else:
                 self.child(os.path.splitext(filename)[0], data, fullpath)
         # Explore every child directory (ignore hidden)
@@ -155,6 +162,10 @@ class Tree(object):
             if dirname.startswith("."):
                 continue
             self.child(dirname, os.path.join(path, dirname))
+        # Apply inheritance when all scattered data are gathered.
+        # This is done only once, from the top parent object.
+        if self.parent is None:
+            self.inherit()
 
     def climb(self, whole=False):
         """ Climb through the tree (iterate leaf/all nodes) """

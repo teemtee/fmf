@@ -45,6 +45,22 @@ class TestTree(object):
         assert(deep.data['description'] == 'Check recursive download options')
         assert(deep.data['tags'] == ['Tier2'])
 
+    def test_scatter(self):
+        """ Scattered files """
+        scatter = Tree(EXAMPLES + "scatter").find("scatter/object")
+        assert(len(list(scatter.climb())) == 1)
+        assert(scatter.data['one'] == 1)
+        assert(scatter.data['two'] == 2)
+        assert(scatter.data['three'] == 3)
+
+    def test_scattered_inheritance(self):
+        """ Inheritance of scattered files """
+        grandson = Tree(EXAMPLES + "child").find("child/son/grandson")
+        assert(grandson.data['name'] == 'Hugo')
+        assert(grandson.data['eyes'] == 'blue')
+        assert(grandson.data['nose'] == 'long')
+        assert(grandson.data['hair'] == 'fair')
+
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")
@@ -59,7 +75,8 @@ class TestTree(object):
         assert(child.data['time'] == 15)
         assert('time+' not in child.data)
         with pytest.raises(MergeError):
-            child.update({"time+": "string"})
+            child.data["time+"] = "string"
+            child.inherit()
 
     def test_get(self):
         """ Get attributes """
