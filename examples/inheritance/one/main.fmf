@@ -1,0 +1,5 @@
+one: 1
+/two:
+  two: 1
+/two/three:
+  three: 1
