@@ -90,6 +90,8 @@ class Tree(object):
                 data = {match.groups()[1]: data}
             # Update existing child or create a new one
             try:
+                if data is not None:
+                    data.update(self.data)
                 self.children[name].update(data)
             except KeyError:
                 self.children[name] = Tree(

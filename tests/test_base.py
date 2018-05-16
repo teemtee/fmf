@@ -28,6 +28,7 @@ class TestTree(object):
         """ Load examples """
         self.wget = Tree(EXAMPLES + "wget")
         self.merge = Tree(EXAMPLES + "merge")
+        self.inheritance = Tree(EXAMPLES + "inheritance")
 
     def test_basic(self):
         """ No directory path given """
@@ -44,6 +45,13 @@ class TestTree(object):
         assert(deep.data['depth'] == 1000)
         assert(deep.data['description'] == 'Check recursive download options')
         assert(deep.data['tags'] == ['Tier2'])
+
+    def test_complete_inheritance(self):
+        """ Test hierarchy across the whole tree """
+        inheritance = self.inheritance.find("inheritance/one/two/three")
+        for data in "one one_root two two_root three three_root".split():
+            assert(data in inheritance.data)
+            assert(inheritance.data[data] == 1)
 
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
