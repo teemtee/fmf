@@ -82,9 +82,6 @@ class Tree(object):
 
         # Handle child attributes
         for name, data in sorted(children.items()):
-            # ensure inheritance of direct parent data
-            if data is not None and self.parent is not None:
-                data.update(copy.deepcopy(self.parent.data))
             # Handle deeper nesting (e.g. keys like /one/two/three) by
             # extracting only the first level of the hierarchy as name
             match = re.search("([^/]+)(/.*)", name)
@@ -93,6 +90,8 @@ class Tree(object):
                 data = {match.groups()[1]: data}
             # Update existing child or create a new one
             try:
+                if data is not None:
+                    data.update(self.data)
                 self.children[name].update(data)
             except KeyError:
                 self.children[name] = Tree(
@@ -150,9 +149,6 @@ class Tree(object):
             log.data(pretty(data))
             if filename == MAIN:
                 self.sources.append(fullpath)
-                # Ensure inheriting all ancestors data
-                if data is not None and self.parent is not None:
-                    data.update(copy.deepcopy(self.parent.data))
                 self.update(data)
             else:
                 self.child(os.path.splitext(filename)[0], data, fullpath)
