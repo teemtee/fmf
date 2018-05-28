@@ -233,13 +233,13 @@ def filter(filter, data, sensitive=True, regexp=False):
 
     # Make sure that data dictionary contains lists of strings
     data = copy.deepcopy(data)
-    try:
+    try: # pragma: no cover
         for key in data:
             if isinstance(data[key], list):
                 data[key] = [unicode(item) for item in data[key]]
             else:
                 data[key] = [unicode(data[key])]
-    except NameError:
+    except NameError: # pragma: no cover
         for key in data:
             if isinstance(data[key], list):
                 data[key] = [str(item) for item in data[key]]

@@ -89,7 +89,7 @@ class Options(object):
         if isinstance(cmdline, type("")):
             cmdline = cmdline.split()
         # Otherwise use sys.argv (plus decode unicode for Python 2)
-        if cmdline is None:
+        if cmdline is None: # pragma: no cover
             try:
                 cmdline = [arg.decode("utf-8") for arg in sys.argv[1:]]
             except AttributeError:
@@ -130,9 +130,9 @@ def main(cmdline=None):
 
     # Print output and summary
     joined = ("" if options.brief or options.formatting else "\n").join(output)
-    try:
+    try: # pragma: no cover
         print(joined, end="")
-    except UnicodeEncodeError:
+    except UnicodeEncodeError: # pragma: no cover
         print(joined.encode('utf-8'), end="")
     if options.verbose:
         utils.info("Found {0}.".format(utils.listed(len(output), "object")))
