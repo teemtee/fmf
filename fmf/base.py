@@ -21,6 +21,21 @@ SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  YAML
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Load all strings from YAML files as unicode
+# https://stackoverflow.com/questions/2890146/
+from yaml import Loader, SafeLoader
+
+def construct_yaml_str(self, node):
+    return self.construct_scalar(node)
+Loader.add_constructor(
+    'tag:yaml.org,2002:str', construct_yaml_str)
+SafeLoader.add_constructor(
+    'tag:yaml.org,2002:str', construct_yaml_str)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Metadata
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
