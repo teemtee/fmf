@@ -7,6 +7,7 @@ from __future__ import unicode_literals, absolute_import
 import os
 import re
 import sys
+import copy
 import logging
 from pprint import pformat as pretty
 
@@ -231,6 +232,7 @@ def filter(filter, data, sensitive=True, regexp=False):
         raise FilterError("Invalid data type '{0}'".format(type(data)))
 
     # Make sure that data dictionary contains lists of strings
+    data = copy.deepcopy(data)
     try:
         for key in data:
             if isinstance(data[key], list):
