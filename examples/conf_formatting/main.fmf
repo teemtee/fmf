@@ -1,0 +1,13 @@
+
+/testset1:
+  keys:
+    - test
+  names: []
+  filters:
+    - "tags:Tier1"
+  format: "{}/{}/{}\n"
+  values:
+    - "root"
+    - "data.get('path',name)"
+    - "data['test']"
+

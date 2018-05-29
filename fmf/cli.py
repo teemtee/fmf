@@ -73,6 +73,10 @@ class Options(object):
         group.add_argument(
             "--value", dest="values", action="append", default=[],
             help="Values for the custom formatting string")
+        group.add_argument(
+            "--testset", dest="testset", action="store", default="",
+            help="Use test set from config for filtering and formatting, (it filter this elements by --name)")
+
 
         # Utilities
         group = self.parser.add_argument_group("Utils")
@@ -118,6 +122,19 @@ def main(cmdline=None):
         if options.verbose:
             utils.info("Checking {0} for metadata.".format(path))
         tree = fmf.Tree(path)
+        if options.testset:
+            testsets = tree.prune(False, [], [options.testset], [])
+            if not testsets:
+                raise BaseException("not selected testset in config")
+            for oneset in testsets:
+                options.keys += oneset.data.get("keys", [])
+                options.names += oneset.data.get("names", [])
+                options.filters += oneset.data.get("filters", [])
+
+                if not options.formatting:
+                    options.formatting = oneset.data.get("format")
+                    options.values = oneset.data.get("values", [])
+
         for node in tree.prune(
                 options.whole, options.keys, options.names, options.filters):
             show = node.show(options.brief, options.formatting, options.values)
