@@ -60,12 +60,17 @@ class Tree(object):
         else:
             self.name = "/".join([self.parent.name, name])
             self.root = self.parent.root
+        log.debug("New tree '{0}' created.".format(self))
 
         # Update data from dictionary or explore directory
         if isinstance(data, dict):
             self.update(data)
         else:
             self.grow(data)
+
+    def __unicode__(self):
+        """ Use tree name as identifier """
+        return self.name
 
     def inherit(self):
         """ Apply inheritance and attribute merging """
@@ -87,6 +92,8 @@ class Tree(object):
                 # And finally update the value
                 data[key] = value
             self.data = data
+        log.debug("Data for '{0}' inherited.".format(self))
+        log.data(pretty(self.data))
         # Apply inheritance to all children
         for child in self.children.values():
             child.inherit()
@@ -111,6 +118,8 @@ class Tree(object):
             # Update regular attributes
             else:
                 self.data[key] = value
+        log.debug("Data for '{0}' updated.".format(self))
+        log.data(pretty(self.data))
 
     def get(self, name=None):
         """ Get desired attribute """
