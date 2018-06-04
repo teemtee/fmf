@@ -105,7 +105,7 @@ class Tree(object):
                 match = re.search("([^/]+)(/.*)", name)
                 if match:
                     name = match.groups()[0]
-                    data = {match.groups()[1]: data}
+                    value = {match.groups()[1]: value}
                 # Update existing child or create a new one
                 self.child(name, value)
             # Update regular attributes
