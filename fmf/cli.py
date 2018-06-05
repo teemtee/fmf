@@ -118,6 +118,7 @@ def main(cmdline=None):
         if options.verbose:
             utils.info("Checking {0} for metadata.".format(path))
         tree = fmf.Tree(path)
+        tree.reference_resolver(whole=options.whole)
         for node in tree.prune(
                 options.whole, options.keys, options.names, options.filters):
             show = node.show(options.brief, options.formatting, options.values)

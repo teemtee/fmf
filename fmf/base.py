@@ -72,26 +72,82 @@ class Tree(object):
         """ Use tree name as identifier """
         return self.name
 
+    def find_root_tree_elem(self, obj=None):
+        """
+        Traverse and return root tree element
+
+        :param obj: base object
+        :return: Tree element (root)
+        """
+        if not obj:
+            obj = self
+        if not obj.parent:
+            return obj
+        else:
+            self.find_root_tree_elem(obj=obj.parent)
+
+    def __remove_append_items(self, whole=False):
+        """
+        internal method, delete all append items (ends with +)
+
+        :param whole: pass thru 'whole' param to climb
+        :return: None
+        """
+        root_tree = self.find_root_tree_elem()
+        for node in root_tree.climb(whole=whole):
+            for key in sorted(node.data.keys()):
+                if key.endswith('+'):
+                    del node.data[key]
+
+    @classmethod
+    def merge_items(cls, reference_node, node):
+        data = copy.deepcopy(reference_node.data)
+        node.sources = reference_node.sources + node.sources
+        for key, value in sorted(node.data.items()):
+            if key + "+" in node.data:
+                continue
+            # Handle attribute adding
+            if key.endswith('+'):
+                origin_key = key
+                key = key.rstrip('+')
+                data[origin_key] = value
+                if key in data:
+                    try:
+                        value = data[key] + value
+                    except TypeError as error:
+                        raise utils.MergeError(
+                            "MergeError: Key '{0}' in {1} ({2}).".format(
+                                key, node.name, str(error)))
+            # And finally update the value
+            data[key] = value
+        node.data = data
+
+    def reference_resolver(self, whole=False):
+        """
+        resolve references in names like /a/b/c/d@.x.y or /a/b/c/@y
+        it uses simple references schema, do not use references to another references
+        avoid usind / in reference because actual solution creates also this tree items
+        it is bug or feature, who knows :-)
+
+        :param whole: pass thru 'whole' param to climb
+        :return: None
+        """
+        root_tree = self.find_root_tree_elem()
+        reference_nodes = root_tree.prune(whole=whole, names=["@"])
+        for node in reference_nodes:
+            ref_item_name = "[^@]%s" % node.name.rsplit("@", 1)[1]
+            reference_node = root_tree.find(ref_item_name, regexp=True)
+            if not reference_node:
+                raise ValueError("Unable to find reference for node: %s  via name search: %s" %
+                                 (node.name, ref_item_name))
+            log.debug("Reference solver for : %s  via item name: %s" % (node.name, reference_node.name))
+            self.merge_items(reference_node=reference_node, node=node)
+        self.__remove_append_items()
+
     def inherit(self):
         """ Apply inheritance and attribute merging """
         if self.parent is not None:
-            data = copy.deepcopy(self.parent.data)
-            self.sources = self.parent.sources + self.sources
-            # Merge child data with parent data
-            for key, value in sorted(self.data.items()):
-                # Handle attribute adding
-                if key.endswith('+'):
-                    key = key.rstrip('+')
-                    if key in data:
-                        try:
-                            value = data[key] + value
-                        except TypeError as error:
-                            raise utils.MergeError(
-                                "MergeError: Key '{0}' in {1} ({2}).".format(
-                                    key, self.name, str(error)))
-                # And finally update the value
-                data[key] = value
-            self.data = data
+            self.merge_items(reference_node=self.parent, node=self)
         log.debug("Data for '{0}' inherited.".format(self))
         log.data(pretty(self.data))
         # Apply inheritance to all children
@@ -199,11 +255,15 @@ class Tree(object):
             for node in child.climb(whole):
                 yield node
 
-    def find(self, name):
+    def find(self, name, regexp=False):
         """ Find node with given name """
         for node in self.climb():
-            if node.name == name:
-                return node
+            if not regexp:
+                if node.name == name:
+                    return node
+            else:
+                if re.search(name,node.name):
+                    return node
         return None
 
     def prune(self, whole=False, keys=[], names=[], filters=[]):

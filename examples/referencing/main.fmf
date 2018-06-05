@@ -1,0 +1,7 @@
+/downstream-checks:
+  /check1@wget.recursion.fast:
+    test+: " --param 1"
+  /check2@deep:
+     tags+: ["fast", "required"]
+
+
