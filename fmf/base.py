@@ -83,6 +83,10 @@ class Tree(object):
                 if key.endswith('+'):
                     key = key.rstrip('+')
                     if key in data:
+                        # Use dict.update() for merging dictionaries
+                        if type(data[key]) == type(value) == dict:
+                            data[key].update(value)
+                            continue
                         try:
                             value = data[key] + value
                         except TypeError as error:

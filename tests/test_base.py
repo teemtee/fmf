@@ -73,6 +73,7 @@ class TestTree(object):
         assert('Specific' in child.data['description'])
         assert(child.data['tags'] == ['Tier1', 'Tier2'])
         assert(child.data['time'] == 15)
+        assert(child.data['vars'] == dict(x=1, y=2))
         assert('time+' not in child.data)
         with pytest.raises(MergeError):
             child.data["time+"] = "string"

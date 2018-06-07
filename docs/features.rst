@@ -78,7 +78,9 @@ appended to the attribute name to add given value instead::
         time+: 3
 
 This operation is possible only for attributes of the same type.
-Exception ``MergeError`` is raised if types are different.
+Exception ``MergeError`` is raised if types are different. When
+the "+" operator is applied on dictionaries ``update()`` method is
+used to merge content of given dictionary instead of replacing it.
 
 
 Elasticity
