@@ -57,8 +57,8 @@ class TestCommandLine(object):
         output = fmf.cli.main(WGET +
             " --filter tags:Tier1 --filter tags:Wrong")
         assert "wget" not in output
-        output = fmf.cli.main([WGET,
-            "--filter", "tags: Tier[A-Z].*"])
+        output = fmf.cli.main(WGET +
+            " --filter 'tags: Tier[A-Z].*'")
         assert "wget/download/test" in output
         assert "wget/recursion" not in output
 
@@ -76,14 +76,12 @@ class TestCommandLine(object):
 
     def test_format_key(self):
         """ Custom format (find by key, check the name) """
-        output = fmf.cli.main(
-            [WGET, "--key", "depth", "--format", "{0}", "--value", "name"])
+        output = fmf.cli.main(WGET + " --key depth --format {0} --value name")
         assert "wget/recursion/deep" in output
 
     def test_format_functions(self):
         """ Custom format (using python functions) """
         output = fmf.cli.main(
-            [WGET, "--key", "depth", "--format", "{0}",
-            "--value", "os.path.basename(name)"])
+            WGET + " --key depth --format {0} --value os.path.basename(name)")
         assert "deep" in output
         assert "wget/recursion" not in output

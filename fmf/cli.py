@@ -30,6 +30,7 @@ from __future__ import unicode_literals, absolute_import, print_function
 import os
 import os.path
 import sys
+import shlex
 import argparse
 
 import fmf
@@ -86,8 +87,13 @@ class Options(object):
     def parse(self, cmdline=None):
         """ Parse the options. """
         # Split command line if given as string (used for testing)
-        if isinstance(cmdline, type("")):
-            cmdline = cmdline.split()
+        if isinstance(cmdline, type("")): # pragma: no cover
+            try:
+                # This is necessary for Python 2.6
+                cmdline = [arg.decode('utf8')
+                    for arg in shlex.split(cmdline.encode('utf8'))]
+            except AttributeError:
+                cmdline = shlex.split(cmdline)
         # Otherwise use sys.argv (plus decode unicode for Python 2)
         if cmdline is None: # pragma: no cover
             try:
