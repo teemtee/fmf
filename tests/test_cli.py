@@ -57,6 +57,10 @@ class TestCommandLine(object):
         output = fmf.cli.main(WGET +
             " --filter tags:Tier1 --filter tags:Wrong")
         assert "wget" not in output
+        output = fmf.cli.main([WGET,
+            "--filter", "tags: Tier[A-Z].*"])
+        assert "wget/download/test" in output
+        assert "wget/recursion" not in output
 
     def test_key_content(self):
         """ Key content """

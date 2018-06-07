@@ -89,6 +89,9 @@ Limit which metadata should be listed.
 --whole
     Consider the whole tree (leaves only by default)
 
+For filtering regular expressions can be used as well. See
+``pydoc fmf.filter`` for advanced filtering options.
+
 Format
 ------
 

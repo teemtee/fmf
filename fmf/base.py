@@ -222,7 +222,7 @@ class Tree(object):
                 continue
             # Apply advanced filters if given
             try:
-                if not all([utils.filter(filter, node.data)
+                if not all([utils.filter(filter, node.data, regexp=True)
                         for filter in filters]):
                     continue
             # Handle missing attribute as if filter failed
