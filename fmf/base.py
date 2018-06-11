@@ -76,7 +76,7 @@ class Tree(object):
 
     def __unicode__(self):
         """ Use tree name as identifier """
-        return self.name
+        return self.name # pragma: no cover
 
     def _initialize(self, path):
         """ Find metadata tree root, detect format version """
