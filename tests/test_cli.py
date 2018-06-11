@@ -6,6 +6,7 @@ import os
 import sys
 import pytest
 import fmf.cli
+import tempfile
 import fmf.utils as utils
 
 # Prepare path to examples
@@ -18,76 +19,109 @@ class TestCommandLine(object):
 
     def test_smoke(self):
         """ Smoke test """
-        fmf.cli.main(WGET)
-        fmf.cli.main(WGET + " --debug")
-        fmf.cli.main(WGET + " --verbose")
+        fmf.cli.main("fmf show", WGET)
+        fmf.cli.main("fmf show --debug", WGET)
+        fmf.cli.main("fmf show --verbose", WGET)
 
     def test_missing_root(self):
         """ Missing root """
         with pytest.raises(utils.FileError):
-            fmf.cli.main("")
+            fmf.cli.main("fmf show", "/")
+
+    def test_invalid_path(self):
+        """ Missing root """
+        with pytest.raises(utils.FileError):
+            fmf.cli.main("fmf show --path /some-non-existent-path")
+
+    def test_wrong_command(self):
+        """ Wrong command """
+        with pytest.raises(utils.GeneralError):
+            fmf.cli.main("fmf wrongcommand")
 
     def test_output(self):
         """ There is some output """
-        output = fmf.cli.main(WGET)
-        assert "wget" in output
+        output = fmf.cli.main("fmf show", WGET)
+        assert "download" in output
 
     def test_recursion(self):
         """ Recursion """
-        output = fmf.cli.main(WGET + " --name recursion/deep")
+        output = fmf.cli.main("fmf show --name recursion/deep", WGET)
         assert "1000" in output
 
     def test_inheritance(self):
         """ Inheritance """
-        output = fmf.cli.main(WGET + " --name protocols/https")
+        output = fmf.cli.main("fmf show --name protocols/https", WGET)
         assert "psplicha" in output
 
     def test_sys_argv(self):
         """ Parsing sys.argv """
         backup = sys.argv
-        sys.argv = ['fmf', WGET, '--name', 'recursion/deep']
+        sys.argv = ['fmf', 'show', '--path', WGET, '--name', 'recursion/deep']
         output = fmf.cli.main()
         assert "1000" in output
         sys.argv = backup
 
     def test_missing_attribute(self):
         """ Missing attribute """
-        output = fmf.cli.main(WGET + " --filter x:y")
+        output = fmf.cli.main("fmf show --filter x:y", WGET)
         assert "wget" not in output
 
     def test_filtering(self):
         """ Filtering """
-        output = fmf.cli.main(WGET +
-            " --filter tags:Tier1 --filter tags:TierSecurity")
+        output = fmf.cli.main(
+            "fmf show --filter tags:Tier1 --filter tags:TierSecurity", WGET)
         assert "/download/test" in output
-        output = fmf.cli.main(WGET +
-            " --filter tags:Tier1 --filter tags:Wrong")
+        output = fmf.cli.main(
+            "fmf show --filter tags:Tier1 --filter tags:Wrong", WGET)
         assert "wget" not in output
-        output = fmf.cli.main(WGET +
-            " --filter 'tags: Tier[A-Z].*'")
+        output = fmf.cli.main(
+            " fmf show --filter 'tags: Tier[A-Z].*'", WGET)
         assert "/download/test" in output
         assert "/recursion" not in output
 
     def test_key_content(self):
         """ Key content """
-        output = fmf.cli.main(WGET + " --key depth")
+        output = fmf.cli.main("fmf show --key depth")
         assert "/recursion/deep" in output
         assert "/download/test" not in output
 
     def test_format_basic(self):
         """ Custom format (basic) """
-        output = fmf.cli.main(WGET + " --format foo")
+        output = fmf.cli.main(WGET + "fmf show --format foo")
         assert "wget" not in output
         assert "foo" in output
 
     def test_format_key(self):
         """ Custom format (find by key, check the name) """
-        output = fmf.cli.main(WGET + " --key depth --format {0} --value name")
+        output = fmf.cli.main(
+            "fmf show --key depth --format {0} --value name", WGET)
         assert "/recursion/deep" in output
 
     def test_format_functions(self):
         """ Custom format (using python functions) """
         output = fmf.cli.main(
-            WGET + " --key depth --format {0} --value os.path.basename(name)")
+            "fmf show --key depth --format {0} --value os.path.basename(name)",
+            WGET)
         assert "deep" in output
         assert "/recursion" not in output
+
+    def test_init(self):
+        """ Initialize metadata tree """
+        path = tempfile.mkdtemp()
+        fmf.cli.main("fmf init", path)
+        fmf.cli.main("fmf show", path)
+        # Already exists
+        with pytest.raises(utils.FileError):
+            fmf.cli.main("fmf init", path)
+        version_path = os.path.join(path, ".fmf", "version")
+        with open(version_path) as version:
+            assert "1" in version.read()
+        # Invalid version
+        with open(version_path, "w") as version:
+            version.write("bad")
+        with pytest.raises(utils.FormatError):
+            fmf.cli.main("fmf ls", path)
+        # Missing version
+        os.remove(version_path)
+        with pytest.raises(utils.FormatError):
+            fmf.cli.main("fmf ls", path)

@@ -29,42 +29,49 @@ Synopsis
 
 Command line usage is straightforward::
 
-    fmf [path...] [options]
+    fmf command [options]
+
+There are following commands available::
+
+    fmf ls      List identifiers of available objects
+    fmf show    Show metadata of available objects
+    fmf init    Initialize a new metadata tree
 
 
 Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-List all metadata stored in the current directory::
+List names of all objects stored in the metadata tree::
 
-    fmf
+    fmf ls
 
 Show all test metadata (with 'test' attribute defined)::
 
-    fmf --key test
-
-List test names only::
-
-    fmf --key test --brief
+    fmf show --key test
 
 Show metddata for all tree nodes (not only leaves)::
 
-    fmf --key test --whole --brief
+    fmf show --key test --whole --brief
 
-List all attributes for the ``wget/recursion`` tests::
+List all attributes for the ``/recursion`` tests::
 
-    fmf --key test --name wget/recursion
+    fmf show --key test --name /recursion
 
 Show all covered requirements::
 
-    fmf --key requirement --key coverage
+    fmf show --key requirement --key coverage
 
 Search for all tests with the ``Tier1`` tag defined and show a
 brief summary of what was found::
 
-    fmf --key test --filter tags:Tier1 --verbose
+    fmf show --key test --filter tags:Tier1 --verbose
 
-See ``fmf --help`` for complete list of available options.
+Initialize a new metadata tree in the current directory::
+
+    fmf init
+
+Check help message of individual commands for the full list of
+available options.
 
 
 Options
@@ -97,9 +104,6 @@ Format
 
 Choose the best format for showing the metadata.
 
---brief
-    Show object names only (no attributes)
-
 --format=FMT
     Custom output format using the {} expansion
 
@@ -119,7 +123,8 @@ Various utility options.
 --debug
     Turn on debugging output, do not catch exceptions
 
-See ``fmf --help`` for complete list of available options.
+Check help message of individual commands for the full list of
+available options.
 
 
 Install

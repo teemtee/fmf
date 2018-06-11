@@ -19,7 +19,6 @@ from pprint import pformat as pretty
 
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
-VERSION = 1
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  YAML
@@ -56,7 +55,7 @@ class Tree(object):
         self.data = dict()
         self.sources = list()
         self.root = None
-        self.version = VERSION
+        self.version = utils.VERSION
 
         # Special handling for top parent
         if self.parent is None:
@@ -189,11 +188,7 @@ class Tree(object):
         path = path.rstrip("/")
         log.info("Walking through directory {0}".format(
             os.path.abspath(path)))
-        try:
-            dirpath, dirnames, filenames = list(os.walk(path))[0]
-        except IndexError:
-            raise utils.FileError(
-                "Unable to walk through the '{0}' directory.".format(path))
+        dirpath, dirnames, filenames = list(os.walk(path))[0]
         # Investigate main.fmf as the first file (for correct inheritance)
         filenames = sorted(
             [filename for filename in filenames if filename.endswith(SUFFIX)])

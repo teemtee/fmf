@@ -14,9 +14,9 @@ class TestSmoke(object):
 
     def test_smoke(self):
         """ Smoke test """
-        fmf.cli.main(WGET)
+        fmf.cli.main("fmf ls", WGET)
 
     def test_output(self):
         """ There is some output """
-        output = fmf.cli.main(WGET)
-        assert "wget" in output
+        output = fmf.cli.main("fmf ls", WGET)
+        assert "download" in output

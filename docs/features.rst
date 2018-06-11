@@ -192,7 +192,7 @@ place values as desired. For example::
     fmf --format 'name: {0}, tester: {1}\n' \
         --value 'name' --value 'data["tester"]'
 
-Individual attribute values can be access through the ``data``
+Individual attribute values can be accessed through the ``data``
 dictionary, variable ``name`` contains the object identifier and
 ``root`` is assigned to directory where metadata tree is rooted.
 
