@@ -1,0 +1,18 @@
+# Fedora Continuous Integration: https://fedoraproject.org/wiki/CI
+- hosts: localhost
+
+  pre_tasks:
+  - name: Get list of tests tagged for policycoreutils
+    tags:
+      - classic
+    shell: fmf --key test --format "{} {}/{}/{}\n" --value 'data.get("env", "")' --value root --value 'data.get("path") or name' --value 'data["test"]'
+    register: tests_list
+    delegate_to: localhost
+
+  tags:
+  - atomic
+  - classic
+  - container
+  roles:
+  - { role: standard-test-beakerlib, tests: tests: "{{ tests_list.stdout.split('\n') }}" }
+
