@@ -19,6 +19,7 @@ from pprint import pformat as pretty
 
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
+VERSION = 1
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  YAML
@@ -43,34 +44,65 @@ class Tree(object):
     """ Metadata Tree """
     def __init__(self, data, name=None, parent=None):
         """
-        Initialize data dictionary, optionally update data
+        Initialize metadata tree from directory path or data dictionary
 
-        Data can be either string with directory path to be explored or
-        a dictionary with the values already prepared.
+        Data parameter can be either a string with directory path to be
+        explored or a dictionary with the values already prepared.
         """
 
-        # Family relations and name (identifier)
+        # Initialize family relations, object data and source files
         self.parent = parent
         self.children = dict()
         self.data = dict()
         self.sources = list()
-        if name is None:
-            self.name = os.path.basename(os.path.realpath(data))
-            self.root = os.path.dirname(os.path.realpath(data))
-        else:
-            self.name = "/".join([self.parent.name, name])
-            self.root = self.parent.root
-        log.debug("New tree '{0}' created.".format(self))
+        self.root = None
+        self.version = VERSION
 
-        # Update data from dictionary or explore directory
+        # Special handling for top parent
+        if self.parent is None:
+            self.name = "/"
+            if not isinstance(data, dict):
+                self._initialize(path=data)
+                data = self.root
+        # Handle child node creation
+        else:
+            self.root = self.parent.root
+            self.name = os.path.join(self.parent.name, name)
+        # Initialize data
         if isinstance(data, dict):
             self.update(data)
         else:
             self.grow(data)
+        log.debug("New tree '{0}' created.".format(self))
 
     def __unicode__(self):
         """ Use tree name as identifier """
         return self.name
+
+    def _initialize(self, path):
+        """ Find metadata tree root, detect format version """
+        # Find the tree root
+        root = os.path.abspath(path)
+        try:
+            while ".fmf" not in next(os.walk(root))[1]:
+                if root == "/":
+                    raise utils.FileError(
+                        "Unable to find root directory for '{0}'".format(path))
+                root = os.path.abspath(os.path.join(root, os.pardir))
+        except StopIteration:
+            raise utils.FileError("Invalid directory path: {0}".format(root))
+        log.info("Root directory found: {0}".format(root))
+        self.root = root
+        # Detect format version
+        try:
+            with open(os.path.join(self.root, ".fmf", "version")) as version:
+                self.version = int(version.read())
+                log.info("Format version detected: {0}".format(self.version))
+        except IOError as error:
+            raise utils.FormatError(
+                "Unable to detect format version: {0}".format(error))
+        except ValueError:
+            raise utils.FormatError("Invalid version format")
 
     def inherit(self):
         """ Apply inheritance and attribute merging """
@@ -156,7 +188,7 @@ class Tree(object):
             return
         path = path.rstrip("/")
         log.info("Walking through directory {0}".format(
-            os.path.realpath(path)))
+            os.path.abspath(path)))
         try:
             dirpath, dirnames, filenames = list(os.walk(path))[0]
         except IndexError:
@@ -173,7 +205,7 @@ class Tree(object):
         for filename in filenames:
             if filename.startswith("."):
                 continue
-            fullpath = os.path.realpath(os.path.join(dirpath, filename))
+            fullpath = os.path.abspath(os.path.join(dirpath, filename))
             log.info("Checking file {0}".format(fullpath))
             with open(fullpath) as datafile:
                 data = yaml.load(datafile)

@@ -80,6 +80,16 @@ collisions between similar attributes. For example:
 * test_description, requirement_description
 
 
+Tree
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Metadata form a tree where inheritance is applied. The tree root
+is defined by an ``.fmf`` directory (similarly as ``.git``
+identifies top of the git repository). The ``.fmf`` directory
+contains at least a ``version`` file with a single integer number
+defining version of the format.
+
+
 Objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -89,9 +99,9 @@ file name ``main.fmf`` works similarly as ``index.html``:
     +-------------------------------+-----------------------+
     | Location                      | Identifier            |
     +===============================+=======================+
-    | wget/main.fmf                 | wget                  |
+    | wget/main.fmf                 | /                     |
     +-------------------------------+-----------------------+
-    | wget/download/main.fmf        | wget/download         |
+    | wget/download/main.fmf        | /download             |
     +-------------------------------+-----------------------+
-    | wget/download/smoke.fmf       | wget/download/smoke   |
+    | wget/download/smoke.fmf       | /download/smoke       |
     +-------------------------------+-----------------------+

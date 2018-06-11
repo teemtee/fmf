@@ -40,14 +40,14 @@ class TestTree(object):
 
     def test_inheritance(self):
         """ Inheritance and data types """
-        deep = self.wget.find('wget/recursion/deep')
+        deep = self.wget.find('/recursion/deep')
         assert(deep.data['depth'] == 1000)
         assert(deep.data['description'] == 'Check recursive download options')
         assert(deep.data['tags'] == ['Tier2'])
 
     def test_scatter(self):
         """ Scattered files """
-        scatter = Tree(EXAMPLES + "scatter").find("scatter/object")
+        scatter = Tree(EXAMPLES + "scatter").find("/object")
         assert(len(list(scatter.climb())) == 1)
         assert(scatter.data['one'] == 1)
         assert(scatter.data['two'] == 2)
@@ -55,7 +55,7 @@ class TestTree(object):
 
     def test_scattered_inheritance(self):
         """ Inheritance of scattered files """
-        grandson = Tree(EXAMPLES + "child").find("child/son/grandson")
+        grandson = Tree(EXAMPLES + "child").find("/son/grandson")
         assert(grandson.data['name'] == 'Hugo')
         assert(grandson.data['eyes'] == 'blue')
         assert(grandson.data['nose'] == 'long')
@@ -68,7 +68,7 @@ class TestTree(object):
 
     def test_merge(self):
         """ Attribute merging """
-        child = self.merge.find('merge/parent/child')
+        child = self.merge.find('/parent/child')
         assert('General' in child.data['description'])
         assert('Specific' in child.data['description'])
         assert(child.data['tags'] == ['Tier1', 'Tier2'])
@@ -90,7 +90,7 @@ class TestTree(object):
         assert(self.wget.show(brief=True).endswith("\n"))
         assert(isinstance(self.wget.show(), type("")))
         assert(self.wget.show().endswith("\n"))
-        assert('wget' in self.wget.show())
+        assert('tester' in self.wget.show())
 
     def test_update(self):
         """ Update data """

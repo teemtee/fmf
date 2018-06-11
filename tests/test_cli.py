@@ -4,7 +4,9 @@ from __future__ import unicode_literals, absolute_import
 
 import os
 import sys
+import pytest
 import fmf.cli
+import fmf.utils as utils
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
@@ -16,10 +18,14 @@ class TestCommandLine(object):
 
     def test_smoke(self):
         """ Smoke test """
-        fmf.cli.main("")
         fmf.cli.main(WGET)
         fmf.cli.main(WGET + " --debug")
         fmf.cli.main(WGET + " --verbose")
+
+    def test_missing_root(self):
+        """ Missing root """
+        with pytest.raises(utils.FileError):
+            fmf.cli.main("")
 
     def test_output(self):
         """ There is some output """
@@ -53,20 +59,20 @@ class TestCommandLine(object):
         """ Filtering """
         output = fmf.cli.main(WGET +
             " --filter tags:Tier1 --filter tags:TierSecurity")
-        assert "wget/download/test" in output
+        assert "/download/test" in output
         output = fmf.cli.main(WGET +
             " --filter tags:Tier1 --filter tags:Wrong")
         assert "wget" not in output
         output = fmf.cli.main(WGET +
             " --filter 'tags: Tier[A-Z].*'")
-        assert "wget/download/test" in output
-        assert "wget/recursion" not in output
+        assert "/download/test" in output
+        assert "/recursion" not in output
 
     def test_key_content(self):
         """ Key content """
         output = fmf.cli.main(WGET + " --key depth")
-        assert "wget/recursion/deep" in output
-        assert "wget/download/test" not in output
+        assert "/recursion/deep" in output
+        assert "/download/test" not in output
 
     def test_format_basic(self):
         """ Custom format (basic) """
@@ -77,11 +83,11 @@ class TestCommandLine(object):
     def test_format_key(self):
         """ Custom format (find by key, check the name) """
         output = fmf.cli.main(WGET + " --key depth --format {0} --value name")
-        assert "wget/recursion/deep" in output
+        assert "/recursion/deep" in output
 
     def test_format_functions(self):
         """ Custom format (using python functions) """
         output = fmf.cli.main(
             WGET + " --key depth --format {0} --value os.path.basename(name)")
         assert "deep" in output
-        assert "wget/recursion" not in output
+        assert "/recursion" not in output

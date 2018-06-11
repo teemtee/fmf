@@ -37,6 +37,9 @@ LOG_ALL = 1
 class GeneralError(Exception):
     """ General error """
 
+class FormatError(GeneralError):
+    """ Metadata format error """
+
 class FileError(GeneralError):
     """ File reading error """
 
