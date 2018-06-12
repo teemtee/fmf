@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.4
+Version: 0.5
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -179,6 +179,18 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Tue Jun 12 2018 Petr Šplíchal <psplicha@redhat.com> 0.5-1
+- Add support for subcommands [fix #32]
+- Define metadata tree root [fix #26]
+- Enable regular expressions in --filter [fix #35]
+- Support merging dictionary values as well
+- Build Python 3 package for pip as well
+- Add more detailed logging for easier debugging
+- Correctly handle deep inheritance [fix #31]
+- Load all strings from YAML files as Unicode
+- Prevent data modification in filter [fix #30]
+- Fix inheritance of scattered files [fix #25]
+
 * Wed May 09 2018 Petr Šplíchal <psplicha@redhat.com> 0.4-1
 - Do not gzip the man page, fix the source link [BZ#1575645]
 
