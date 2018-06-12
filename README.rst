@@ -117,6 +117,9 @@ Utils
 
 Various utility options.
 
+--path PATHS
+    Path to the metadata tree (default: current directory)
+
 --verbose
     Print additional information standard error output
 
