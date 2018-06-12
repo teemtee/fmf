@@ -49,9 +49,9 @@ Show all test metadata (with 'test' attribute defined)::
 
     fmf show --key test
 
-Show metddata for all tree nodes (not only leaves)::
+Show metadata for all tree nodes (not only leaves)::
 
-    fmf show --key test --whole --brief
+    fmf show --key test --whole
 
 List all attributes for the ``/recursion`` tests::
 
@@ -130,7 +130,11 @@ available options.
 Install
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Install from the Copr repository::
+The fmf package is available in Fedora and EPEL::
+
+    dnf install fmf
+
+Install the latest version from the Copr repository::
 
     dnf copr enable psss/fmf
     dnf install fmf
