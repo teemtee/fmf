@@ -40,9 +40,9 @@ Source: https://github.com/psss/fmf/releases/download/%{version}/fmf-%{version}.
 
 # Main fmf package requires corresponding python module
 %if %{with py2executable}
-Requires: python2-%{name}
+Requires: python2-%{name} == %{version}-%{release}
 %else
-Requires: python%{python3_pkgversion}-%{name}
+Requires: python%{python3_pkgversion}-%{name} == %{version}-%{release}
 %endif
 
 %description
