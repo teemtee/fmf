@@ -83,7 +83,7 @@ Or integrated with test case metadata, e.g.
     test: runtest.sh
     time: 3 min
     
-    /requirements
+    /requirements:
         requirement: Various download options working correctly
         priority: low
         /get-file:

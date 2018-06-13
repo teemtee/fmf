@@ -203,8 +203,12 @@ class Tree(object):
                 continue
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
             log.info("Checking file {0}".format(fullpath))
-            with open(fullpath) as datafile:
-                data = yaml.load(datafile)
+            try:
+                with open(fullpath) as datafile:
+                    data = yaml.load(datafile)
+            except yaml.scanner.ScannerError as error:
+                    raise(utils.FileError("Failed to parse '{0}'\n{1}".format(
+                            fullpath, error)))
             log.data(pretty(data))
             # Handle main.fmf as data for self
             if filename == MAIN:
