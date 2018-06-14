@@ -189,7 +189,7 @@ class Tree(object):
         path = path.rstrip("/")
         log.info("Walking through directory {0}".format(
             os.path.abspath(path)))
-        dirpath, dirnames, filenames = list(os.walk(path))[0]
+        dirpath, dirnames, filenames = next(os.walk(path))
         # Investigate main.fmf as the first file (for correct inheritance)
         filenames = sorted(
             [filename for filename in filenames if filename.endswith(SUFFIX)])
