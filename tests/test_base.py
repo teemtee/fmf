@@ -4,8 +4,11 @@ from __future__ import unicode_literals, absolute_import
 
 import os
 import pytest
-from fmf.utils import FileError, MergeError
+import tempfile
+import fmf.utils as utils
+import fmf.cli
 from fmf.base import Tree
+from shutil import rmtree
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -31,8 +34,10 @@ class TestTree(object):
 
     def test_basic(self):
         """ No directory path given """
-        with pytest.raises(FileError):
+        with pytest.raises(utils.GeneralError):
             Tree("")
+        with pytest.raises(utils.GeneralError):
+            Tree(None)
 
     def test_hidden(self):
         """ Hidden files and directories """
@@ -75,7 +80,7 @@ class TestTree(object):
         assert(child.data['time'] == 15)
         assert(child.data['vars'] == dict(x=1, y=2))
         assert('time+' not in child.data)
-        with pytest.raises(MergeError):
+        with pytest.raises(utils.MergeError):
             child.data["time+"] = "string"
             child.inherit()
 
@@ -98,6 +103,21 @@ class TestTree(object):
         self.wget.update(None)
         assert(self.wget.data == data)
 
-    def test_find(self):
+    def test_find_node(self):
         """ Find node by name """
         assert(self.wget.find("non-existent") == None)
+
+    def test_find_root(self):
+        """ Find metadata tree root """
+        tree = Tree(os.path.join(EXAMPLES, "wget", "protocols"))
+        assert(tree.find("/download/test"))
+
+    def test_yaml_syntax_errors(self):
+        """ Handle YAML syntax errors """
+        path = tempfile.mkdtemp()
+        fmf.cli.main("fmf init", path)
+        with open(os.path.join(path, "main.fmf"), "w") as main:
+            main.write("missing\ncolon:")
+        with pytest.raises(utils.FileError):
+            tree = fmf.Tree(path)
+        rmtree(path)
