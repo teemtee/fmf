@@ -49,6 +49,11 @@ class Tree(object):
         explored or a dictionary with the values already prepared.
         """
 
+        # Bail out if no data and no parent given
+        if not data and not parent:
+            raise utils.GeneralError(
+                "No data or parent provided to initialize the tree.")
+
         # Initialize family relations, object data and source files
         self.parent = parent
         self.children = dict()
