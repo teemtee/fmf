@@ -112,35 +112,36 @@ class Tree(object):
 
     @classmethod
     def merge_semantics(cls, parent, recent):
-        data = copy.deepcopy(parent.data)
-        recent.sources = parent.sources + recent.sources
-        # Merge child data with parent data
-        for key, value in sorted(recent.data.items()):
-            # Handle attribute adding
-            if key.endswith('+'):
-                key = key.rstrip('+')
-                if key in data:
-                    # Use dict.update() for merging dictionaries
-                    if type(data[key]) == type(value) == dict:
-                        data[key].update(value)
-                        continue
-                    try:
-                        value = data[key] + value
-                    except TypeError as error:
-                        raise utils.MergeError(
-                            "MergeError: Key '{0}' in {1} ({2}).".format(
-                                key, recent.name, str(error)))
-            # And finally update the value
-            data[key] = value
-        recent.data = data
+        if parent is not None:
+            data = copy.deepcopy(parent.data)
+            recent.sources = parent.sources + recent.sources
+            # Merge child data with parent data
+            for key, value in sorted(recent.data.items()):
+                # Handle attribute adding
+                if key.endswith('+'):
+                    key = key.rstrip('+')
+                    if key in data:
+                        # Use dict.update() for merging dictionaries
+                        if type(data[key]) == type(value) == dict:
+                            data[key].update(value)
+                            continue
+                        try:
+                            value = data[key] + value
+                        except TypeError as error:
+                            raise utils.MergeError(
+                                "MergeError: Key '{0}' in {1} ({2}).".format(
+                                    key, recent.name, str(error)))
+                # And finally update the value
+                data[key] = value
+            recent.data = data
 
     def inherit(self):
         """ Apply inheritance and attribute merging """
         # preserve original values in data_origin item:
         if not self.data_origin:
             self.data_origin = self.data
-        if self.parent is not None:
-            Tree.merge_semantics(self.parent, self)
+
+        Tree.merge_semantics(self.parent, self)
         log.debug("Data for '{0}' inherited.".format(self))
         log.data(pretty(self.data))
         # Apply inheritance to all children
