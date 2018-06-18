@@ -61,6 +61,7 @@ class Tree(object):
         self.sources = list()
         self.root = None
         self.version = utils.VERSION
+        self.data_origin = dict()
 
         # Special handling for top parent
         if self.parent is None:
@@ -109,13 +110,13 @@ class Tree(object):
         except ValueError:
             raise utils.FormatError("Invalid version format")
 
-    def inherit(self):
-        """ Apply inheritance and attribute merging """
-        if self.parent is not None:
-            data = copy.deepcopy(self.parent.data)
-            self.sources = self.parent.sources + self.sources
+    @classmethod
+    def merge_semantics(cls, parent, recent):
+        if parent is not None:
+            data = copy.deepcopy(parent.data)
+            recent.sources = parent.sources + recent.sources
             # Merge child data with parent data
-            for key, value in sorted(self.data.items()):
+            for key, value in sorted(recent.data.items()):
                 # Handle attribute adding
                 if key.endswith('+'):
                     key = key.rstrip('+')
@@ -129,10 +130,18 @@ class Tree(object):
                         except TypeError as error:
                             raise utils.MergeError(
                                 "MergeError: Key '{0}' in {1} ({2}).".format(
-                                    key, self.name, str(error)))
+                                    key, recent.name, str(error)))
                 # And finally update the value
                 data[key] = value
-            self.data = data
+            recent.data = data
+
+    def inherit(self):
+        """ Apply inheritance and attribute merging """
+        # preserve original values in data_origin item:
+        if not self.data_origin:
+            self.data_origin = self.data
+
+        Tree.merge_semantics(self.parent, self)
         log.debug("Data for '{0}' inherited.".format(self))
         log.data(pretty(self.data))
         # Apply inheritance to all children
@@ -281,6 +290,7 @@ class Tree(object):
             data = self.data
             root = self.root
             sources = self.sources
+            data_origin = self.data_origin
             evaluated = []
             for value in values:
                 evaluated.append(eval(value))
