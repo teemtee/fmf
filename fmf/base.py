@@ -61,6 +61,7 @@ class Tree(object):
         self.sources = list()
         self.root = None
         self.version = utils.VERSION
+        self.data_origin = dict()
 
         # Special handling for top parent
         if self.parent is None:
@@ -111,6 +112,9 @@ class Tree(object):
 
     def inherit(self):
         """ Apply inheritance and attribute merging """
+        # preserve original values in data_origin item:
+        if not self.data_origin:
+            self.data_origin = self.data
         if self.parent is not None:
             data = copy.deepcopy(self.parent.data)
             self.sources = self.parent.sources + self.sources
@@ -281,6 +285,7 @@ class Tree(object):
             data = self.data
             root = self.root
             sources = self.sources
+            data_origin = self.data_origin
             evaluated = []
             for value in values:
                 evaluated.append(eval(value))
