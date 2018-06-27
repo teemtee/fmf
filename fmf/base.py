@@ -61,6 +61,7 @@ class Tree(object):
         self.sources = list()
         self.root = None
         self.version = utils.VERSION
+        self.original_data = dict()
 
         # Special handling for top parent
         if self.parent is None:
@@ -109,30 +110,41 @@ class Tree(object):
         except ValueError:
             raise utils.FormatError("Invalid version format")
 
+    def merge(self, parent=None):
+        """ Merge parent data """
+        # Check parent, append source files
+        if parent is None:
+            parent = self.parent
+        if parent is None:
+            return
+        self.sources = parent.sources + self.sources
+        # Merge child data with parent data
+        data = copy.deepcopy(parent.data)
+        for key, value in sorted(self.data.items()):
+            # Handle attribute adding
+            if key.endswith('+'):
+                key = key.rstrip('+')
+                if key in data:
+                    # Use dict.update() for merging dictionaries
+                    if type(data[key]) == type(value) == dict:
+                        data[key].update(value)
+                        continue
+                    try:
+                        value = data[key] + value
+                    except TypeError as error:
+                        raise utils.MergeError(
+                            "MergeError: Key '{0}' in {1} ({2}).".format(
+                                key, self.name, str(error)))
+            # And finally update the value
+            data[key] = value
+        self.data = data
+
     def inherit(self):
-        """ Apply inheritance and attribute merging """
-        if self.parent is not None:
-            data = copy.deepcopy(self.parent.data)
-            self.sources = self.parent.sources + self.sources
-            # Merge child data with parent data
-            for key, value in sorted(self.data.items()):
-                # Handle attribute adding
-                if key.endswith('+'):
-                    key = key.rstrip('+')
-                    if key in data:
-                        # Use dict.update() for merging dictionaries
-                        if type(data[key]) == type(value) == dict:
-                            data[key].update(value)
-                            continue
-                        try:
-                            value = data[key] + value
-                        except TypeError as error:
-                            raise utils.MergeError(
-                                "MergeError: Key '{0}' in {1} ({2}).".format(
-                                    key, self.name, str(error)))
-                # And finally update the value
-                data[key] = value
-            self.data = data
+        """ Apply inheritance """
+        # Preserve original data and merge parent
+        # (original data needed for custom inheritance extensions)
+        self.original_data = self.data
+        self.merge()
         log.debug("Data for '{0}' inherited.".format(self))
         log.data(pretty(self.data))
         # Apply inheritance to all children
