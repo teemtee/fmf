@@ -38,6 +38,8 @@ class TestTree(object):
             Tree("")
         with pytest.raises(utils.GeneralError):
             Tree(None)
+        with pytest.raises(utils.RootError):
+            Tree("/")
 
     def test_hidden(self):
         """ Hidden files and directories """

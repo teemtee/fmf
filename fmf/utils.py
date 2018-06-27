@@ -46,6 +46,9 @@ class FormatError(GeneralError):
 class FileError(GeneralError):
     """ File reading error """
 
+class RootError(FileError):
+    """ Metadata tree root missing """
+
 class FilterError(GeneralError):
     """ Missing data when filtering """
 

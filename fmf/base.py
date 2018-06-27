@@ -91,7 +91,7 @@ class Tree(object):
         try:
             while ".fmf" not in next(os.walk(root))[1]:
                 if root == "/":
-                    raise utils.FileError(
+                    raise utils.RootError(
                         "Unable to find tree root for '{0}'.".format(
                             os.path.abspath(path)))
                 root = os.path.abspath(os.path.join(root, os.pardir))
