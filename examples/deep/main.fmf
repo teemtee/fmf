@@ -8,3 +8,14 @@
 
 /one/two/three:
     key: value
+
+
+# Values from a deep dictionary can be retrieved easily using the
+# get() method which supports providing default values as well.
+# Example: tree.get(['hardware', 'memory', 'size'], default)
+
+hardware:
+    memory:
+        size: 8
+    network:
+        model: e1000

@@ -73,6 +73,14 @@ class TestTree(object):
         deep = Tree(EXAMPLES + "deep")
         assert len(deep.children) == 1
 
+    def test_deep_dictionary(self):
+        """ Get value from a deep dictionary """
+        deep = Tree(EXAMPLES + "deep")
+        assert deep.data['hardware']['memory']['size'] == 8
+        assert deep.get(['hardware', 'memory', 'size']) == 8
+        assert deep.get(['hardware', 'bad', 'size'], 12) == 12
+        assert deep.get('nonexistent', default=3) == 3
+
     def test_merge(self):
         """ Attribute merging """
         child = self.merge.find('/parent/child')
@@ -123,3 +131,4 @@ class TestTree(object):
         with pytest.raises(utils.FileError):
             tree = fmf.Tree(path)
         rmtree(path)
+

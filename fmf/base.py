@@ -174,11 +174,34 @@ class Tree(object):
         log.debug("Data for '{0}' updated.".format(self))
         log.data(pretty(self.data))
 
-    def get(self, name=None):
-        """ Get desired attribute """
+    def get(self, name=None, default=None):
+        """
+        Get attribute value or return default
+
+        Whole data dictionary is returned when no attribute provided.
+        Supports direct values retrieval from deep dictionaries as well.
+        Dictionary path should be provided as list. The following two
+        examples are equal:
+
+        tree.data['hardware']['memory']['size']
+        tree.get(['hardware', 'memory', 'size'])
+
+        However the latter approach will also correctly handle providing
+        default value when any of the dictionary keys does not exist.
+
+        """
+        # Return the whole dictionary if no attribute specified
         if name is None:
             return self.data
-        return self.data[name]
+        if not isinstance(name, list):
+            name = [name]
+        data = self.data
+        try:
+            for key in name:
+                data = data[key]
+        except KeyError:
+            return default
+        return data
 
     def child(self, name, data, source=None):
         """ Create or update child with given data """
