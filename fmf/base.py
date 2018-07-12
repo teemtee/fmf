@@ -396,6 +396,7 @@ class FMFGenerator(Tree):
                 log.info("writing to %s metadata: %s", os.path.join(dirpath, MAIN), node_dict)
                 with open(MAIN,"w") as fmf_file:
                     yaml.dump(node_dict, fmf_file, default_flow_style=False)
+        os.chdir(actualdir)
         super(FMFGenerator, self).grow(path=path)
 
     @classmethod
