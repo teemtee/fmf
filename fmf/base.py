@@ -257,9 +257,13 @@ class Tree(object):
             # Handle other *.fmf files as children
             else:
                 self.child(os.path.splitext(filename)[0], data, fullpath)
-        # Explore every child directory (ignore hidden)
+        # Explore every child directory (ignore hidden dirs and subtrees)
         for dirname in sorted(dirnames):
             if dirname.startswith("."):
+                continue
+            # Ignore metadata subtrees
+            if os.path.isdir(os.path.join(path, dirname, SUFFIX)):
+                log.debug("Ignoring metadata tree '{0}'.".format(dirname))
                 continue
             self.child(dirname, os.path.join(path, dirname))
         # Apply inheritance when all scattered data are gathered.

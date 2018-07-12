@@ -68,6 +68,11 @@ class TestTree(object):
         assert(grandson.data['nose'] == 'long')
         assert(grandson.data['hair'] == 'fair')
 
+    def test_subtrees(self):
+        """ Subtrees should be ignored """
+        child = Tree(EXAMPLES + "child")
+        assert child.find("/nobody") is None
+
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")
