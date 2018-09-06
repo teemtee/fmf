@@ -139,10 +139,14 @@ class Parser(object):
         # For each path create an .fmf directory and version file
         for path in self.options.paths or ["."]:
             root = os.path.abspath(os.path.join(path, ".fmf"))
-            if os.path.isdir(root):
-                raise utils.FileError(
-                    "Directory '{0}' already exists.".format(root))
-            os.makedirs(root)
+            if not os.path.isdir(root):
+                try:
+                    os.makedirs(root)
+                except OSError as error:
+                    if error.errno != errno.EEXIST:
+                        raise utils.FileError(
+                            "Failed to create directory '{0}'".format(root))
+
             with open(os.path.join(root, "version"), "w") as version:
                 version.write("{0}\n".format(utils.VERSION))
             print("Metadata tree '{0}' successfully initialized.".format(root))
