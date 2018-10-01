@@ -73,6 +73,12 @@ class TestTree(object):
         child = Tree(EXAMPLES + "child")
         assert child.find("/nobody") is None
 
+    def test_empty(self):
+        """ Empty structures should be ignored """
+        child = Tree(EXAMPLES + "empty")
+        assert child.find("/nothing") is None
+        assert child.find("/zero") is None
+
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")
