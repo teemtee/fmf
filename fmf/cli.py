@@ -3,7 +3,7 @@
 """
 This is command line interface for the Flexible Metadata Format.
 
-Available commands are:
+Available commands are::
 
     fmf ls      List identifiers of available objects
     fmf show    Show metadata of available objects
