@@ -266,6 +266,12 @@ class Tree(object):
                 log.debug("Ignoring metadata tree '{0}'.".format(dirname))
                 continue
             self.child(dirname, os.path.join(path, dirname))
+        # Remove empty children (ignore directories without metadata)
+        for name in list(self.children.keys()):
+            child = self.children[name]
+            if not child.data and not child.children:
+                del(self.children[name])
+                log.debug("Empty tree '{0}' removed.".format(child.name))
         # Apply inheritance when all scattered data are gathered.
         # This is done only once, from the top parent object.
         if self.parent is None:
