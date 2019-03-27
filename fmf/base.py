@@ -245,7 +245,7 @@ class Tree(object):
             log.info("Checking file {0}".format(fullpath))
             try:
                 with open(fullpath) as datafile:
-                    data = yaml.load(datafile)
+                    data = yaml.load(datafile, Loader=yaml.FullLoader)
             except yaml.scanner.ScannerError as error:
                     raise(utils.FileError("Failed to parse '{0}'\n{1}".format(
                             fullpath, error)))
