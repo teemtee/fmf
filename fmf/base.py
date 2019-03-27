@@ -287,7 +287,7 @@ class Tree(object):
 
     def find(self, name):
         """ Find node with given name """
-        for node in self.climb():
+        for node in self.climb(whole=True):
             if node.name == name:
                 return node
         return None

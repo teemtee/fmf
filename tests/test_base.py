@@ -127,6 +127,8 @@ class TestTree(object):
     def test_find_node(self):
         """ Find node by name """
         assert(self.wget.find("non-existent") == None)
+        protocols = self.wget.find('/protocols')
+        assert(isinstance(protocols, Tree))
 
     def test_find_root(self):
         """ Find metadata tree root """
