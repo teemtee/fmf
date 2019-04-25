@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.5
+Version: 0.6
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -179,6 +179,19 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Mon Oct 08 2018 Petr Šplíchal <psplicha@redhat.com> 0.6-1
+- Ignore directories with no metadata defined
+- Give a nice error when .fmf file exists [fix #37]
+- Ignore metadata subtrees [fix #43]
+- Support for direct deep dictionary value retrieval
+- Separate exception for missing tree root [fix #42]
+- Move data merging into a separate method [fix #41]
+- Ensure that data or parent are provided for Tree
+- Test coverage for yaml syntax and finding root
+- Do not walk through the whole directory hierarchy
+- Example typo, handle yaml parse errors [fix #38]
+- Require the same version of the rpm package
+
 * Tue Jun 12 2018 Petr Šplíchal <psplicha@redhat.com> 0.5-1
 - Add support for subcommands [fix #32]
 - Define metadata tree root [fix #26]

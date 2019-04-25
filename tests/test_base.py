@@ -68,6 +68,17 @@ class TestTree(object):
         assert(grandson.data['nose'] == 'long')
         assert(grandson.data['hair'] == 'fair')
 
+    def test_subtrees(self):
+        """ Subtrees should be ignored """
+        child = Tree(EXAMPLES + "child")
+        assert child.find("/nobody") is None
+
+    def test_empty(self):
+        """ Empty structures should be ignored """
+        child = Tree(EXAMPLES + "empty")
+        assert child.find("/nothing") is None
+        assert child.find("/zero") is None
+
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")
@@ -116,6 +127,8 @@ class TestTree(object):
     def test_find_node(self):
         """ Find node by name """
         assert(self.wget.find("non-existent") == None)
+        protocols = self.wget.find('/protocols')
+        assert(isinstance(protocols, Tree))
 
     def test_find_root(self):
         """ Find metadata tree root """

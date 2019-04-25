@@ -24,6 +24,6 @@ utils
 cli
 ---
 
-.. automodule:: did.cli
+.. automodule:: fmf.cli
     :members:
     :undoc-members:

@@ -168,7 +168,7 @@ Copr:
 http://copr.fedoraproject.org/coprs/psss/fmf
 
 PIP:
-https://pypi.python.org/pypi/fmf
+https://pypi.org/project/fmf/
 
 Travis:
 https://travis-ci.org/psss/fmf

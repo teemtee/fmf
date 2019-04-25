@@ -26,13 +26,11 @@ MAIN = "main" + SUFFIX
 
 # Load all strings from YAML files as unicode
 # https://stackoverflow.com/questions/2890146/
-from yaml import Loader, SafeLoader
+from yaml import FullLoader
 
 def construct_yaml_str(self, node):
     return self.construct_scalar(node)
-Loader.add_constructor(
-    'tag:yaml.org,2002:str', construct_yaml_str)
-SafeLoader.add_constructor(
+FullLoader.add_constructor(
     'tag:yaml.org,2002:str', construct_yaml_str)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -245,7 +243,7 @@ class Tree(object):
             log.info("Checking file {0}".format(fullpath))
             try:
                 with open(fullpath) as datafile:
-                    data = yaml.load(datafile)
+                    data = yaml.load(datafile, Loader=FullLoader)
             except yaml.scanner.ScannerError as error:
                     raise(utils.FileError("Failed to parse '{0}'\n{1}".format(
                             fullpath, error)))
@@ -257,11 +255,21 @@ class Tree(object):
             # Handle other *.fmf files as children
             else:
                 self.child(os.path.splitext(filename)[0], data, fullpath)
-        # Explore every child directory (ignore hidden)
+        # Explore every child directory (ignore hidden dirs and subtrees)
         for dirname in sorted(dirnames):
             if dirname.startswith("."):
                 continue
+            # Ignore metadata subtrees
+            if os.path.isdir(os.path.join(path, dirname, SUFFIX)):
+                log.debug("Ignoring metadata tree '{0}'.".format(dirname))
+                continue
             self.child(dirname, os.path.join(path, dirname))
+        # Remove empty children (ignore directories without metadata)
+        for name in list(self.children.keys()):
+            child = self.children[name]
+            if not child.data and not child.children:
+                del(self.children[name])
+                log.debug("Empty tree '{0}' removed.".format(child.name))
         # Apply inheritance when all scattered data are gathered.
         # This is done only once, from the top parent object.
         if self.parent is None:
@@ -277,7 +285,7 @@ class Tree(object):
 
     def find(self, name):
         """ Find node with given name """
-        for node in self.climb():
+        for node in self.climb(whole=True):
             if node.name == name:
                 return node
         return None
