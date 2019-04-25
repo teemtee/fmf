@@ -39,6 +39,8 @@ FullLoader.add_constructor(
 
 class Tree(object):
     """ Metadata Tree """
+    _plugin_name_prefix = "plugin"
+
     def __init__(self, data, name=None, parent=None):
         """
         Initialize metadata tree from directory path or data dictionary
@@ -46,7 +48,6 @@ class Tree(object):
         Data parameter can be either a string with directory path to be
         explored or a dictionary with the values already prepared.
         """
-
         # Bail out if no data and no parent given
         if not data and not parent:
             raise utils.GeneralError(
@@ -76,6 +77,11 @@ class Tree(object):
             self.update(data)
         else:
             self.grow(data)
+        # call all plugin functions if any for whole tree after it is constructed
+        for item in dir(self):
+            if item.startswith(self._plugin_name_prefix):
+                log.debug("Calling plugin method for tree: {}".format(item))
+                getattr(self, item)()
         log.debug("New tree '{0}' created.".format(self))
 
     def __unicode__(self):
