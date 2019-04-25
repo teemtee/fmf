@@ -48,6 +48,7 @@ class Tree(object):
         Data parameter can be either a string with directory path to be
         explored or a dictionary with the values already prepared.
         """
+
         # Bail out if no data and no parent given
         if not data and not parent:
             raise utils.GeneralError(
