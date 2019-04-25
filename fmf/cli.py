@@ -170,6 +170,10 @@ class Parser(object):
             if self.options.verbose:
                 utils.info("Checking {0} for metadata.".format(path))
             tree = self.TreeClass(path)
+            for item in dir(tree):
+                # call all plugin functions if any for tree
+                if item.startswith("plugin"):
+                    getattr(tree, item)()
             for node in tree.prune(
                     self.options.whole, self.options.keys, self.options.names,
                     self.options.filters):

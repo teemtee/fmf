@@ -26,7 +26,7 @@ class Tree(TreeOrigin):
                 if key.endswith('+'):
                     del node.data[key]
 
-    def references(self, datatrees, whole=False):
+    def plugin1(self, datatrees=None, whole=False):
         """
         Reference name resolver (eg. /a/b/c/d@.x.y or /a/b/c/@y will search data in .x.y or y nodes)
         there are used regular expressions (re.search) to match names
@@ -48,6 +48,8 @@ class Tree(TreeOrigin):
         :param datatrees: list of original trees with testcases to contain parent nodes
         :return: None
         """
+        if datatrees is None:
+            datatrees = [self]
         if not isinstance(datatrees, list):
             raise ValueError("datatrees argument has to be list of fmf trees")
         reference_nodes = self.prune(whole=whole, names=["@"])
