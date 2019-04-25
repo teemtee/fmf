@@ -1,4 +1,5 @@
 import logging
+from copy import deepcopy
 import re
 
 """
@@ -64,16 +65,23 @@ class Tree(TreeOrigin):
             # match same item
             reference_node = None
             for datatree in datatrees:
-                reference_node = datatree.search("[^@]%s" % ref_item_name)
+                reference_node = datatree.search("[^@]%s" % ref_item_name, whole=True)
                 if reference_node is not None:
                     break
             if not reference_node:
                 raise ValueError("Unable to find reference for node: %s via name search: %s" %
                                  (node.name, ref_item_name))
-            logger.debug("MERGING: %s @ %s from %s",
-                         node.name,
-                         reference_node.name,
-                         reference_node.root)
-            node.merge(parent=reference_node)
+            if not reference_node.children:
+                logger.debug("MERGING: %s from %s (root %s)",
+                             node.name,
+                             reference_node.name,
+                             reference_node.root)
+                node.merge(parent=reference_node)
+            else:
+                logger.debug("MERGING TREE: %s from %s (root %s)",
+                             node.name,
+                             reference_node.name,
+                             reference_node.root)
+                node.merge_tree(reference=reference_node)
 
         self.__remove_append_items(whole=whole)

@@ -9,3 +9,10 @@
 /inherited@dddd:
   hallo: world
   tags+: ["c"]
+
+/inherited/tree@a:
+  inside: value
+
+/romwget@recursion:
+  inside: value
+

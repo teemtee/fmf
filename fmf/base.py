@@ -221,6 +221,7 @@ class Tree(object):
         # Save source file
         if source is not None:
             self.children[name].sources.append(source)
+        return self.children[name]
 
     def grow(self, path):
         """
@@ -298,12 +299,19 @@ class Tree(object):
                 return node
         return None
 
-    def search(self, name):
+    def search(self, name, whole=False):
         """ Search node with given name based on regexp, basic method (find) uses equality"""
-        for node in self.climb():
+        for node in self.climb(whole=whole):
             if re.search(name, node.name):
                 return node
         return None
+
+    def merge_tree(self, reference):
+        self.merge(parent=reference)
+        for name, child in reference.children.items():
+            returnedchild = self.child(name=name, data=child.data)
+            returnedchild.sources += self.sources
+
 
     def prune(self, whole=False, keys=[], names=[], filters=[]):
         """ Filter tree nodes based on given criteria """

@@ -1,2 +1,6 @@
-x: 4
-fourth: True
+/leaf1:
+  x: 4
+  fourth: True
+
+/leaf2:
+  x: 5
