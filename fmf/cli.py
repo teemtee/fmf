@@ -156,16 +156,22 @@ class Parser(object):
         """ Show metadata for each path given """
         output = []
         if self.options.plugin:
-            if "." not in self.options.plugin:
-                plugin_name = "fmf.plugins." + self.options.plugin
+            plugin = self.options.plugin.split(":", 1)
+            if "." not in plugin[0]:
+                plugin_name = "fmf.plugins." + plugin[0]
             else:
-                plugin_name = self.options.plugin
+                plugin_name = plugin[0]
+            if len(plugin)>1:
+                plugin_option = plugin[1]
+            else:
+                plugin_option = None
             utils.info("Using plugin: {}".format(plugin_name))
             try:
                 module = importlib.import_module(plugin_name)
             except (NameError, ImportError):
                 raise utils.GeneralError("Unable to find python module plugin: {}".format(plugin_name))
             self.TreeClass = module.Tree
+            self.TreeClass._plugin_option = plugin_option
         for path in self.options.paths or ["."]:
             if self.options.verbose:
                 utils.info("Checking {0} for metadata.".format(path))

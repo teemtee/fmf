@@ -40,6 +40,7 @@ FullLoader.add_constructor(
 class Tree(object):
     """ Metadata Tree """
     _plugin_name_prefix = "plugin"
+    _plugin_option = None
 
     def __init__(self, data, name=None, parent=None):
         """
@@ -294,6 +295,13 @@ class Tree(object):
         """ Find node with given name """
         for node in self.climb(whole=True):
             if node.name == name:
+                return node
+        return None
+
+    def search(self, name):
+        """ Search node with given name based on regexp, basic method (find) uses equality"""
+        for node in self.climb():
+            if re.search(name, node.name):
                 return node
         return None
 

@@ -15,6 +15,7 @@ class Tree(TreeOrigin):
     FMF Extension. Allows to use references via @ to another items -> usefull for rulesets
     """
 
+
     def __remove_append_items(self, whole=False):
         """
         internal method, delete all append items (ends with +)
@@ -49,7 +50,10 @@ class Tree(TreeOrigin):
         :return: None
         """
         if datatrees is None:
-            datatrees = [self]
+            if self._plugin_option:
+                datatrees = [TreeOrigin(path) for path in self._plugin_option.split(":")]
+            else:
+                datatrees = [self]
         if not isinstance(datatrees, list):
             raise ValueError("datatrees argument has to be list of fmf trees")
         reference_nodes = self.prune(whole=whole, names=["@"])
@@ -73,10 +77,3 @@ class Tree(TreeOrigin):
             node.merge(parent=reference_node)
 
         self.__remove_append_items(whole=whole)
-
-    def search(self, name):
-        """ Search node with given name based on regexp, basic method (find) uses equality"""
-        for node in self.climb():
-            if re.search(name, node.name):
-                return node
-        return None
