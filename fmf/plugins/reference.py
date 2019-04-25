@@ -26,7 +26,7 @@ class Tree(TreeOrigin):
                 if key.endswith('+'):
                     del node.data[key]
 
-    def plugin1(self, datatrees=None, whole=False):
+    def pluginReferenceResolver(self, datatrees=None, whole=False):
         """
         Reference name resolver (eg. /a/b/c/d@.x.y or /a/b/c/@y will search data in .x.y or y nodes)
         there are used regular expressions (re.search) to match names
