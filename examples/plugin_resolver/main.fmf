@@ -13,6 +13,7 @@
 /inherited/tree@a:
   inside: value
 
-/romwget@recursion:
+/referencedget@protocols:
   inside: value
+  tags+: ["ref_inherited"]
 

@@ -1,5 +1,4 @@
 import logging
-from copy import deepcopy
 import re
 
 """
@@ -59,8 +58,11 @@ class Tree(TreeOrigin):
             raise ValueError("datatrees argument has to be list of fmf trees")
         reference_nodes = self.prune(whole=whole, names=["@"])
         for node in reference_nodes:
-            node.data = node.original_data
             ref_item_name = node.name.rsplit("@", 1)[1]
+            #if "/" in ref_item_name:
+            #    logger.debug("SKIP inter merging: %s", ref_item_name)
+            #    continue
+            node.data = node.original_data
             # match item what does not contain @ before name, otherwise it
             # match same item
             reference_node = None

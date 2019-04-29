@@ -309,8 +309,17 @@ class Tree(object):
     def merge_tree(self, reference):
         self.merge(parent=reference)
         for name, child in reference.children.items():
-            returnedchild = self.child(name=name, data=child.data)
-            returnedchild.sources += self.sources
+            self.children[name] = self.deepcopy(name, parent=self, reference=child)
+        self.inherit()
+
+    def deepcopy(self, name, parent=None, reference=None):
+        if not reference:
+            reference = self
+        output = Tree(data=copy.deepcopy(reference.original_data), name=name, parent=parent)
+        for name, child in reference.children.items():
+            new_child = self.deepcopy(name=name, parent=output, reference=child)
+            output.children[name] = new_child
+        return output
 
 
     def prune(self, whole=False, keys=[], names=[], filters=[]):
