@@ -337,7 +337,7 @@ class Tree(object):
         for key, value in sorted(self.data.items()):
             output += "\n{0}: ".format(utils.color(key, 'green'))
             if isinstance(value, type("")):
-                output += value
+                output += value.rstrip("\n")
             elif isinstance(value, list) and all(
                     [isinstance(item, type("")) for item in value]):
                 output += utils.listed(value)
