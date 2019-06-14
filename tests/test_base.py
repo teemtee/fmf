@@ -79,6 +79,11 @@ class TestTree(object):
         assert child.find("/nothing") is None
         assert child.find("/zero") is None
 
+    def test_none_key(self):
+        """ Handle None keys """
+        with pytest.raises(utils.FormatError):
+            tree = Tree({None: "weird key"})
+
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")

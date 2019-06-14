@@ -191,6 +191,9 @@ class Tree(object):
         if data is None:
             return
         for key, value in sorted(data.items()):
+            # Ensure there are no 'None' keys
+            if key is None:
+                raise utils.FormatError("Invalid key 'None'.")
             # Handle child attributes
             if key.startswith('/'):
                 name = key.lstrip('/')
@@ -280,7 +283,7 @@ class Tree(object):
             try:
                 with open(fullpath) as datafile:
                     data = yaml.load(datafile, Loader=FullLoader)
-            except yaml.scanner.ScannerError as error:
+            except yaml.error.YAMLError as error:
                     raise(utils.FileError("Failed to parse '{0}'\n{1}".format(
                             fullpath, error)))
             log.data(pretty(data))
