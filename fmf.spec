@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.6
+Version: 0.7
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -179,6 +179,14 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Fri Jun 14 2019 Petr Šplíchal <psplicha@redhat.com> 0.7-1
+- Better handle yaml errors [fix #50]
+- Support reducing attributes using the "-" suffix
+- Prevent extra new lines in the show() output
+- Adjust FullLoader to load all strings as unicode
+- Suppress yaml warnings by specifying the loader
+- Support Tree.find() for non-leaf nodes as well
+
 * Mon Oct 08 2018 Petr Šplíchal <psplicha@redhat.com> 0.6-1
 - Ignore directories with no metadata defined
 - Give a nice error when .fmf file exists [fix #37]
