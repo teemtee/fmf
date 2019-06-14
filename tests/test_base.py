@@ -92,17 +92,35 @@ class TestTree(object):
         assert deep.get(['hardware', 'bad', 'size'], 12) == 12
         assert deep.get('nonexistent', default=3) == 3
 
-    def test_merge(self):
-        """ Attribute merging """
-        child = self.merge.find('/parent/child')
+    def test_merge_plus(self):
+        """ Extending attributes using the '+' suffix """
+        child = self.merge.find('/parent/extended')
         assert('General' in child.data['description'])
         assert('Specific' in child.data['description'])
-        assert(child.data['tags'] == ['Tier1', 'Tier2'])
+        assert(child.data['tags'] == ['Tier1', 'Tier2', 'Tier3'])
         assert(child.data['time'] == 15)
-        assert(child.data['vars'] == dict(x=1, y=2))
+        assert(child.data['vars'] == dict(x=1, y=2, z=3))
+        assert(child.data['disabled'] == True)
         assert('time+' not in child.data)
         with pytest.raises(utils.MergeError):
             child.data["time+"] = "string"
+            child.inherit()
+
+    def test_merge_minus(self):
+        """ Reducing attributes using the '-' suffix """
+        child = self.merge.find('/parent/reduced')
+        assert('General' in child.data['description'])
+        assert('description' not in child.data['description'])
+        assert(child.data['tags'] == ['Tier1'])
+        assert(child.data['time'] == 5)
+        assert(child.data['vars'] == dict(x=1, y=2))
+        assert('time+' not in child.data)
+        with pytest.raises(utils.MergeError):
+            child.data["disabled-"] = True
+            child.inherit()
+        child.data.pop('disabled-')
+        with pytest.raises(utils.MergeError):
+            child.data["time-"] = "bad"
             child.inherit()
 
     def test_get(self):

@@ -1,14 +1,23 @@
 # Parent defines generic attribute data
 description: General description
-tags: [Tier1]
+tags: [Tier1, Tier2]
 time: 10
 vars:
     x: 1
+    y: 2
 
 # Child extends values instead of replacing them
-/child:
+/extended:
     description+: Specific description
-    tags+: [Tier2]
+    tags+: [Tier3]
     time+: 5
     vars+:
-        y: 2
+        z: 3
+    disabled+: true
+
+# Minus suffix removes or subtracts parent values
+/reduced:
+    description-: desc.*
+    tags-: [Tier2]
+    time-: 5
+    vars-: [z]

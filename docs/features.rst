@@ -70,8 +70,15 @@ Metadata is inherited from parent objects::
 
 This nicely prevents unnecessary duplication. Redefining an
 attribute in a child object will by default overwrite value
-inherited from the parent. It is also possible to use a "+"
-appended to the attribute name to add given value instead::
+inherited from the parent.
+
+
+Merging
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When inheriting values from the parent it is also possible to use
+special attribute suffixes to merge child value with parent data.
+Append a ``+`` sign to the attribute name to add given value::
 
     time: 1
     /download:
@@ -79,8 +86,21 @@ appended to the attribute name to add given value instead::
 
 This operation is possible only for attributes of the same type.
 Exception ``MergeError`` is raised if types are different. When
-the "+" operator is applied on dictionaries ``update()`` method is
+the ``+`` suffix is applied on dictionaries ``update()`` method is
 used to merge content of given dictionary instead of replacing it.
+
+In a similar way, appending a ``-`` sign will reduce or remove
+parent value from parent's attribute (which has to be defined)::
+
+    time-: 5
+    tags-: [Tier2]
+    desc-: details.*
+    vars-: [z]
+
+Numbers are subtracked, list items are removed from the parent
+attribute, matching regular expressions are replaced by an empty
+string. For dictionaries it's possible to provide list of keys
+which should be removed.
 
 
 Elasticity

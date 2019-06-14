@@ -108,6 +108,50 @@ class Tree(object):
         except ValueError:
             raise utils.FormatError("Invalid version format")
 
+    def _merge_plus(self, data, key, value):
+        """ Handle extending attributes using the '+' suffix """
+        # Nothing to do if key not in parent
+        if key not in data:
+            data[key] = value
+            return
+        # Use dict.update() for merging dictionaries
+        if type(data[key]) == type(value) == dict:
+            data[key].update(value)
+            return
+        # Attempt to apply the plus operator
+        try:
+            data[key] = data[key] + value
+        except TypeError as error:
+            raise utils.MergeError(
+                "MergeError: Key '{0}' in {1} ({2}).".format(
+                    key, self.name, str(error)))
+
+    def _merge_minus(self, data, key, value):
+        """ Handle reducing attributes using the '-' suffix """
+        # Cannot reduce attribute if key is not present in parent
+        if key not in data:
+            data[key] = value
+            raise utils.MergeError(
+                "MergeError: Key '{0}' in {1} (not inherited).".format(
+                    key, self.name))
+        # Subtract numbers
+        if type(data[key]) == type(value) in [int, float]:
+            data[key] = data[key] - value
+        # Replace matching regular expression with empty string
+        elif type(data[key]) == type(value) == type(""):
+            data[key] = re.sub(value, '', data[key])
+        # Remove given values from the parent list
+        elif type(data[key]) == type(value) == list:
+            data[key] = [item for item in data[key] if item not in value]
+        # Remove given key from the parent dictionary
+        elif type(data[key]) == dict and type(value) == list:
+            for item in value:
+                data[key].pop(item, None)
+        else:
+            raise utils.MergeError(
+                "MergeError: Key '{0}' in {1} (wrong type).".format(
+                    key, self.name))
+
     def merge(self, parent=None):
         """ Merge parent data """
         # Check parent, append source files
@@ -119,22 +163,14 @@ class Tree(object):
         # Merge child data with parent data
         data = copy.deepcopy(parent.data)
         for key, value in sorted(self.data.items()):
-            # Handle attribute adding
+            # Handle special attribute merging
             if key.endswith('+'):
-                key = key.rstrip('+')
-                if key in data:
-                    # Use dict.update() for merging dictionaries
-                    if type(data[key]) == type(value) == dict:
-                        data[key].update(value)
-                        continue
-                    try:
-                        value = data[key] + value
-                    except TypeError as error:
-                        raise utils.MergeError(
-                            "MergeError: Key '{0}' in {1} ({2}).".format(
-                                key, self.name, str(error)))
-            # And finally update the value
-            data[key] = value
+                self._merge_plus(data, key.rstrip('+'), value)
+            elif key.endswith('-'):
+                self._merge_minus(data, key.rstrip('-'), value)
+            # Otherwise just update the value
+            else:
+                data[key] = value
         self.data = data
 
     def inherit(self):
