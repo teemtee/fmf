@@ -483,6 +483,15 @@ class Coloring(object):
         return self._mode == COLOR_ON
 
 
+def afilter(filter, node):
+    locals().update(node.data)
+    try:
+        return eval(filter)
+    except NameError as e:
+        raise FilterError("Key is not defined in data: {}".format(e))
+    except KeyError as e:
+        raise FilterError("Internal key is not defined: {}".format(e))
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Default Logger
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
