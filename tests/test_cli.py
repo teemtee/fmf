@@ -125,3 +125,17 @@ class TestCommandLine(object):
         os.remove(version_path)
         with pytest.raises(utils.FormatError):
             fmf.cli.main("fmf ls", path)
+
+    def test_conditions(self):
+        """ Advanced filters via conditions """
+        CONDS = PATH + "/../examples/conditions"
+        output = fmf.cli.main("fmf ls --condition 'float(release)>=7'", CONDS)
+        assert len(output.splitlines()) == 3
+        output = fmf.cli.main("fmf ls --condition 'float(release)>7'", CONDS)
+        assert len(output.splitlines()) == 2
+        output = fmf.cli.main("""fmf show --condition "execute['how']=='dependency'" --format "comp: {}\n" --value "data['execute']['components']" """, CONDS)
+        assert len(output.splitlines()) == 1
+        assert "'apache'" in output
+        assert "'curl'" in output
+        assert "comp: " in output
+

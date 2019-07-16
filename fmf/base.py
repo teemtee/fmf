@@ -329,7 +329,7 @@ class Tree(object):
                 return node
         return None
 
-    def prune(self, whole=False, keys=[], names=[], filters=[]):
+    def prune(self, whole=False, keys=[], names=[], filters=[], conditions=[]):
         """ Filter tree nodes based on given criteria """
         for node in self.climb(whole):
             # Select only nodes with key content
@@ -343,6 +343,8 @@ class Tree(object):
             try:
                 if not all([utils.filter(filter, node.data, regexp=True)
                         for filter in filters]):
+                    continue
+                if not all([utils.afilter(filter, node) for filter in conditions]):
                     continue
             # Handle missing attribute as if filter failed
             except utils.FilterError:

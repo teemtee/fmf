@@ -85,6 +85,11 @@ class Parser(object):
             "--filter", dest="filters", action="append", default=[],
             help="Apply advanced filter (see 'pydoc fmf.filter')")
         group.add_argument(
+            "--condition", dest="conditions", action="append", default=[],
+            help="Apply advanced filter based on python logic system. "
+                 "You can use (eg: float(key)==7 or key='value') "
+                 "retyping, logical operands are supported, it is evaluated as bool value")
+        group.add_argument(
             "--whole", dest="whole", action="store_true",
             help="Consider the whole tree (leaves only by default)")
 
@@ -156,7 +161,7 @@ class Parser(object):
             tree = fmf.Tree(path)
             for node in tree.prune(
                     self.options.whole, self.options.keys, self.options.names,
-                    self.options.filters):
+                    self.options.filters, self.options.conditions):
                 if brief:
                     show = node.show(brief=True)
                 else:
