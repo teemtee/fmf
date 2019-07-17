@@ -24,6 +24,7 @@ import os.path
 import sys
 import shlex
 import argparse
+import importlib
 
 import fmf
 import fmf.utils as utils
@@ -35,6 +36,7 @@ import fmf.utils as utils
 
 class Parser(object):
     """ Command line options parser """
+    TreeClass = fmf.Tree
 
     def __init__(self, arguments=None, path=None):
         """ Prepare the parser. """
@@ -110,6 +112,9 @@ class Parser(object):
         group.add_argument(
             "--debug", action="store_true",
             help="Turn on debugging output, do not catch exceptions")
+        group.add_argument(
+            "--plugin", action="store",default="",
+            help="Enable selected plugin")
 
     def command_ls(self):
         """ List names """
@@ -150,10 +155,27 @@ class Parser(object):
     def show(self, brief=False):
         """ Show metadata for each path given """
         output = []
+        if self.options.plugin:
+            plugin = self.options.plugin.split(":", 1)
+            if "." not in plugin[0]:
+                plugin_name = "fmf.plugins." + plugin[0]
+            else:
+                plugin_name = plugin[0]
+            if len(plugin)>1:
+                plugin_option = plugin[1]
+            else:
+                plugin_option = None
+            utils.info("Using plugin: {}".format(plugin_name))
+            try:
+                module = importlib.import_module(plugin_name)
+            except (NameError, ImportError):
+                raise utils.GeneralError("Unable to find python module plugin: {}".format(plugin_name))
+            self.TreeClass = module.Tree
+            self.TreeClass._plugin_option = plugin_option
         for path in self.options.paths or ["."]:
             if self.options.verbose:
                 utils.info("Checking {0} for metadata.".format(path))
-            tree = fmf.Tree(path)
+            tree = self.TreeClass(path)
             for node in tree.prune(
                     self.options.whole, self.options.keys, self.options.names,
                     self.options.filters):
@@ -193,3 +215,6 @@ def main(arguments=None, path=None):
     """ Parse options, do what is requested """
     parser = Parser(arguments, path)
     return parser.output
+
+if __name__ == "__main__":
+    main()

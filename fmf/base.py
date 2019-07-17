@@ -39,6 +39,9 @@ FullLoader.add_constructor(
 
 class Tree(object):
     """ Metadata Tree """
+    _plugin_name_prefix = "plugin"
+    _plugin_option = None
+
     def __init__(self, data, name=None, parent=None):
         """
         Initialize metadata tree from directory path or data dictionary
@@ -76,6 +79,11 @@ class Tree(object):
             self.update(data)
         else:
             self.grow(data)
+        # call all plugin functions if any for whole tree after it is constructed
+        for item in dir(self):
+            if item.startswith(self._plugin_name_prefix):
+                log.debug("Calling plugin method for tree: {}".format(item))
+                getattr(self, item)()
         log.debug("New tree '{0}' created.".format(self))
 
     def __unicode__(self):
@@ -252,6 +260,7 @@ class Tree(object):
         # Save source file
         if source is not None:
             self.children[name].sources.append(source)
+        return self.children[name]
 
     def grow(self, path):
         """
@@ -328,6 +337,29 @@ class Tree(object):
             if node.name == name:
                 return node
         return None
+
+    def search(self, name, whole=False):
+        """ Search node with given name based on regexp, basic method (find) uses equality"""
+        for node in self.climb(whole=whole):
+            if re.search(name, node.name):
+                return node
+        return None
+
+    def merge_tree(self, reference):
+        self.merge(parent=reference)
+        for name, child in reference.children.items():
+            self.children[name] = self.deepcopy(name, parent=self, reference=child)
+        self.inherit()
+
+    def deepcopy(self, name, parent=None, reference=None):
+        if not reference:
+            reference = self
+        output = Tree(data=copy.deepcopy(reference.original_data), name=name, parent=parent)
+        for name, child in reference.children.items():
+            new_child = self.deepcopy(name=name, parent=output, reference=child)
+            output.children[name] = new_child
+        return output
+
 
     def prune(self, whole=False, keys=[], names=[], filters=[]):
         """ Filter tree nodes based on given criteria """

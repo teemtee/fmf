@@ -1,0 +1,19 @@
+/a/b/c:
+   x: 1
+   first: True
+
+/d/dddd:
+   y: 1
+   filtered: asd
+   tags+: ["a", "b"]
+/inherited@dddd:
+  hallo: world
+  tags+: ["c"]
+
+/inherited/tree@a:
+  inside: value
+
+/referencedget@protocols:
+  inside: value
+  tags+: ["ref_inherited"]
+
