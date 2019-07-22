@@ -86,9 +86,8 @@ class Parser(object):
             help="Apply advanced filter (see 'pydoc fmf.filter')")
         group.add_argument(
             "--condition", dest="conditions", action="append", default=[],
-            help="Apply advanced filter based on python logic system. "
-                 "You can use (eg: float(key)==7 or key='value') "
-                 "retyping, logical operands are supported, it is evaluated as bool value")
+            metavar="EXPR",
+            help="Use arbitrary Python expression for filtering")
         group.add_argument(
             "--whole", dest="whole", action="store_true",
             help="Consider the whole tree (leaves only by default)")

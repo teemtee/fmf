@@ -339,12 +339,13 @@ class Tree(object):
             if names and not any(
                     [re.search(name, node.name) for name in names]):
                 continue
-            # Apply advanced filters if given
+            # Apply filters and conditions if given
             try:
                 if not all([utils.filter(filter, node.data, regexp=True)
                         for filter in filters]):
                     continue
-                if not all([utils.afilter(filter, node) for filter in conditions]):
+                if not all([utils.evaluate(condition, node.data)
+                        for condition in conditions]):
                     continue
             # Handle missing attribute as if filter failed
             except utils.FilterError:

@@ -1,15 +1,15 @@
 release: 7.0
 tags: [default]
-/top:
-  /relevant_everywhere:
-    tags+: [easy]
-  /rhel7:
-    release: 7.1
-    execute:
-      how: dependency
-      components:
-        - curl
-        - apache
-  /rhel8:
-    release: 8.0
 
+/top:
+    /relevant_everywhere:
+        tags+: [easy]
+    /rhel7:
+        release: 7.1
+        execute:
+            how: dependency
+            components:
+                - curl
+                - apache
+    /rhel8:
+        release: 8.0

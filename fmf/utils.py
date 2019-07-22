@@ -147,6 +147,22 @@ def info(message, newline=True):
 #  Filtering
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def evaluate(expression, data):
+    """
+    Evaluate arbitrary Python expression against given data
+
+    Expects data dictionary which will be used to populate local
+    namespace. Used to provide flexible conditions for filtering.
+    """
+    locals().update(data)
+    try:
+        return eval(expression)
+    except NameError as error:
+        raise FilterError("Key is not defined in data: {}".format(error))
+    except KeyError as error:
+        raise FilterError("Internal key is not defined: {}".format(error))
+
+
 def filter(filter, data, sensitive=True, regexp=False):
     """
     Return true if provided filter matches given dictionary of values
@@ -482,15 +498,6 @@ class Coloring(object):
             return sys.stdout.isatty()
         return self._mode == COLOR_ON
 
-
-def afilter(filter, node):
-    locals().update(node.data)
-    try:
-        return eval(filter)
-    except NameError as e:
-        raise FilterError("Key is not defined in data: {}".format(e))
-    except KeyError as e:
-        raise FilterError("Internal key is not defined: {}".format(e))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Default Logger

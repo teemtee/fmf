@@ -128,14 +128,17 @@ class TestCommandLine(object):
 
     def test_conditions(self):
         """ Advanced filters via conditions """
-        CONDS = PATH + "/../examples/conditions"
-        output = fmf.cli.main("fmf ls --condition 'float(release)>=7'", CONDS)
+        path = PATH + "/../examples/conditions"
+        # Compare numbers
+        output = fmf.cli.main("fmf ls --condition 'float(release) >= 7'", path)
         assert len(output.splitlines()) == 3
-        output = fmf.cli.main("fmf ls --condition 'float(release)>7'", CONDS)
+        output = fmf.cli.main("fmf ls --condition 'float(release) > 7'", path)
         assert len(output.splitlines()) == 2
-        output = fmf.cli.main("""fmf show --condition "execute['how']=='dependency'" --format "comp: {}\n" --value "data['execute']['components']" """, CONDS)
-        assert len(output.splitlines()) == 1
-        assert "'apache'" in output
-        assert "'curl'" in output
-        assert "comp: " in output
-
+        # Access a dictionary key
+        output = fmf.cli.main(
+            "fmf ls --condition \"execute['how'] == 'dependency'\"", path)
+        assert output.strip() == "/top/rhel7"
+        # Wrong key means unsatisfied condition
+        output = fmf.cli.main(
+            "fmf ls --condition \"execute['wrong key'] == 0\"", path)
+        assert output == ''

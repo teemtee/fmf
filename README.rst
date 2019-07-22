@@ -66,6 +66,11 @@ brief summary of what was found::
 
     fmf show --key test --filter tags:Tier1 --verbose
 
+Use arbitrary Python expressions to access deeper objects and
+create more complex conditions::
+
+    fmf show --condition "execute['how'] == 'shell'"
+
 Initialize a new metadata tree in the current directory::
 
     fmf init
@@ -92,6 +97,9 @@ Limit which metadata should be listed.
 
 --filter=FLTRS
     Apply advanced filter when selecting objects
+
+--condition=EXPR
+    Use arbitrary Python expression for filtering
 
 --whole
     Consider the whole tree (leaves only by default)
