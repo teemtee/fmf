@@ -147,7 +147,7 @@ def info(message, newline=True):
 #  Filtering
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def evaluate(expression, data):
+def evaluate(expression, data, _node=None):
     """
     Evaluate arbitrary Python expression against given data
 

@@ -349,7 +349,7 @@ class Tree(object):
                 if not all([utils.filter(filter, node.data, regexp=True)
                         for filter in filters]):
                     continue
-                if not all([utils.evaluate(condition, node.data)
+                if not all([utils.evaluate(condition, node.data, node)
                         for condition in conditions]):
                     continue
             # Handle missing attribute as if filter failed
