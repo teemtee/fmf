@@ -24,13 +24,18 @@ MAIN = "main" + SUFFIX
 #  YAML
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Handle both older and newer yaml loader
+# https://msg.pyyaml.org/load
+try:
+    from yaml import FullLoader as YamlLoader
+except ImportError: # pragma: no cover
+    from yaml import SafeLoader as YamlLoader
+
 # Load all strings from YAML files as unicode
 # https://stackoverflow.com/questions/2890146/
-from yaml import FullLoader
-
 def construct_yaml_str(self, node):
     return self.construct_scalar(node)
-FullLoader.add_constructor(
+YamlLoader.add_constructor(
     'tag:yaml.org,2002:str', construct_yaml_str)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -282,7 +287,7 @@ class Tree(object):
             log.info("Checking file {0}".format(fullpath))
             try:
                 with open(fullpath) as datafile:
-                    data = yaml.load(datafile, Loader=FullLoader)
+                    data = yaml.load(datafile, Loader=YamlLoader)
             except yaml.error.YAMLError as error:
                     raise(utils.FileError("Failed to parse '{0}'\n{1}".format(
                             fullpath, error)))
