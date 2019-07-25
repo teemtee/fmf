@@ -182,12 +182,12 @@ class Parser(object):
             prune_opts = [self.options.whole, self.options.keys, self.options.names, self.options.filters, self.options.conditions]
             if self.options.testset:
                 for node in tree.prune(*prune_opts):
-                    prune_opts_testset = list()
-                    prune_opts_testset.append(self.options.whole)
-                    prune_opts_testset.append(node.data.get("keys", []))
-                    prune_opts_testset.append(node.data.get("names", []))
-                    prune_opts_testset.append(node.data.get("fitlers", []))
-                    prune_opts_testset.append(node.data.get("conditions", []))
+                    prune_opts_testset = [self.options.whole,
+                                          node.data.get("keys", []),
+                                          node.data.get("names", []),
+                                          node.data.get("fitlers", []),
+                                          node.data.get("conditions", [])
+                                          ]
                     output += self._select(tree, brief, prune_opts_testset, self.options.formatting, self.options.values,
                                            debug=self.options.debug)
             else:
