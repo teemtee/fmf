@@ -91,6 +91,9 @@ class Parser(object):
         group.add_argument(
             "--whole", dest="whole", action="store_true",
             help="Consider the whole tree (leaves only by default)")
+        group.add_argument(
+            "--testset", dest="testset", action="store_true",
+            help="Use filtering via testsets defined in fmf files, you can use options in fmf node for filtering (names, keys, conditions, filters) expected are lists")
 
     def options_formatting(self):
         """ Formating options """
@@ -151,6 +154,24 @@ class Parser(object):
                 version.write("{0}\n".format(utils.VERSION))
             print("Metadata tree '{0}' successfully initialized.".format(root))
 
+    def _select(self, tree, brief, prune_opts, formatting, values, debug):
+        output = []
+        for node in tree.prune(*prune_opts):
+            if brief:
+                show = node.show(brief=True)
+            else:
+                show = node.show(
+                    brief=False,
+                    formatting=formatting,
+                    values=values)
+            # List source files when in debug mode
+            if debug:
+                for source in node.sources:
+                    show += utils.color("{0}\n".format(source), "blue")
+            if show is not None:
+                output.append(show)
+        return output
+
     def show(self, brief=False):
         """ Show metadata for each path given """
         output = []
@@ -158,22 +179,19 @@ class Parser(object):
             if self.options.verbose:
                 utils.info("Checking {0} for metadata.".format(path))
             tree = fmf.Tree(path)
-            for node in tree.prune(
-                    self.options.whole, self.options.keys, self.options.names,
-                    self.options.filters, self.options.conditions):
-                if brief:
-                    show = node.show(brief=True)
-                else:
-                    show = node.show(
-                        brief=False,
-                        formatting=self.options.formatting,
-                        values=self.options.values)
-                # List source files when in debug mode
-                if self.options.debug:
-                    for source in node.sources:
-                        show += utils.color("{0}\n".format(source), "blue")
-                if show is not None:
-                    output.append(show)
+            prune_opts = [self.options.whole, self.options.keys, self.options.names, self.options.filters, self.options.conditions]
+            if self.options.testset:
+                for node in tree.prune(*prune_opts):
+                    prune_opts_testset = list()
+                    prune_opts_testset.append(self.options.whole)
+                    prune_opts_testset.append(node.data.get("keys", []))
+                    prune_opts_testset.append(node.data.get("names", []))
+                    prune_opts_testset.append(node.data.get("fitlers", []))
+                    prune_opts_testset.append(node.data.get("conditions", []))
+                    output += self._select(tree, brief, prune_opts_testset, self.options.formatting, self.options.values,
+                                           debug=self.options.debug)
+            else:
+                output += self._select(tree, brief, prune_opts, self.options.formatting, self.options.values, debug=self.options.debug)
 
         # Print output and summary
         if brief or self.options.formatting:
