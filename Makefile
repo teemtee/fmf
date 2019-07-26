@@ -66,7 +66,7 @@ hooks:
 tags:
 	find fmf -name '*.py' | xargs ctags --python-kinds=-i
 clean:
-	rm -rf $(TMP) build dist fmf.egg-info .cache
+	rm -rf $(TMP) build dist fmf.egg-info .cache .pytest_cache
 	find . -type f -name "*.py[co]" -delete
 	find . -type f -name "*,cover" -delete
 	find . -type d -name "__pycache__" -delete
