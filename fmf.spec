@@ -183,6 +183,8 @@ export LANG=en_US.utf-8
 
 %changelog
 * Fri Jul 26 2019 Petr Šplíchal <psplicha@redhat.com> - 0.7-1
+- Support both old and new yaml loader
+- Add advanced python filtering [fix #55]
 - Drop explicit locale setting during build and install
 - Drop Python 2 subpackage on Fedora 30+ (#1647798)
 - Better handle yaml errors [fix #50]
