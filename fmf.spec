@@ -9,29 +9,28 @@ BuildArch: noarch
 URL: https://github.com/psss/fmf
 Source: https://github.com/psss/fmf/releases/download/%{version}/fmf-%{version}.tar.gz
 
-
 # Depending on the distro, we set some defaults.
 # Note that the bcond macros are named for the CLI option they create.
 # "%%bcond_without" means "ENABLE by default and create a --without option"
 
-# Fedora (py3 executable, py2 & py3 subpackage, auto build requires)
-%if 0%{?fedora}
-%bcond_without python2
+# Fedora 30+ or RHEL 8+ (py3 executable, py3 subpackage, auto build requires)
+%if 0%{?fedora} > 29 || 0%{?rhel} > 7
+%bcond_with python2
 %bcond_without python3
 %bcond_with py2executable
 %bcond_with oldreqs
 
-# RHEL6 and RHEL7 (py2 executable, py2 subpackage, manual build requires)
+# Older RHEL (py2 executable, py2 subpackage, manual build requires)
 %else
-%if 0%{?rhel} <= 7
+%if 0%{?rhel}
 %bcond_without python2
 %bcond_with python3
 %bcond_without py2executable
 %bcond_without oldreqs
 
-# RHEL8+ (py3 executable, py3 subpackage, auto build requires)
+# Older Fedora (py3 executable, py3 & py2 subpackage, auto build requires)
 %else
-%bcond_with python2
+%bcond_without python2
 %bcond_without python3
 %bcond_with py2executable
 %bcond_with oldreqs
@@ -112,7 +111,9 @@ This package contains the Python 3 module.
 
 
 %build
+%if 0%{?fedora} < 30 || 0%{?rhel}
 export LANG=en_US.utf-8 # for Python <= 3.6 and EPEL <= 7, but harmless
+%endif
 
 %if %{with python2}
 %py2_build
@@ -123,7 +124,9 @@ export LANG=en_US.utf-8 # for Python <= 3.6 and EPEL <= 7, but harmless
 
 
 %install
+%if 0%{?fedora} < 30 || 0%{?rhel}
 export LANG=en_US.utf-8
+%endif
 
 %if %{with python2}
 %py2_install
@@ -179,7 +182,9 @@ export LANG=en_US.utf-8
 
 
 %changelog
-* Fri Jun 14 2019 Petr Šplíchal <psplicha@redhat.com> 0.7-1
+* Fri Jul 26 2019 Petr Šplíchal <psplicha@redhat.com> - 0.7-1
+- Drop explicit locale setting during build and install
+- Drop Python 2 subpackage on Fedora 30+ (#1647798)
 - Better handle yaml errors [fix #50]
 - Support reducing attributes using the "-" suffix
 - Prevent extra new lines in the show() output
