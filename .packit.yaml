@@ -16,5 +16,6 @@ jobs:
 
 actions:
   post-upstream-clone:
+    - pip3 install docutils
     - make man
     - mv tmp/fmf* .
