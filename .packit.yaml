@@ -16,5 +16,4 @@ jobs:
 
 actions:
   post-upstream-clone:
-    - make man
-    - mv tmp/fmf* .
+    - bash -c "set -x; make man; mv tmp/fmf* ."
