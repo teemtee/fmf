@@ -150,7 +150,7 @@ Install the latest version from the Copr repository::
     dnf copr enable psss/fmf
     dnf install fmf
 
-or use PIP (sudo required if not in a virtualenv)::
+or use PIP::
 
     pip install fmf
 
