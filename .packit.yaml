@@ -15,5 +15,4 @@ jobs:
       - fedora-29-x86_64
 
 actions:
-  post-upstream-clone:
-    - bash -c "set -x; make man; mv tmp/fmf* ."
+  create-archive: make tarball
