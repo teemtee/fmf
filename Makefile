@@ -53,7 +53,7 @@ packages: rpm srpm
 
 # Packit
 packit-tarball: tarball
-	ln -snf $(TMP)/SOURCES/$(PACKAGE).tar.gz .
+	cp $(TMP)/SOURCES/$(PACKAGE).tar.gz .
 packit-path:
 	@printf "$(PACKAGE).tar.gz"
 packit-version:
