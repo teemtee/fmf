@@ -41,7 +41,7 @@ man: source
 source: clean
 	mkdir -p $(TMP)/SOURCES
 	mkdir -p $(TMP)/$(PACKAGE)
-	cp -a $(FILES) $(TMP)/$(PACKAGE)/
+	cp -a $(FILES) $(TMP)/$(PACKAGE)
 tarball: source man
 	cd $(TMP) && tar cfz SOURCES/$(PACKAGE).tar.gz $(PACKAGE)
 rpm: tarball
@@ -51,9 +51,9 @@ srpm: tarball
 packages: rpm srpm
 
 
-# Packit
+# Packit stuff
 packit-tarball: tarball
-	cp $(TMP)/SOURCES/$(PACKAGE).tar.gz .
+	mv $(TMP)/SOURCES/$(PACKAGE).tar.gz .
 packit-path:
 	@printf "$(PACKAGE).tar.gz"
 packit-version:
@@ -74,7 +74,7 @@ hooks:
 tags:
 	find fmf -name '*.py' | xargs ctags --python-kinds=-i
 clean:
-	rm -rf $(TMP) build dist fmf.egg-info .cache .pytest_cache
+	rm -rf $(TMP) build dist fmf.egg-info .cache .pytest_cache fmf*.tar.gz
 	find . -type f -name "*.py[co]" -delete
 	find . -type f -name "*,cover" -delete
 	find . -type d -name "__pycache__" -delete
