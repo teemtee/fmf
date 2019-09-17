@@ -41,9 +41,14 @@ man: source
 source: clean
 	mkdir -p $(TMP)/SOURCES
 	mkdir -p $(TMP)/$(PACKAGE)
-	cp -a $(FILES) $(TMP)/$(PACKAGE)
+	cp -a $(FILES) $(TMP)/$(PACKAGE)/
 tarball: source man
 	cd $(TMP) && tar cfz SOURCES/$(PACKAGE).tar.gz $(PACKAGE)
+	mv $(TMP)/SOURCES/$(PACKAGE).tar.gz .
+print-tarball-path:
+	@printf "$(PACKAGE).tar.gz"
+print-version:
+	@printf "$(VERSION)"
 rpm: tarball
 	rpmbuild --define '_topdir $(TMP)' -bb fmf.spec
 srpm: tarball
