@@ -7,7 +7,7 @@ License: GPLv2+
 BuildArch: noarch
 
 URL: https://github.com/psss/fmf
-Source: https://github.com/psss/fmf/releases/download/%{version}/fmf-%{version}.tar.gz
+Source0: https://github.com/psss/fmf/releases/download/%{version}/fmf-%{version}.tar.gz
 
 # Depending on the distro, we set some defaults.
 # Note that the bcond macros are named for the CLI option they create.
@@ -107,7 +107,7 @@ This package contains the Python 3 module.
 
 
 %prep
-%setup -q
+%autosetup
 
 
 %build

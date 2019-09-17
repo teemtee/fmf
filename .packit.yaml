@@ -5,6 +5,8 @@ synced_files:
 upstream_project_name: fmf
 downstream_package_name: fmf
 
+current_version_command: ["make", "print-version"]
+
 jobs:
 - job: copr_build
   trigger: pull_request
@@ -15,4 +17,6 @@ jobs:
       - fedora-29-x86_64
 
 actions:
-  create-archive: make tarball
+  create-archive:
+  - make tarball
+  - make print-tarball-path
