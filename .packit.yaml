@@ -5,7 +5,12 @@ synced_files:
 upstream_project_name: fmf
 downstream_package_name: fmf
 
-current_version_command: ["make", "print-version"]
+current_version_command: ["make", "packit-version"]
+
+actions:
+  create-archive:
+  - make packit-tarball
+  - make packit-path
 
 jobs:
 - job: copr_build
@@ -15,8 +20,3 @@ jobs:
       - fedora-rawhide-x86_64
       - fedora-30-x86_64
       - fedora-29-x86_64
-
-actions:
-  create-archive:
-  - make tarball
-  - make print-tarball-path
