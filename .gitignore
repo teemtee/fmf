@@ -1,1 +1,8 @@
-tmp/
+tmp
+build
+dist
+
+*.egg
+*.egg-info
+
+.pytest_cache
