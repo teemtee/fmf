@@ -1,0 +1,7 @@
+summary:
+    Basic smoke tests
+discover:
+    how: fmf
+    repository: https://github.com/psss/fmf
+execute:
+    how: beakerlib
