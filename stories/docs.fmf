@@ -1,0 +1,38 @@
+story:
+    As a command line user I want to have all essential
+    documentation at hand.
+
+/help:
+    requirement:
+        Main command and all its subcommands should provide --help
+    description:
+        All available options should be easily discoverable.
+    examples: |
+        fmf --help
+        fmf ls --help
+        fmf show --help
+
+/man:
+    requirement:
+        There should be an 'fmf' man page availabe in the package
+    description:
+        Man page should contain brief introduction about the tool
+        and a list of essential commands and options.
+    examples:
+        man fmf
+
+/examples:
+    requirement:
+        A couple of instructive examples should be included in the
+        package for easy first experimenting
+    description:
+        Examples should be stored under the /usr/share/doc
+        directory.
+    examples: |
+        cd /usr/share/doc/fmf/examples
+        ls
+        cd wget
+        fmf ls
+        fmf show
+        fmf show --key test
+        fmf show --key test --name protocols

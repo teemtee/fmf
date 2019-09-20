@@ -1,0 +1,28 @@
+story:
+    As a command line user I want to show only selected nodes.
+
+/name:
+    requirement: 'Choose nodes by name: '
+    /whole:
+        requirement+: Complete identifier
+        examples: fmf ls --name /protocols/https
+    /part:
+        requirement+: Identifier substring
+        examples: fmf ls --name protocols
+
+/filter:
+    requirement: 'Choose nodes by attribute filter: '
+    /simple:
+        requirement+: Single attribute
+        examples: fmf ls --filter component:wget
+    /regexp:
+        requirement+: Regular expression
+        examples: fmf ls --filter component:python-.*
+    /combination:
+        requirement+: Attribute combination
+        examples: fmf ls --filter 'component:wget & tier:1'
+
+/condition:
+    requirement: 'Choose nodes by arbitrary condition'
+    description: Any Python expression can be used.
+    examples: fmf ls --condition 'depth < 100'

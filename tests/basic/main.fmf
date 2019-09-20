@@ -1,0 +1,27 @@
+summary: 'Test basic options: '
+path: '/tests/basic'
+
+/ls:
+    summary+: List names of available nodes
+    coverage: /stories/explore/names
+    test+: ' ls'
+
+/show:
+    summary+: List nodes and their attributes
+    coverage: /stories/explore/attributes
+    test+: ' show'
+
+/name:
+    summary+: Select nodes by name
+    coverage: /stories/select/name/whole
+    test+: ' name'
+
+/filter:
+    summary+: Select nodes using advanced filter
+    coverage: /stories/select/filter/simple
+    test+: ' filter'
+
+/condition:
+    summary+: Select nodes using arbitrary expression
+    coverage: /stories/select/condition
+    test+: ' condition'

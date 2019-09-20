@@ -1,0 +1,11 @@
+story:
+    As a command line user I want to quickly explore what metadata
+    are present in the current tree.
+
+/names:
+    requirement: Show a brief list of object names
+    examples: fmf ls
+
+/attributes:
+    requirement: Display all nodes including their attributes
+    examples: fmf show
