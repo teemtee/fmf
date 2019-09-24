@@ -11,7 +11,7 @@ import fmf.utils as utils
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
-WGET = PATH + "/../examples/wget"
+WGET = PATH + "/../../examples/wget"
 
 
 class TestCommandLine(object):
@@ -128,7 +128,7 @@ class TestCommandLine(object):
 
     def test_conditions(self):
         """ Advanced filters via conditions """
-        path = PATH + "/../examples/conditions"
+        path = PATH + "/../../examples/conditions"
         # Compare numbers
         output = fmf.cli.main("fmf ls --condition 'float(release) >= 7'", path)
         assert len(output.splitlines()) == 3

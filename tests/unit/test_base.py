@@ -17,7 +17,7 @@ from shutil import rmtree
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
-EXAMPLES = PATH + "/../examples/"
+EXAMPLES = PATH + "/../../examples/"
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
