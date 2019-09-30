@@ -10,6 +10,7 @@ import copy
 import yaml
 
 import fmf.utils as utils
+from io import open
 from fmf.utils import log
 from pprint import pformat as pretty
 
@@ -286,7 +287,7 @@ class Tree(object):
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
             log.info("Checking file {0}".format(fullpath))
             try:
-                with open(fullpath) as datafile:
+                with open(fullpath, encoding='utf-8') as datafile:
                     data = yaml.load(datafile, Loader=YamlLoader)
             except yaml.error.YAMLError as error:
                     raise(utils.FileError("Failed to parse '{0}'\n{1}".format(
