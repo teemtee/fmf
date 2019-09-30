@@ -202,7 +202,7 @@ def filter(filter, data, sensitive=True, regexp=False):
         """ Check whether the value matches data """
         # E.g. value = 'A, B' or value = "C" or value = "-D"
         # If there are multiple values, at least one must match
-        for atom in re.split("\s*,\s*", value):
+        for atom in re.split(r"\s*,\s*", value):
             # Handle negative values (check the whole data for non-presence)
             if atom.startswith("-"):
                 atom = atom[1:]
@@ -237,10 +237,10 @@ def filter(filter, data, sensitive=True, regexp=False):
         # E.g. clause = 'tag: A, B & tag: C & tag: -D'
         # Split into individual literals by dimension
         literals = dict()
-        for literal in re.split("\s*&\s*", clause):
+        for literal in re.split(r"\s*&\s*", clause):
             # E.g. literal = 'tag: A, B'
             # Make sure the literal matches dimension:value format
-            matched = re.match("^(.*)\s*:\s*(.*)$", literal)
+            matched = re.match(r"^(.*)\s*:\s*(.*)$", literal)
             if not matched:
                 raise FilterError("Invalid filter '{0}'".format(literal))
             dimension, value = matched.groups()
@@ -280,7 +280,7 @@ def filter(filter, data, sensitive=True, regexp=False):
 
     # At least one clause must be true
     return any([check_clause(clause)
-            for clause in re.split("\s*\|\s*", filter)])
+            for clause in re.split(r"\s*\|\s*", filter)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Logging
