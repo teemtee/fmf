@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.7
+Version: 0.8
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -104,6 +104,16 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Mon Sep 30 2019 Petr Šplíchal <psplicha@redhat.com> - 0.8-1
+- Update spec to build Python 3 packages only
+- Move unit tests into a separate directory
+- Move testsets, include a super simple smoke test
+- Initial set of stories and tests
+- Enable beakerlib smoke test in the testing farm
+- Add a simple beakerlib test for command line help
+- Clean up the docs build folder directly
+- Enable packit
+
 * Fri Jul 26 2019 Petr Šplíchal <psplicha@redhat.com> - 0.7-1
 - Support both old and new yaml loader
 - Add advanced python filtering [fix #55]
