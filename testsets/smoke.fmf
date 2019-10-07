@@ -1,6 +1,4 @@
 summary:
     Just a basic smoke test
 execute:
-    how: shell
-    commands:
-        - fmf --help
+    script: fmf --help
