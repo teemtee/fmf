@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.8
+Version: 0.9
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -104,6 +104,12 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Wed Oct 09 2019 Petr Šplíchal <psplicha@redhat.com> - 0.9-1
+- Support custom conjunction like 'or' in listed()
+- Update smoke testset to the latest L2 spec
+- Fix build conditional default for englocale
+- Use raw strings for regular expression patterns
+
 * Mon Sep 30 2019 Petr Šplíchal <psplicha@redhat.com> - 0.8-1
 - Update spec to build Python 3 packages only
 - Move unit tests into a separate directory
