@@ -69,12 +69,13 @@ def pluralize(singular=None):
         plural = singular + "s"
     return plural
 
-def listed(items, singular=None, plural=None, max=None, quote=""):
+def listed(items, singular=None, plural=None, max=None, quote="", join="and"):
     """
     Convert an iterable into a nice, human readable list or description::
 
         listed(range(1)) .................... 0
         listed(range(2)) .................... 0 and 1
+        listed(range(3), join='or') ......... 0, 1 or 2
         listed(range(3), quote='"') ......... "0", "1" and "2"
         listed(range(4), max=3) ............. 0, 1, 2 and 1 more
         listed(range(5), 'number', max=3) ... 0, 1, 2 and 2 more numbers
@@ -116,7 +117,7 @@ def listed(items, singular=None, plural=None, max=None, quote=""):
     if len(items) < 2:
         return "".join(items)
     else:
-        return ", ".join(items[0:-2] + [" and ".join(items[-2:])])
+        return ", ".join(items[0:-2] + [' {} '.format(join).join(items[-2:])])
 
 
 def split(values, separator=re.compile("[ ,]+")):
