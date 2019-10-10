@@ -116,6 +116,13 @@ class TestCommandLine(object):
         version_path = os.path.join(path, ".fmf", "version")
         with open(version_path) as version:
             assert "1" in version.read()
+        # Permission denied
+        secret_path = os.path.join(path, 'denied')
+        os.makedirs(secret_path)
+        os.chmod(secret_path, 0o666)
+        with pytest.raises(utils.FileError):
+            fmf.cli.main('fmf init --path {}'.format(secret_path), path)
+        os.chmod(secret_path, 0o777)
         # Invalid version
         with open(version_path, "w") as version:
             version.write("bad")

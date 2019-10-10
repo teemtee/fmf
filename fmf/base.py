@@ -158,6 +158,22 @@ class Tree(object):
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
                     key, self.name))
 
+    @staticmethod
+    def init(path):
+        """ Create metadata tree root under given path """
+        root = os.path.abspath(os.path.join(path, ".fmf"))
+        if os.path.exists(root):
+            raise utils.FileError("{0} '{1}' already exists.".format(
+                "Directory" if os.path.isdir(root) else "File", root))
+        try:
+            os.makedirs(root)
+            with open(os.path.join(root, "version"), "w") as version:
+                version.write("{0}\n".format(utils.VERSION))
+        except OSError as error:
+            raise utils.FileError("Failed to create '{}': {}.".format(
+                root, error))
+        return root
+
     def merge(self, parent=None):
         """ Merge parent data """
         # Check parent, append source files
