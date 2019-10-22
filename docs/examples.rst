@@ -173,6 +173,7 @@ can be found at storage_setup__::
             /block_map_cache_size
 
 __ https://github.com/jkrysl/storage_setup
+
 You can find here not only how to use FMF for setup/cleanup
 and group tests based on that, but also installing requirements,
 passing values from metadata to tests themself and much more.
