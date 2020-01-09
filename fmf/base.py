@@ -418,3 +418,29 @@ class Tree(object):
                 output += pretty(value)
             output
         return output + "\n"
+
+    @staticmethod
+    def node(reference):
+        """
+        Return single test (of class Tree) as identified by the reference.
+        Raises FilterError if no such node exists.
+
+        Reference is a dict (https://github.com/psss/fmf/blob/master/docs/concept.rst#identifiers)
+        """
+        if 'url' in reference:
+            # remote git
+            reference_path = reference.get('path', '.')
+            if reference_path.startswith('/'):
+                raise utils.FilterError('absolute path "%s" specified' % reference_path)
+            destination = utils.checkout_remote(reference)
+            destination = os.path.join(destination, reference_path)
+        else:
+            # local files
+            destination = reference.get('path', '.')
+            if not destination.startswith('/') and destination != '.':
+                raise utils.FilterError('relative path "%s" specified' % destination)
+        found_node = Tree(destination).find(reference.get('name', '/'))
+        if found_node is None:
+            raise utils.FilterError("No test found for '{0}' reference".format(reference))
+        # FIXME Should be able to remove .cache if required
+        return found_node

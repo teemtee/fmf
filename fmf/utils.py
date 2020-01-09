@@ -8,7 +8,9 @@ import os
 import re
 import sys
 import copy
+import time
 import logging
+import subprocess
 from pprint import pformat as pretty
 
 
@@ -32,6 +34,9 @@ LOG_ALL = 1
 
 # Current metadata format version
 VERSION = 1
+
+# Cache validity
+CACHE_VALID_FOR = 1200 # in seconds
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Exceptions
@@ -499,6 +504,63 @@ class Coloring(object):
             return sys.stdout.isatty()
         return self._mode == COLOR_ON
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# checkout_remote
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def checkout_remote(remote_ref):
+    """
+    Checkouts remote_ref to the cache dir and returns local directory.
+
+    remote_ref: Dictionary following Remote reference proposal (#52 issue).
+                See base.Tree.node for description
+                Key 'name' is ignored.
+    """
+
+    default_for_rev = 'master'
+
+    destination = os.path.join(
+        os.path.join(os.path.expanduser(os.environ.get('XDG_CACHE_HOME', '~/.cache')), 'fmf'),
+        remote_ref['url'].replace('/', '_'),
+        )
+
+    def _run(command, cwd=None):
+        process = subprocess.Popen(
+            command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        # python3 returns byte stream
+        if hasattr(stdout, 'decode'):
+            stdout = stdout.decode('utf-8')
+            stderr = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            log.error("stdout: {0}".format(stdout))
+            log.error("stderr: {0}".format(stderr))
+            raise subprocess.CalledProcessError(
+                process.returncode, ' '.join(command))
+        return stdout, stderr
+
+
+    try:
+        # FIXME  - implement locking
+        if not os.path.isdir(destination):
+            base = os.path.dirname(destination)
+            if not os.path.isdir(base):
+                # python2 doesn't have `exists_ok=True`
+                os.makedirs(base)
+            assert os.path.isdir(base)
+            _run(['git', 'clone', remote_ref['url'], destination], cwd=base)
+        fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
+        # Fetch changes if we are too old
+        if not os.path.isfile(fetch_head_file) or (time.time() - os.path.getmtime(fetch_head_file) > CACHE_VALID_FOR):
+            _run(['git', 'fetch'], cwd=destination)
+
+        # Always checkout the reference
+        _run(['git', 'checkout', remote_ref.get('ref', default_for_rev)], cwd=destination)
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise GeneralError("{0}".format(error))
+
+    return destination
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Default Logger

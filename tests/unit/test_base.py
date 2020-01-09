@@ -183,3 +183,21 @@ class TestTree(object):
         assert tree.find('/inaccessible') is None
         os.chmod(inaccessible, 511)
         rmtree(directory)
+
+class TestRemote(object):
+    """ e2e getting testcase data using remote reference """
+    def test_get_remote_id(self):
+        remote_id = {
+            'url': 'https://github.com/psss/fmf.git',
+            'ref': '0.10',
+            'path': 'examples/deep',
+            'name': '/one/two/three'
+        }
+        # Values of test in 0.10 tag
+        expected_data = {'hardware': {'memory': {'size': 8}, 'network': {'model': 'e1000'}}, 'key': 'value'}
+        node = Tree.node(remote_id)
+        assert (node.get() == expected_data)
+
+        with pytest.raises(utils.FilterError):
+            remote_id['name'] = 'not_existing_name_'
+            node = Tree.node(remote_id)

@@ -147,3 +147,20 @@ class TestColoring(object):
     def test_color(self):
         utils.Coloring().set()
         text = utils.color("text", "lightblue", enabled=True)
+
+
+class TestCheckout_remote(object):
+    """ Remote reference from fmf github """
+    def test_get_remote_id(self):
+        remote_id = {
+            'url': 'https://github.com/psss/fmf.git',
+            'ref': '0.10',
+            'path': 'examples/deep',
+        }
+
+        destination = utils.checkout_remote(remote_id)
+        assert utils.os.path.isfile(utils.os.path.join(destination, 'fmf.spec'))
+
+        remote_id['url'] = 'BAH_'
+        with pytest.raises(utils.GeneralError):
+            utils.checkout_remote(remote_id)
