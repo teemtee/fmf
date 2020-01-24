@@ -8,6 +8,8 @@ import os
 import re
 import copy
 import yaml
+import shutil
+import glob
 
 import fmf.utils as utils
 from io import open
@@ -409,3 +411,91 @@ class Tree(object):
                 output += pretty(value)
             output
         return output + "\n"
+
+
+class FMFGenerator(Tree):
+    def __init__(self, data, name=None, parent=None, patterns=None):
+        self.patters = patterns or []
+        super(FMFGenerator, self).__init__(data, name=name, parent=parent)
+
+    def _initialize(self, path):
+        root = os.path.abspath(path)
+        fmf_init_dir = os.path.abspath(os.path.join(path, ".fmf"))
+        initialized = True
+        while ".fmf" not in next(os.walk(root))[1]:
+            if root == "/":
+                initialized = False
+                break
+            root = os.path.abspath(os.path.join(root, os.pardir))
+        if initialized:
+            raise ValueError("fmf data there are already initialized, generating aborted: %s" % root)
+        else:
+            log.debug("creating FMF init directory to path %s", fmf_init_dir)
+            os.makedirs(fmf_init_dir)
+            with open(os.path.join(fmf_init_dir, "version"), "w") as version:
+                version.write(str("1"))
+        super(FMFGenerator, self)._initialize(path)
+
+    def grow(self, path):
+        """
+        Method finally calls parent grow method, but before that, it creates main.fmf files for matched data.
+        It evals self.patters and creates data dict
+        eg.:
+        "test=glob.glob('*.sh')[0]", "tags=['sanity']", "description='somedesc'"
+
+        :param path: str path to fs
+        :return:
+        """
+        if path is None:
+            return
+        path = path.rstrip("/")
+        log.info("GENERATOR: Walking through directory {0}".format(
+            os.path.abspath(path)))
+        actualdir = os.getcwd()
+        for dirpath, dirs, files in os.walk(path):
+            os.chdir(dirpath)
+            node_dict = dict()
+            for pattern in self.patters:
+                value = None
+                key, str_value = pattern.split("=", 1)
+                try:
+                    value = eval(str_value)
+                except Exception:
+                    log.debug("Unable to eval %s in path %s", str_value, dirpath)
+                    value = None
+                node_dict[key] = value
+            if all(node_dict[x] for x in node_dict):
+                log.info("writing to %s metadata: %s", os.path.join(dirpath, MAIN), node_dict)
+                with open(MAIN,"w") as fmf_file:
+                    yaml.dump(node_dict, fmf_file, default_flow_style=False)
+        os.chdir(actualdir)
+        super(FMFGenerator, self).grow(path=path)
+
+    @classmethod
+    def delete(cls, path):
+        """
+        Deletes all FMF metadata for given path
+
+        :param path: str path to FS
+        :return: None
+        """
+        fmf_init_dir = os.path.abspath(os.path.join(path, ".fmf"))
+        if os.path.isdir(fmf_init_dir):
+            log.info("removing fmf root directory %s", fmf_init_dir)
+            shutil.rmtree(fmf_init_dir)
+        for dirpath, dirs, files in os.walk(path):
+            fmffiles = glob.glob(os.path.join(dirpath,"*.fmf"))
+            for fmffile in fmffiles:
+                log.info("removing fmf file: %s", fmffile)
+                os.remove(fmffile)
+
+
+test_path = 'examples/generator'
+
+
+def test_fmf_generator():
+    FMFGenerator(test_path, patterns=["test=glob.glob('*.sh')[0]", "tags=['sanity']", "description='somedesc'"])
+
+
+def test_fmf_generator_del():
+    FMFGenerator.delete(test_path)
