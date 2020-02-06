@@ -59,14 +59,22 @@ These choices have been made:
 * Yaml format easily readable for both machines and humans.
 
 
-Naming
+Files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A dedicated file name extension ``fmf`` as an abbreviation of
-Flexible Metadata Format to easily find all metadata files:
+Flexible Metadata Format is used to easily find all metadata
+files on the filesystem:
 
-* main.fmf
 * smoke.fmf
+* main.fmf
+
+Special file name ``main.fmf`` works similarly as ``index.html``.
+It can be used to define the top level data for the directory.
+
+
+Attributes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The format does not define attribute naming in any way. This is up
 to individual projects. The only exception is the special name
@@ -80,7 +88,7 @@ collisions between similar attributes. For example:
 * test_description, requirement_description
 
 
-Tree
+Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Metadata form a tree where inheritance is applied. The tree root
@@ -90,14 +98,17 @@ contains at least a ``version`` file with a single integer number
 defining version of the format.
 
 
-Objects
+Names
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Objects are identified by path from the root directory. Special
-file name ``main.fmf`` works similarly as ``index.html``:
+Individual tree nodes are identified by path from the metadata
+root directory plus optional hierarchy defined inside yaml files.
+For example, let's have the metadata root defined in the ``wget``
+directory. Below you can see node names for different files:
+
 
     +-------------------------------+-----------------------+
-    | Location                      | Identifier            |
+    | Location                      | Name                  |
     +===============================+=======================+
     | wget/main.fmf                 | /                     |
     +-------------------------------+-----------------------+
