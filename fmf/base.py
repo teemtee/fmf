@@ -20,6 +20,7 @@ from pprint import pformat as pretty
 
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
+IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  YAML
@@ -287,6 +288,9 @@ class Tree(object):
             return
         if path != '/':
             path = path.rstrip("/")
+        if path in IGNORED_DIRECTORIES: # pragma: no cover
+            log.debug("Ignoring '{0}' (special directory).".format(path))
+            return
         log.info("Walking through directory {0}".format(
             os.path.abspath(path)))
         try:
