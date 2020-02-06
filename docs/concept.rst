@@ -116,3 +116,64 @@ directory. Below you can see node names for different files:
     +-------------------------------+-----------------------+
     | wget/download/smoke.fmf       | /download/smoke       |
     +-------------------------------+-----------------------+
+
+
+Identifiers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Node names are unique across the metadata tree and thus can be
+used as identifiers for local referencing across the same tree. In
+order to reference remote fmf nodes from other trees a full ``fmf
+identifier`` is defined as a dictionary containing keys with the
+following meaning:
+
+url
+    Git repository containing the metadata tree. Use any format
+    acceptable by the ``git clone`` command. Optional, if no
+    repository url is provided, local files will be used.
+ref
+    Branch, tag or commit specifying the desired git revision.
+    This is used to perform a ``git checkout`` in the repository.
+    Optional, by default the ``master`` branch is used.
+path
+    Path to the metadata tree root. Should be relative to the git
+    repository root if ``url`` provided, absolute local filesystem
+    path otherwise. Optional, by default ``.`` is used.
+name
+    Node name as defined by the hierarchy in the metadata tree.
+    Optional, by default the parent node ``/`` is used, which
+    represents the whole metadata tree.
+
+Here's a full fmf identifier example::
+
+    url: https://github.com/psss/fmf
+    ref: 0.10
+    path: /examples/wget
+    name: /download/test
+
+Use default values for ``ref`` and ``path`` to reference the
+latest version of the smoke plan from the ``master`` branch::
+
+    url: https://github.com/psss/fmf
+    name: /plans/smoke
+
+If desired, it is also possible to write the identifier on a
+single line as supported by the ``yaml`` format::
+
+    {url: "https://github.com/psss/fmf", name: "/plans/smoke"}
+
+Let's freeze the stable test version by using a specific commit::
+
+    url: https://github.com/psss/fmf
+    ref: f24ef3f
+    name: /tests/basic/filter
+
+Reference a smoke plan from another metadata tree stored on the
+local filesystem::
+
+    path: /home/psss/git/tmt
+    name: /plans/smoke
+
+Local reference across the same metadata tree is also supported::
+
+    name: /plans/smoke
