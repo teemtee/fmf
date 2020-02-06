@@ -285,10 +285,15 @@ class Tree(object):
         """
         if path is None:
             return
-        path = path.rstrip("/")
+        if path != '/':
+            path = path.rstrip("/")
         log.info("Walking through directory {0}".format(
             os.path.abspath(path)))
-        dirpath, dirnames, filenames = next(os.walk(path))
+        try:
+            dirpath, dirnames, filenames = next(os.walk(path))
+        except StopIteration:
+            log.debug("Skipping '{0}' (not accessible).".format(path))
+            return
         # Investigate main.fmf as the first file (for correct inheritance)
         filenames = sorted(
             [filename for filename in filenames if filename.endswith(SUFFIX)])

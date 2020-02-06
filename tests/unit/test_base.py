@@ -168,3 +168,18 @@ class TestTree(object):
             tree = fmf.Tree(path)
         rmtree(path)
 
+    def test_inaccessible_directories(self):
+        """ Inaccessible directories should be silently ignored """
+        directory = tempfile.mkdtemp()
+        accessible = os.path.join(directory, 'accessible')
+        inaccessible = os.path.join(directory, 'inaccessible')
+        os.mkdir(accessible, 511)
+        os.mkdir(inaccessible, 000)
+        with open(os.path.join(accessible, 'main.fmf'), 'w') as main:
+            main.write('key: value\n')
+        Tree.init(directory)
+        tree = Tree(directory)
+        assert tree.find('/accessible').get('key') == 'value'
+        assert tree.find('/inaccessible') is None
+        os.chmod(inaccessible, 511)
+        rmtree(directory)
