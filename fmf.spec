@@ -87,7 +87,7 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 export LANG=en_US.utf-8
 %endif
 
-%{__python3} -m pytest -vv
+%{__python3} -m pytest -vv -m 'not web'
 
 
 %{!?_licensedir:%global license %%doc}

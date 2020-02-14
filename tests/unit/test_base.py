@@ -187,6 +187,7 @@ class TestTree(object):
 class TestRemote(object):
     """ Get tree node data using remote reference """
 
+    @pytest.mark.web
     def test_tree_node_remote(self):
         reference = {
             'url': 'https://github.com/psss/fmf.git',

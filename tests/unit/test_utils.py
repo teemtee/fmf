@@ -151,6 +151,7 @@ class TestColoring(object):
         text = utils.color("text", "lightblue", enabled=True)
 
 
+@pytest.mark.web
 class TestFetch(object):
     """ Remote reference from fmf github """
 
