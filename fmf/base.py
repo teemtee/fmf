@@ -422,25 +422,35 @@ class Tree(object):
     @staticmethod
     def node(reference):
         """
-        Return single test (of class Tree) as identified by the reference.
-        Raises FilterError if no such node exists.
+        Return Tree node referenced by the fmf identifier
 
-        Reference is a dict (https://github.com/psss/fmf/blob/master/docs/concept.rst#identifiers)
+        Keys supported in the reference:
+
+        url .... git repository url (optional)
+        ref .... branch, tag or commit ('master' by default)
+        path ... metadata tree root ('.' by default)
+        name ... tree node name ('/' by default)
+
+        See the documentation for the full fmf id specification:
+        https://fmf.readthedocs.io/en/latest/concept.html#identifiers
+        Raises ReferenceError if referenced node does not exist.
         """
+
+        # Fetch remote git repository
         if 'url' in reference:
-            # remote git
-            reference_path = reference.get('path', '.')
-            if reference_path.startswith('/'):
-                raise utils.FilterError('absolute path "%s" specified' % reference_path)
-            destination = utils.checkout_remote(reference)
-            destination = os.path.join(destination, reference_path)
+            path = reference.get('path', '.').lstrip('/')
+            repository = utils.fetch(
+                reference.get('url'), reference.get('ref', 'master'))
+            root = os.path.join(repository, path)
+        # Use local files
         else:
-            # local files
-            destination = reference.get('path', '.')
-            if not destination.startswith('/') and destination != '.':
-                raise utils.FilterError('relative path "%s" specified' % destination)
-        found_node = Tree(destination).find(reference.get('name', '/'))
+            root = reference.get('path', '.')
+            if not root.startswith('/') and root != '.':
+                raise utils.ReferenceError(
+                    'Relative path "%s" specified.' % root)
+        found_node = Tree(root).find(reference.get('name', '/'))
         if found_node is None:
-            raise utils.FilterError("No test found for '{0}' reference".format(reference))
+            raise utils.ReferenceError(
+                "No tree node found for '{0}' reference".format(reference))
         # FIXME Should be able to remove .cache if required
         return found_node

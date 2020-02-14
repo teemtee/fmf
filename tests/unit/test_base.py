@@ -185,19 +185,45 @@ class TestTree(object):
         rmtree(directory)
 
 class TestRemote(object):
-    """ e2e getting testcase data using remote reference """
-    def test_get_remote_id(self):
-        remote_id = {
+    """ Get tree node data using remote reference """
+
+    def test_tree_node_remote(self):
+        reference = {
             'url': 'https://github.com/psss/fmf.git',
             'ref': '0.10',
             'path': 'examples/deep',
-            'name': '/one/two/three'
-        }
+            'name': '/one/two/three',
+            }
+
         # Values of test in 0.10 tag
-        expected_data = {'hardware': {'memory': {'size': 8}, 'network': {'model': 'e1000'}}, 'key': 'value'}
-        node = Tree.node(remote_id)
+        expected_data = {
+            'hardware': {
+                'memory': {'size': 8},
+                'network': {'model': 'e1000'}},
+            'key': 'value'}
+
+        # Full identifier
+        node = Tree.node(reference)
         assert (node.get() == expected_data)
 
-        with pytest.raises(utils.FilterError):
-            remote_id['name'] = 'not_existing_name_'
-            node = Tree.node(remote_id)
+        # Default ref
+        reference.pop('ref')
+        node = Tree.node(reference)
+        assert (node.get() == expected_data)
+
+        # Raise exception for invalid tree nodes
+        with pytest.raises(utils.ReferenceError):
+            reference['name'] = 'not_existing_name_'
+            node = Tree.node(reference)
+
+    def test_tree_node_local(self):
+        reference = {
+            'path': EXAMPLES + 'wget',
+            'name': '/protocols/https',
+            }
+        node = Tree.node(reference)
+        assert node.get('time') == '1 min'
+
+    def test_tree_node_relative_path(self):
+        with pytest.raises(utils.ReferenceError):
+            Tree.node(dict(path='some/relative/path'))

@@ -35,8 +35,8 @@ LOG_ALL = 1
 # Current metadata format version
 VERSION = 1
 
-# Cache validity
-CACHE_VALID_FOR = 1200 # in seconds
+# Cache expiration in seconds
+CACHE_EXPIRATION = 1200
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Exceptions
@@ -59,6 +59,9 @@ class FilterError(GeneralError):
 
 class MergeError(GeneralError):
     """ Unable to merge data between parent and child """
+
+class ReferenceError(GeneralError):
+    """ Referenced tree node cannot be found """
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Utils
@@ -506,33 +509,39 @@ class Coloring(object):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# checkout_remote
+#  Fetch Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def checkout_remote(remote_ref):
+
+def fetch(url, ref='master'):
     """
-    Checkouts remote_ref to the cache dir and returns local directory.
+    Fetch remote git repository and return local directory
 
-    remote_ref: Dictionary following Remote reference proposal (#52 issue).
-                See base.Tree.node for description
-                Key 'name' is ignored.
+    Fetch git repository from provided url into a local cache
+    directory, checkout requested ref and return path to the repo.
     """
 
-    default_for_rev = 'master'
-
-    destination = os.path.join(
-        os.path.join(os.path.expanduser(os.environ.get('XDG_CACHE_HOME', '~/.cache')), 'fmf'),
-        remote_ref['url'].replace('/', '_'),
-        )
+    # Prepare the destination path and the cache directory
+    cache = os.path.expanduser(os.environ.get('XDG_CACHE_HOME', '~/.cache'))
+    fmf_cache = os.path.join(cache, 'fmf')
+    if not os.path.isdir(fmf_cache):
+        try:
+            os.makedirs(fmf_cache)
+        except OSError:
+            raise GeneralError(
+                "Failed to create cache directory '{0}'.".format(fmf_cache))
+    directory = url.replace('/', '_')
+    destination = os.path.join(fmf_cache, directory)
 
     def _run(command, cwd=None):
+        """ Run command, check exit code """
+        log.debug("Running command: '{0}'.".format(' '.join(command)))
         process = subprocess.Popen(
             command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
-        # python3 returns byte stream
+        # Python 3 returns byte stream
         if hasattr(stdout, 'decode'):
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
-
         if process.returncode != 0:
             log.error("stdout: {0}".format(stdout))
             log.error("stderr: {0}".format(stderr))
@@ -540,23 +549,21 @@ def checkout_remote(remote_ref):
                 process.returncode, ' '.join(command))
         return stdout, stderr
 
-
     try:
-        # FIXME  - implement locking
+        # FIXME Implement locking
+        # Clone the repository
         if not os.path.isdir(destination):
-            base = os.path.dirname(destination)
-            if not os.path.isdir(base):
-                # python2 doesn't have `exists_ok=True`
-                os.makedirs(base)
-            assert os.path.isdir(base)
-            _run(['git', 'clone', remote_ref['url'], destination], cwd=base)
-        fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
+            _run(['git', 'clone', url, destination], cwd=fmf_cache)
         # Fetch changes if we are too old
-        if not os.path.isfile(fetch_head_file) or (time.time() - os.path.getmtime(fetch_head_file) > CACHE_VALID_FOR):
+        fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
+        try:
+            age = time.time() - os.path.getmtime(fetch_head_file)
+        except OSError:
+            age = CACHE_EXPIRATION
+        if age >= CACHE_EXPIRATION:
             _run(['git', 'fetch'], cwd=destination)
-
         # Always checkout the reference
-        _run(['git', 'checkout', remote_ref.get('ref', default_for_rev)], cwd=destination)
+        _run(['git', 'checkout', ref], cwd=destination)
     except (OSError, subprocess.CalledProcessError) as error:
         raise GeneralError("{0}".format(error))
 

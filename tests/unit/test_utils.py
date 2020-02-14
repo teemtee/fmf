@@ -2,10 +2,12 @@
 
 from __future__ import unicode_literals, absolute_import
 
+import os
 import pytest
 import fmf.utils as utils
 from fmf.utils import filter, listed
 
+GIT_REPO = 'https://github.com/psss/fmf.git'
 
 class TestFilter(object):
     """ Function filter() """
@@ -149,18 +151,29 @@ class TestColoring(object):
         text = utils.color("text", "lightblue", enabled=True)
 
 
-class TestCheckout_remote(object):
+class TestFetch(object):
     """ Remote reference from fmf github """
-    def test_get_remote_id(self):
-        remote_id = {
-            'url': 'https://github.com/psss/fmf.git',
-            'ref': '0.10',
-            'path': 'examples/deep',
-        }
 
-        destination = utils.checkout_remote(remote_id)
-        assert utils.os.path.isfile(utils.os.path.join(destination, 'fmf.spec'))
+    def test_fetch_valid_id(self):
+        repo = utils.fetch(GIT_REPO, '0.10')
+        assert utils.os.path.isfile(utils.os.path.join(repo, 'fmf.spec'))
 
-        remote_id['url'] = 'BAH_'
+    def test_fetch_invalid_url(self):
         with pytest.raises(utils.GeneralError):
-            utils.checkout_remote(remote_id)
+            utils.fetch('invalid')
+
+    def test_fetch_invalid_ref(self):
+        with pytest.raises(utils.GeneralError):
+            utils.fetch(GIT_REPO, 'invalid')
+
+    def test_cache_expiration(self):
+        repo = utils.fetch(GIT_REPO)
+        fetch_head = (os.path.join(repo, '.git', 'FETCH_HEAD'))
+        os.remove(fetch_head)
+        repo = utils.fetch(GIT_REPO)
+        assert os.path.isfile(fetch_head)
+
+    def test_invalid_cache_directory(self):
+        with pytest.raises(utils.GeneralError):
+            os.environ.update(dict(XDG_CACHE_HOME='/etc'))
+            utils.fetch(GIT_REPO)
