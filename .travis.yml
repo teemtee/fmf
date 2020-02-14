@@ -4,7 +4,7 @@ python:
   - "3.6"
   - "3.7"
 before_install:
-  - "pip install -U pip setuptools virtualenv python-coveralls PyYAML"
+  - "pip install -U pip setuptools virtualenv coveralls PyYAML"
 script:
   - "coverage run --source=bin,fmf -m py.test $CAPTURE tests"
 after_success:
