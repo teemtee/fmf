@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.10
+Version: 0.11
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -105,6 +105,18 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Fri Feb 14 2020 Petr Šplíchal <psplicha@redhat.com> - 0.11-1
+- Add git to BuildRequires (now required by tests)
+- Use coveralls to report coverage results
+- Adjust Tree.node() implementation, extend tests
+- Get metadata for unique id [fix #67]
+- Use the fedora-all target in packit config (#72)
+- Define the full fmf identifier [fix #52]
+- A minor cleanup of the concept documentation
+- Always ignore special system directories
+- Filesystem root and inaccessible dirs [fix #70]
+- Rename the 'testsets' directory to 'plans'
+
 * Wed Oct 30 2019 Petr Šplíchal <psplicha@redhat.com> - 0.10-1
 - Mock is not needed for docs, fix missing new line
 - Provide a public static method Tree.init()
