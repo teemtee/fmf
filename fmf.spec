@@ -44,6 +44,7 @@ BuildRequires: python%{python3_pkgversion}-devel
 BuildRequires: python%{python3_pkgversion}-setuptools
 BuildRequires: python%{python3_pkgversion}-pytest
 BuildRequires: python%{python3_pkgversion}-PyYAML
+BuildRequires: git-core
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
 %if %{with oldreqs}
 Requires:       python%{python3_pkgversion}-PyYAML
