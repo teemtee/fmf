@@ -1,6 +1,6 @@
 Name: fmf
 Version: 0.11
-Release: 1%{?dist}
+Release: 2%{?dist}
 
 Summary: Flexible Metadata Format
 License: GPLv2+
@@ -15,9 +15,12 @@ Source0: https://github.com/psss/fmf/releases/download/%{version}/fmf-%{version}
 
 # Fedora or RHEL 8+
 %if 0%{?fedora} || 0%{?rhel} > 7
+%bcond_with python2
 %bcond_with oldreqs
 %bcond_with englocale
+# RHEL 7
 %else
+%bcond_without python2
 # The automatic runtime dependency generator doesn't exist yet
 %bcond_without oldreqs
 # The C.UTF-8 locale doesn't exist, Python defaults to C (ASCII)
@@ -38,6 +41,28 @@ This package contains the command line tool.
 %?python_enable_dependency_generator
 
 
+# Python 2
+%if %{with python2}
+%package -n     python2-%{name}
+Summary:        %{summary}
+BuildRequires: python2-devel
+BuildRequires: python2-setuptools
+BuildRequires: pytest
+BuildRequires: PyYAML
+%{?python_provide:%python_provide python2-%{name}}
+Requires:       PyYAML
+
+%description -n python2-%{name}
+The fmf Python module and command line tool implement a flexible
+format for defining metadata in plain text files which can be
+stored close to the source code. Thanks to hierarchical structure
+with support for inheritance and elasticity it provides an
+efficient way to organize data into well-sized text documents.
+This package contains the Python 2 module.
+%endif
+
+
+# Python 3
 %package -n     python%{python3_pkgversion}-%{name}
 Summary:        %{summary}
 BuildRequires: python%{python3_pkgversion}-devel
@@ -68,12 +93,20 @@ This package contains the Python 3 module.
 export LANG=en_US.utf-8
 %endif
 
+%if %{with python2}
+%py2_build
+%endif
+
 %py3_build
 
 
 %install
 %if %{with englocale}
 export LANG=en_US.utf-8
+%endif
+
+%if %{with python2}
+%py2_install
 %endif
 
 %py3_install
@@ -87,6 +120,10 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 export LANG=en_US.utf-8
 %endif
 
+%if %{with python2}
+%{__python2} -m pytest -vv -m 'not web'
+%endif
+
 %{__python3} -m pytest -vv -m 'not web'
 
 
@@ -98,6 +135,13 @@ export LANG=en_US.utf-8
 %doc README.rst examples
 %license LICENSE
 
+%if %{with python2}
+%files -n python2-%{name}
+%{python2_sitelib}/%{name}/
+%{python2_sitelib}/%{name}-*.egg-info
+%license LICENSE
+%endif
+
 %files -n python%{python3_pkgversion}-%{name}
 %{python3_sitelib}/%{name}/
 %{python3_sitelib}/%{name}-*.egg-info
@@ -105,6 +149,9 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Tue Mar 17 2020 Petr Šplíchal <psplicha@redhat.com> - 0.11-2
+- Enable back python2-fmf subpackage for RHEL7
+
 * Fri Feb 14 2020 Petr Šplíchal <psplicha@redhat.com> - 0.11-1
 - Add git to BuildRequires (now required by tests)
 - Use coveralls to report coverage results
