@@ -5,7 +5,7 @@ from __future__ import unicode_literals, absolute_import
 import os
 import pytest
 import fmf.utils as utils
-from fmf.utils import filter, listed
+from fmf.utils import filter, listed, run
 
 GIT_REPO = 'https://github.com/psss/fmf.git'
 
@@ -174,7 +174,22 @@ class TestFetch(object):
         repo = utils.fetch(GIT_REPO)
         assert os.path.isfile(fetch_head)
 
-    def test_invalid_cache_directory(self):
+    def test_invalid_cache_directory(self, monkeypatch):
         with pytest.raises(utils.GeneralError):
-            os.environ.update(dict(XDG_CACHE_HOME='/etc'))
+            monkeypatch.setenv("XDG_CACHE_HOME", "/etc")
             utils.fetch(GIT_REPO)
+
+    @pytest.mark.parametrize("ref", ["master", "0.10", "8566a39"])
+    def test_out_of_sync_ref(self, ref):
+        """ Solve Your branch is behind ... """
+        repo = utils.fetch(GIT_REPO, ref)
+        out, err = run(["git", "rev-parse", "HEAD"], repo)
+        old_ref = out
+        # move head one commit back, doesn't invalidates FETCH!
+        out, err = run(["git", "reset", "--hard", "HEAD^1"], repo)
+        out, err = run(["git", "rev-parse", "HEAD"], repo)
+        assert out != old_ref
+        # fetch again, it should move the head back to origin/master
+        repo = utils.fetch(GIT_REPO, ref)
+        out, err = run(["git", "rev-parse", "HEAD"],repo)
+        assert out == old_ref

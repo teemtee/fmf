@@ -545,8 +545,12 @@ def fetch(url, ref='master'):
             age = CACHE_EXPIRATION
         if age >= CACHE_EXPIRATION:
             run(['git', 'fetch'], cwd=destination)
-        # Always checkout the reference
-        run(['git', 'checkout', ref], cwd=destination)
+        # Checkout branch
+        run(['git', 'checkout', '-f', ref], cwd=destination)
+        # Reset to origin to get possible changes but no exit code check
+        # ref could be tag or commit where it is expected to fail
+        run(['git', 'reset', '--hard', "origin/{0}".format(ref)],
+            cwd=destination, check_exit_code=False)
     except (OSError, subprocess.CalledProcessError) as error:
         raise GeneralError("{0}".format(error))
 
@@ -566,6 +570,7 @@ def run(command, cwd=None, check_exit_code=True):
     :check_exit_code raise CalledProcessError if exit code is non-zero
     """
     log.debug("Running command: '{0}'.".format(' '.join(command)))
+
     process = subprocess.Popen(
         command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
@@ -575,9 +580,8 @@ def run(command, cwd=None, check_exit_code=True):
         stderr = stderr.decode('utf-8')
     log.debug("stdout: {0}".format(stdout))
     log.debug("stderr: {0}".format(stderr))
+    log.debug("exit_code: {0}".format(process.returncode))
     if check_exit_code and process.returncode != 0:
-        log.error("stdout: {0}".format(stdout))
-        log.error("stderr: {0}".format(stderr))
         raise subprocess.CalledProcessError(
             process.returncode, ' '.join(command))
     return stdout, stderr
