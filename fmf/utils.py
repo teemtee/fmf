@@ -532,28 +532,11 @@ def fetch(url, ref='master'):
     directory = url.replace('/', '_')
     destination = os.path.join(fmf_cache, directory)
 
-    def _run(command, cwd=None):
-        """ Run command, check exit code """
-        log.debug("Running command: '{0}'.".format(' '.join(command)))
-        process = subprocess.Popen(
-            command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        # Python 3 returns byte stream
-        if hasattr(stdout, 'decode'):
-            stdout = stdout.decode('utf-8')
-            stderr = stderr.decode('utf-8')
-        if process.returncode != 0:
-            log.error("stdout: {0}".format(stdout))
-            log.error("stderr: {0}".format(stderr))
-            raise subprocess.CalledProcessError(
-                process.returncode, ' '.join(command))
-        return stdout, stderr
-
     try:
         # FIXME Implement locking
         # Clone the repository
         if not os.path.isdir(destination):
-            _run(['git', 'clone', url, destination], cwd=fmf_cache)
+            run(['git', 'clone', url, destination], cwd=fmf_cache)
         # Fetch changes if we are too old
         fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
         try:
@@ -561,13 +544,43 @@ def fetch(url, ref='master'):
         except OSError:
             age = CACHE_EXPIRATION
         if age >= CACHE_EXPIRATION:
-            _run(['git', 'fetch'], cwd=destination)
+            run(['git', 'fetch'], cwd=destination)
         # Always checkout the reference
-        _run(['git', 'checkout', ref], cwd=destination)
+        run(['git', 'checkout', ref], cwd=destination)
     except (OSError, subprocess.CalledProcessError) as error:
         raise GeneralError("{0}".format(error))
 
     return destination
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Run command
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def run(command, cwd=None, check_exit_code=True):
+    """
+    Run command and return stdout,stderr touple
+
+    :command as list (name, arg1, arg2...)
+    :cwd Path to directory where to run the command
+    :check_exit_code raise CalledProcessError if exit code is non-zero
+    """
+    log.debug("Running command: '{0}'.".format(' '.join(command)))
+    process = subprocess.Popen(
+        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    # Python 3 returns byte stream
+    if hasattr(stdout, 'decode'):
+        stdout = stdout.decode('utf-8')
+        stderr = stderr.decode('utf-8')
+    log.debug("stdout: {0}".format(stdout))
+    log.debug("stderr: {0}".format(stderr))
+    if check_exit_code and process.returncode != 0:
+        log.error("stdout: {0}".format(stdout))
+        log.error("stderr: {0}".format(stderr))
+        raise subprocess.CalledProcessError(
+            process.returncode, ' '.join(command))
+    return stdout, stderr
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Default Logger
