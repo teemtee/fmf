@@ -5,27 +5,22 @@
 Let's have a look at a couple of real-life examples!
 
 
-Relevancy
+Context
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Test Case Relevancy can be naturaly integrated::
+You can easily adjust attribute values by Context::
 
-    description: Check basic download options
-    tags: [Tier2, TierSecurity]
-    relevancy:
-    - "distro < rhel-7: False"
-    - "arch = s390x: False"
+    enabled: true
+    adjust:
+        enable: false
+        when: distro = centos
+        because: Not supported here
 
-Note that, because of YAML parsing, relevancy rules have to be
-enclosed in quotes. Another option is to use text format::
+Note that this functionality reserves two attributes for its usage
+  - `when` listing context rules and
+  - `because` to store comment
 
-    description: Check basic download options
-    tags: [Tier2, TierSecurity]
-    relevancy: |
-        distro < rhel-7: False
-        arch = s390x: False
-
-Which seems a bit more clear.
+Name of the attribute which contains rules to be evaluated can be arbitrary (in the example `adjust` is used)
 
 
 Coverage
