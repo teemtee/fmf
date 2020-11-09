@@ -9,6 +9,7 @@ import re
 import copy
 import yaml
 
+import fmf.context
 import fmf.utils as utils
 from io import open
 from fmf.utils import log
@@ -83,6 +84,12 @@ class Tree(object):
             self.update(data)
         else:
             self.grow(data)
+
+        # Apply inheritance when all scattered data are gathered.
+        # This is done only once, from the top parent object.
+        if self.parent is None:
+            self.inherit()
+
         log.debug("New tree '{0}' created.".format(self))
 
     def __unicode__(self):
@@ -159,6 +166,18 @@ class Tree(object):
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
                     key, self.name))
 
+    def _merge_special(self, data, source):
+        """ Merge source dict into data, handle special suffixes """
+        for key, value in sorted(source.items()):
+            # Handle special attribute merging
+            if key.endswith('+'):
+                self._merge_plus(data, key.rstrip('+'), value)
+            elif key.endswith('-'):
+                self._merge_minus(data, key.rstrip('-'), value)
+            # Otherwise just update the value
+            else:
+                data[key] = value
+
     @staticmethod
     def init(path):
         """ Create metadata tree root under given path """
@@ -185,15 +204,7 @@ class Tree(object):
         self.sources = parent.sources + self.sources
         # Merge child data with parent data
         data = copy.deepcopy(parent.data)
-        for key, value in sorted(self.data.items()):
-            # Handle special attribute merging
-            if key.endswith('+'):
-                self._merge_plus(data, key.rstrip('+'), value)
-            elif key.endswith('-'):
-                self._merge_minus(data, key.rstrip('-'), value)
-            # Otherwise just update the value
-            else:
-                data[key] = value
+        self._merge_special(data, self.data)
         self.data = data
 
     def inherit(self):
@@ -233,6 +244,89 @@ class Tree(object):
                 self.data[key] = value
         log.debug("Data for '{0}' updated.".format(self))
         log.data(pretty(self.data))
+
+    def adjust(self, context, key='adjust', undecided='skip'):
+        """
+        Adjust tree data based on provided context and rules
+
+        The 'context' should be an instance of the fmf.context.Context
+        class describing the environment context. By default, the key
+        'adjust' of each node is inspected for possible rules that
+        should be applied. Provide 'key' to use a custom key instead.
+
+        Optional 'undecided' parameter can be used to specify what
+        should happen when a rule condition cannot be decided because
+        context dimension is not defined. By default, such rules are
+        skipped. In order to raise the fmf.context.CannotDecide
+        exception in such cases use undecided='raise'.
+        """
+
+        # Check context sanity
+        if not isinstance(context, fmf.context.Context):
+            raise utils.GeneralError(
+                "Invalid adjust context: '{}'.".format(type(context).__name__))
+
+        # Adjust rules should be a dictionary or a list of dictionaries
+        try:
+            rules = self.data.pop(key)
+            log.debug("Applying adjust rules for '{}'.".format(self))
+            log.data(rules)
+            if isinstance(rules, dict):
+                rules = [rules]
+            if not isinstance(rules, list):
+                raise utils.FormatError(
+                    "Invalid adjust rule format in '{}'. "
+                    "Should be a dictionary or a list of dictionaries, "
+                    "got '{}'.".format(self.name, type(rules).__name__))
+        except KeyError:
+            rules = []
+
+        # Check and apply each rule
+        for rule in rules:
+
+            # Rule must be a dictionary
+            if not isinstance(rule, dict):
+                raise utils.FormatError("Adjust rule should be a dictionary.")
+
+            # There must be a condition defined
+            try:
+                condition = rule.pop('when')
+            except KeyError:
+                raise utils.FormatError("No condition defined in adjust rule.")
+
+            # The optional 'continue' key should be a bool
+            continue_ = rule.pop('continue', False)
+            if not isinstance(continue_, bool):
+                raise utils.FormatError(
+                    "The 'continue' value should be bool, "
+                    "got '{}'.".format(continue_))
+
+            # The 'because' key is reserved for optional comments (ignored)
+            rule.pop('because', None)
+
+            # Apply remaining rule attributes if context matches
+            try:
+                if context.matches(condition):
+                    self._merge_special(self.data, rule)
+
+                    # First matching rule wins, skip the rest unless continue
+                    if not continue_:
+                        break
+            # Handle undecided rules as requested
+            except fmf.context.CannotDecide:
+                if undecided == 'skip':
+                    continue
+                elif undecided == 'raise':
+                    raise
+                else:
+                    raise utils.GeneralError(
+                        "Invalid value for the 'undecided' parameter. Should "
+                        "be 'skip' or 'raise', got '{}'.".format(undecided))
+
+        # Adjust all child nodes as well
+        for child in self.children.values():
+            child.adjust(context, key, undecided)
+
 
     def get(self, name=None, default=None):
         """
@@ -340,10 +434,6 @@ class Tree(object):
             if not child.data and not child.children:
                 del(self.children[name])
                 log.debug("Empty tree '{0}' removed.".format(child.name))
-        # Apply inheritance when all scattered data are gathered.
-        # This is done only once, from the top parent object.
-        if self.parent is None:
-            self.inherit()
 
     def climb(self, whole=False):
         """ Climb through the tree (iterate leaf/all nodes) """
