@@ -2,24 +2,26 @@
 import re
 
 """
-== Syntax of rules ==
+== Rule Syntax ==
 
 CONDITION ::= expression (bool expression)*
 bool ::= '&&' | '||'
 expression ::= dimension operator values
 dimension ::= [[:alnum:]]+
-operator ::= '==' | '!=' | '<' | '<=' | '>' | '>=' | '~==' | '~!=' | '~<' | '~<=' | '~>' | '~>=' | 'defined' | '!defined'
+operator ::= '==' | '!=' | '<' | '<=' | '>' | '>=' | '~==' | '~!=' |
+    '~<' | '~<=' | '~>' | '~>=' | 'defined' | '!defined'
 values ::= value (',' value)*
 value ::= [[:alnum:]]+
 
 Operators 'defined' and '!defined' do not have a right side.
 
-Check tests/unit/test_relevancy for Examples
+Check tests/unit/test_relevancy for Examples.
 
 == Values treated as version ==
 
-Each value is parsed into name + version parts (dash separated, similar to rpm nvr)
-If it isn't possible then whole value is stored as name part.
+Each value is parsed into name + version parts (dash separated, similar
+to rpm nvr). If it isn't possible then the whole value is stored as name
+part.
 
 Example:
 centos-8.3.0 -> name centos, version parts are 8, 3, 0
@@ -27,13 +29,13 @@ python3-3.8.5-5.fc32 -> name  python3, version parts are 3.8.5, 5.fc32
 
 == Missing dimension in expression ==
 
-Expression can use dimmension which is not defined.
-Return values of operations other than `(!)defined` are not specified and thus such expression is ignored.
+Expression can use dimension which is not defined. Return values of
+operations other than `(!)defined` are not specified and thus such
+expression is ignored.
 
-Condition with unspecified outcome (where none of expression can be evaluated) is marked as such and it is up to the caller
-to provide default behaviour
-
-
+Condition with unspecified outcome (where none of expression can be
+evaluated) is marked as such and it is up to the caller to provide
+default behaviour.
 """
 
 
@@ -83,17 +85,18 @@ class ContextValue(object):
 
         if minor_mode:
             if self._to_compare[0] != other._to_compare[0]:
-                raise CannotDecide("name parts differ")
-            # when both have major and at least one has minor version we treat that differently
+                raise CannotDecide("Name parts differ")
+            # When both have major and at least one has minor version we treat
+            # that differently
             if (
                 len(self._to_compare) > 1
                 and len(other._to_compare) > 1
                 and (len(self._to_compare) > 2 or len(other._to_compare) > 2)
             ):
                 if self._to_compare[1] != other._to_compare[1]:
-                    raise CannotDecide("major versions differ")
+                    raise CannotDecide("Major versions differ")
 
-        # name parts are same and we can compare
+        # Name parts are same and we can compare
         compared = 0
         for first, second in zip(self._to_compare, other._to_compare):
             compared = (first > second) - (first < second)
@@ -103,12 +106,19 @@ class ContextValue(object):
 
     @staticmethod
     def _split_to_version(text):
-        """Try to split text into name + version parts
+        """
+        Try to split text into name + version parts
 
         Examples:
-            centos-8.3.0 -> name centos, version parts are 8, 3, 0
-            python3-3.8.5-5.fc32 -> name  python3, version parts are 3,8,5, 5,fc32
-            x86_64 -> name x86_64, no version parts
+            centos-8.3.0
+                name: centos
+                version: 8, 3, 0
+            python3-3.8.5-5.fc32
+                name: python3
+                version: 3, 8, 5, 5, fc32
+            x86_64
+                name: x86_64
+                version: no version parts
 
         :param text: original value
 
@@ -122,7 +132,7 @@ class ContextValue(object):
 
 
 class Context(object):
-    ### Operators' definitions
+    # Operators' definitions
     def _op_defined(self, dimension_name, values):
         """ 'defined' operand """
         return dimension_name in self._dimensions
@@ -264,7 +274,7 @@ class Context(object):
         "~>": _op_minor_greater,
     }
 
-    # dimension operand values
+    # Triple expression: dimension operand values
     # [^=].* is necessary as .+ was able to match '= something'
     re_expression_triple = re.compile(
         r"(\w+)"
@@ -273,7 +283,7 @@ class Context(object):
         + r")\s*"
         + r"([^=].*)"
     )
-    # dimension operand
+    # Double expression: dimension operand
     re_expression_double = re.compile(
         r"(\w+)" + r"\s*(" + r"|".join(["defined", "!defined"]) + r")"
     )
@@ -288,19 +298,19 @@ class Context(object):
         """
         self._dimensions = {}
 
-        # initialized with rule
+        # Initialized with rule
         if args:
             if len(args) != 1:
                 raise InvalidContext()
             definition = Context.parse_rule(args[0])
-            # no ORs and at least one expression in AND
+            # No ORs and at least one expression in AND
             if len(definition) != 1 or not definition[0]:
                 raise InvalidContext()
             for dim, op, values in definition[0]:
                 if op != "==":
                     raise InvalidContext()
                 self._dimensions[dim] = set(values)
-        # initialized with dimension=value(s)
+        # Initialized with dimension=value(s)
         for dimension_name, values in kwargs.items():
             if not isinstance(values, list):
                 values = [values]
@@ -310,13 +320,13 @@ class Context(object):
 
     @staticmethod
     def parse_rule(rule):
-        """Parses rule into expressions
+        """
+        Parses rule into expressions
 
-        Expression is a tuple of dimension_name, operand_str, list of value objects
-
-        Parsed rule is nested list of expression from OR and AND operands.
-
-        Items of the first dimension are in OR relation. Items in the second dimension are in AND relation.
+        Expression is a tuple of dimension_name, operand_str, list of
+        value objects. Parsed rule is nested list of expression from OR
+        and AND operands. Items of the first dimension are in OR
+        relation. Items in the second dimension are in AND relation.
 
         expr_1 && expr_2 || expr_3 is returned as [[expr_1, expr_2], expr_3]
         expr_4 || expr_5 is returned as [[expr_4], [expr_5]]
@@ -328,7 +338,7 @@ class Context(object):
         :raises InvalidRule:  Syntax error in the rule
         """
         parsed_rule = []
-        # change '=' to '=='
+        # Change '=' to '=='
         rule = re.sub(r"(?<!=|!|~|<|>)=(?!=)", "==", rule)
         rule_parts = Context.split_rule_to_groups(rule)
         for and_group in rule_parts:
@@ -336,7 +346,8 @@ class Context(object):
             for part in and_group:
                 dimension, operand, raw_values = Context.split_expression(part)
                 if raw_values is not None:
-                    values = [Context.parse_value(value) for value in raw_values]
+                    values = [
+                        Context.parse_value(value) for value in raw_values]
                 else:
                     values = None
                 parsed_and_group.append((dimension, operand, values))
@@ -350,7 +361,8 @@ class Context(object):
 
     @staticmethod
     def split_rule_to_groups(rule):
-        """Split rule into nested lists, no real parsing
+        """
+        Split rule into nested lists, no real parsing
 
         expr0 && expr1 || expr2 is split into [[expr0, expr1], [expr2]]
 
@@ -374,20 +386,25 @@ class Context(object):
 
     @staticmethod
     def split_expression(expression):
-        """Split expression to dimension name, operand and values
+        """
+        Split expression to dimension name, operand and values
 
-        When operand doesn't have right side, None is returned instead of the list of values
+        When operand doesn't have right side, None is returned instead
+        of the list of values.
 
         :param expression: expression to split
         :type expression: str
         :raises InvalidRule: When expression cannot be split, e.g. syntax error
         :return: tuple(dimension name, operand, list of values)
-        :rtype: tuple (str, str, list|None)
+        :rtype: tuple(str, str, list|None)
         """
+        # Triple expressions
         match = Context.re_expression_triple.match(expression)
         if match:
             dimension, operand, raw_values = match.groups()
-            return (dimension, operand, [val.strip() for val in raw_values.split(",")])
+            return (dimension, operand, [
+                val.strip() for val in raw_values.split(",")])
+        # Double expressions
         match = Context.re_expression_double.match(expression)
         if match:
             return (match.group(1), match.group(2), None)
@@ -395,22 +412,24 @@ class Context(object):
 
     # FIXME - WIP
     def matches(self, rule):
-        """Does the rule matches current Context
+        """
+        Does the rule match the current Context?
 
         We have three outcomes: Yes, No and can't say
 
         :param rule: Single rule to decide
         :type rule: str
         :rtype: bool
-        :raises CannotDecide: Impossible to decide the rule wrt current Context, e.g. dimension is missing
+        :raises CannotDecide: Impossible to decide the rule wrt current
+            Context, e.g. dimension is missing
         :raises InvalidRule:  Syntax error in the rule
         """
-        decided_whole = False  # at least one outcome overall
+        decided_whole = False  # At least one outcome overall
         for and_group in self.parse_rule(rule):
             decided_group = False
-            outcome = None  # at least one outcome withing AND relation
+            outcome = None  # At least one outcome within AND relation
             for expression in and_group:
-                # skip over CannotDecide expressions
+                # Skip over CannotDecide expressions
                 try:
                     if outcome is None:
                         outcome = self.evaluate(expression)
@@ -419,17 +438,18 @@ class Context(object):
                     decided_group = True
                     decided_whole = True
                     if not outcome:
-                        break  # no need to check the rest
+                        break  # No need to check the rest
                 except CannotDecide:
                     pass
-            # if we could decide at least one expression and outcome is True -> return it
+            # If we could decide at least one expression and outcome is
+            # True -> return it
             if decided_group and outcome:
                 return True
-            # otherwise process next OR sections
+            # Otherwise process next OR sections
         if decided_whole:
             return False  # True would have returned already
         else:
-            raise CannotDecide()  # it's up to callee how to treat this
+            raise CannotDecide()  # It's up to callee how to treat this
 
     def evaluate(self, expression):
         dimension_name, operand, values = expression

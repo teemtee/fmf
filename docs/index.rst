@@ -19,6 +19,7 @@ Table of Contents
     Overview <overview>
     Concept <concept>
     Features <features>
+    Context <context>
     Examples <examples>
     Modules <modules>
     Contribute <contribute>
