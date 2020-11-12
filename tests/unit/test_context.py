@@ -42,8 +42,8 @@ class TestExample(object):
         assert env_centos.matches("distro ~< centos-8.5")
 
         # Presence of a dimension
-        assert env_centos.matches("fips !defined")
-        assert not env_centos.matches("fips defined")
+        assert env_centos.matches("fips is not defined")
+        assert not env_centos.matches("fips is defined")
 
         # Operator 'contains' is not necessary anymore
         assert env_centos.matches("component = bash")
@@ -53,13 +53,13 @@ class TestExample(object):
     def test_multi_condition(self, env_centos):
         """ Rules with multiple conditions """
         assert env_centos.matches(
-            "arch=x86_64 && distro != fedora")
+            "arch=x86_64 and distro != fedora")
         assert env_centos.matches(
-            "distro = fedora && component >= bash-5.0 || "
-            "distro = centos && component >= bash-4.9")
+            "distro = fedora and component >= bash-5.0 or "
+            "distro = centos and component >= bash-4.9")
         assert not env_centos.matches(
-            "distro = fedora && component >= bash-5.0 || "
-            "distro = rhel && component >= bash-4.9")
+            "distro = fedora and component >= bash-5.0 or "
+            "distro = rhel and component >= bash-4.9")
 
     def test_minor_comparison_mode(self):
         """ How it minor comparison should work """
@@ -68,43 +68,45 @@ class TestExample(object):
         centos6 = Context(distro="centos-6.9.0")
 
         # Simple version compare is not enough
-        # Think about feature add in centos-7.4.0 and centos-6.9.0
+        # Think about feature added in centos-7.4.0 and centos-6.9.0
         # so for 'centos' Context we want matches() == False
         # but for 'centos6' we want matches() == True
+        #
         rule = "distro >= centos-7.4.0"
-        assert not centos.matches(rule)  # good
-        assert not centos6.matches(rule)  # wrong for us
+        assert not centos.matches(rule)
+        assert not centos6.matches(rule) # we need the opposite outcome
 
         rule = "distro >= centos-6.9.0"
-        assert centos.matches(rule)  # wrong for us
-        assert centos6.matches(rule)  # good for us
+        assert centos.matches(rule) # we need the opposite outcome
+        assert centos6.matches(rule)
 
         assert centos.matches(
-            "distro >= centos-7.4.0 || distro >= centos-6.9.0"
-        )  # wrong for us
+            "distro >= centos-7.4.0 or distro >= centos-6.9.0"
+        ) # we need the opposite outcome
         assert not centos.matches(
-            "distro >= centos-7.4.0 && distro >= centos-6.9.0"
-        )  # wrong for us
+            "distro >= centos-7.4.0 and distro >= centos-6.9.0"
+        ) # we need the opposite outcome
         assert centos6.matches(
-            "distro >= centos-7.4.0 || distro >= centos-6.9.0"
-        )  # good
+            "distro >= centos-7.4.0 or distro >= centos-6.9.0"
+        )
         assert not centos6.matches(
-            "distro >= centos-7.4.0 && distro >= centos-6.9.0"
-        )  # good
+            "distro >= centos-7.4.0 and distro >= centos-6.9.0"
+        )
 
         # Here comes minor compare into the play as it skip incomparable majors
+        # All outcomes are exactly as we need them to be
         assert not centos.matches(
-            "distro ~>= centos-7.4.0 || distro ~>= centos-6.9.0"
-        )  # good
+            "distro ~>= centos-7.4.0 or distro ~>= centos-6.9.0"
+        )
         assert not centos.matches(
-            "distro ~>= centos-7.4.0 && distro ~>= centos-6.9.0"
-        )  # good
+            "distro ~>= centos-7.4.0 and distro ~>= centos-6.9.0"
+        )
         assert centos6.matches(
-            "distro ~>= centos-7.4.0 || distro ~>= centos-6.9.0"
-        )  # good
+            "distro ~>= centos-7.4.0 or distro ~>= centos-6.9.0"
+        )
         assert centos6.matches(
-            "distro ~>= centos-7.4.0 && distro ~>= centos-6.9.0"
-        )  # good
+            "distro ~>= centos-7.4.0 and distro ~>= centos-6.9.0"
+        )
 
 
 class TestContextValue(object):
@@ -213,16 +215,17 @@ class TestContextValue(object):
 
 class TestParser(object):
     # Missing expression
-    rule_groups_invalid = ["foo<bar && ", "foo<bar && defined bar || "]
+    rule_groups_invalid = ["foo<bar and ", "foo<bar and defined bar or "]
 
     invalid_expressions = [
         "bar",
         "bar |",
-        "bar ||",
+        "bar or",
         "& baz",
-        "&& baz",
+        "and baz",
         "dim !! value",
-        "defined dim",  # should be different order
+        "is defined dim",  # should be different order
+        "defined dim",
         ]
 
     def test_split_rule_to_groups(self):
@@ -236,27 +239,27 @@ class TestParser(object):
         assert Context.split_rule_to_groups(" bar   ") == [["bar"]]
         assert Context.split_rule_to_groups("foo = bar") == [["foo = bar"]]
         assert Context.split_rule_to_groups(
-            "foo = bar && baz") == [["foo = bar", "baz"]]
+            "foo = bar and baz") == [["foo = bar", "baz"]]
         assert Context.split_rule_to_groups(
-            "foo = bar && defined baz || !defined foo") == [
-                ["foo = bar", "defined baz"],
-                ["!defined foo"],
+            "foo = bar and is defined baz or is not defined foo") == [
+                ["foo = bar", "is defined baz"],
+                ["is not defined foo"],
                 ]
-        assert Context.split_rule_to_groups("a ~= b || c>d || defined x") == [
+        assert Context.split_rule_to_groups("a ~= b or c>d or is defined x") == [
             ["a ~= b"],
             ["c>d"],
-            ["defined x"],
+            ["is defined x"],
             ]
 
     def test_split_expression(self):
-        """ Split to dimension/operand/value tuple """
+        """ Split to dimension/operator/value tuple """
         for invalid in self.invalid_expressions:
             with pytest.raises(InvalidRule):
                 Context.split_expression(invalid)
-        assert Context.split_expression("dim defined") == (
-            "dim", "defined", None)
-        assert Context.split_expression("dim !defined") == (
-            "dim", "!defined", None)
+        assert Context.split_expression("dim is defined") == (
+            "dim", "is defined", None)
+        assert Context.split_expression("dim is not defined") == (
+            "dim", "is not defined", None)
         assert Context.split_expression("dim < value") == (
             "dim", "<", ["value"])
         assert Context.split_expression("dim < value-123") == (
@@ -274,8 +277,8 @@ class TestParser(object):
             with pytest.raises(InvalidRule):
                 Context.parse_rule(invalid)
 
-        assert Context.parse_rule("dim defined") == [
-            [("dim", "defined", None)]]
+        assert Context.parse_rule("dim is defined") == [
+            [("dim", "is defined", None)]]
         assert Context.parse_rule("dim < value") == [
             [("dim", "<", [ContextValue("value")])]]
         assert Context.parse_rule("dim < value-123") == [
@@ -283,7 +286,7 @@ class TestParser(object):
         assert Context.parse_rule("dim ~< value, second") == [
             [("dim", "~<", [ContextValue("value"), ContextValue("second")])]]
         assert Context.parse_rule(
-            "dim < value && dim > valueB || dim != valueC") == [
+            "dim < value and dim > valueB or dim != valueC") == [
             [
                 ("dim", "<", [ContextValue("value")]),
                 ("dim", ">", [ContextValue("valueB")])],
@@ -295,7 +298,7 @@ class TestContext(object):
     def test_creation(self):
         for created in [
                 Context(dim_a="value", dim_b=["val"], dim_c=["foo", "bar"]),
-                Context("dim_a=value && dim_b=val && dim_c == foo,bar")]:
+                Context("dim_a=value and dim_b=val and dim_c == foo,bar")]:
             assert created._dimensions["dim_a"] == set([ContextValue("value")])
             assert created._dimensions["dim_b"] == set([ContextValue("val")])
             assert created._dimensions["dim_c"] == set(
@@ -304,7 +307,7 @@ class TestContext(object):
         with pytest.raises(InvalidContext):
             Context("a=b", "c=d") # Just argument
         with pytest.raises(InvalidContext):
-            Context("a=b || c=d") # Can't use OR
+            Context("a=b or c=d") # Can't use OR
         with pytest.raises(InvalidContext):
             Context("a < d") # Operator other than =/==
 
@@ -329,32 +332,32 @@ class TestContext(object):
         context = Context(distro="centos-8.2.0")
 
         # Clear outcome
-        assert context.matches("distro = centos-8.2.0 || distro = fedora")
-        assert context.matches("distro = fedora || distro = centos-8.2.0")
-        assert not context.matches("distro != centos-8.2.0 || distro = fedora")
-        assert context.matches("distro = centos-8 && distro = centos-8.2")
-        assert not context.matches("distro = centos-8 && distro = centos-8.6")
+        assert context.matches("distro = centos-8.2.0 or distro = fedora")
+        assert context.matches("distro = fedora or distro = centos-8.2.0")
+        assert not context.matches("distro != centos-8.2.0 or distro = fedora")
+        assert context.matches("distro = centos-8 and distro = centos-8.2")
+        assert not context.matches("distro = centos-8 and distro = centos-8.6")
 
-        # Some operands cannot be decided
-        assert context.matches("distro = centos-8.2.0 || foo=bar")
-        assert context.matches("foo=bar || distro = centos-8.2.0")
+        # Some operators cannot be decided
+        assert context.matches("distro = centos-8.2.0 or foo=bar")
+        assert context.matches("foo=bar or distro = centos-8.2.0")
         assert context.matches(
-            "foo=bar && distro = centos-8.2.0"
+            "foo=bar and distro = centos-8.2.0"
         )  # skip over 'foo' part since it is not defined
-        assert not context.matches("foo=bar && distro = rhel")
-        assert not context.matches("foo=bar || distro = centos-8.9.0")
+        assert not context.matches("foo=bar and distro = rhel")
+        assert not context.matches("foo=bar or distro = centos-8.9.0")
 
         # Whole rule cannot be decided
         for undecidable in [
             "foo = baz",
-            "foo = baz && distro ~= fedora-32",  # both are CannotDecide
-            "foo = baz && distro ~= fedora-32 || do=done",
+            "foo = baz and distro ~= fedora-32",  # both are CannotDecide
+            "foo = baz and distro ~= fedora-32 or do=done",
         ]:
             with pytest.raises(CannotDecide):
                 context.matches(undecidable)
 
     def test_matches(self):
-        """ yes/no/skip test per operand for matches """
+        """ yes/no/skip test per operator for matches """
 
         context = Context(
             distro="fedora-32",
@@ -363,14 +366,14 @@ class TestContext(object):
             )
 
         # defined
-        assert context.matches("distro defined")
-        assert not context.matches("FOOBAR defined")
-        # skip not possible for this operand
+        assert context.matches("distro is defined")
+        assert not context.matches("FOOBAR is defined")
+        # skip not possible for this operator
 
         # !defined
-        assert context.matches("FOOBAR !defined")
-        assert not context.matches("distro !defined")
-        # skip not possible for this operand
+        assert context.matches("FOOBAR is not defined")
+        assert not context.matches("distro is not defined")
+        # skip not possible for this operator
 
         # ==
         assert context.matches("distro == fedora-32")
@@ -455,7 +458,7 @@ class TestContext(object):
             context.matches("product ~> centos-8")
 
 
-class TestOperands(object):
+class TestOperators(object):
     """ more thorough testing for operations """
 
     context = Context(
@@ -469,7 +472,7 @@ class TestOperands(object):
         components=["bash-5.0.17-1.fc32", "curl-7.69.1-6.fc32"],
         )
 
-    # defined/!defined is too simple and covered by test_matches
+    # is (not) defined is too simple and covered by test_matches
 
     def test_equal(self):
         assert self.context.matches("distro=fedora-32")

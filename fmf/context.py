@@ -1,43 +1,18 @@
 # coding: utf-8
+"""
+All you need to decide if Context matches
+
+For user documentation (rule syntax, motivation) see
+https://fmf.readthedocs.io/en/latest/context.html
+
+Reminder: FMF doesn't know attribute name which holds rules nor
+the context used for adjusting.
+It is up to caller of fmf.base.Tree.adjust to provide it.
+
+TODO How it is supposed to be used...
+"""
+
 import re
-
-"""
-== Rule Syntax ==
-
-CONDITION ::= expression (bool expression)*
-bool ::= '&&' | '||'
-expression ::= dimension operator values
-dimension ::= [[:alnum:]]+
-operator ::= '==' | '!=' | '<' | '<=' | '>' | '>=' | '~==' | '~!=' |
-    '~<' | '~<=' | '~>' | '~>=' | 'defined' | '!defined'
-values ::= value (',' value)*
-value ::= [[:alnum:]]+
-
-Operators 'defined' and '!defined' do not have a right side.
-
-Check tests/unit/test_relevancy for Examples.
-
-== Values treated as version ==
-
-Each value is parsed into name + version parts (dash separated, similar
-to rpm nvr). If it isn't possible then the whole value is stored as name
-part.
-
-Example:
-centos-8.3.0 -> name centos, version parts are 8, 3, 0
-python3-3.8.5-5.fc32 -> name  python3, version parts are 3.8.5, 5.fc32
-
-== Missing dimension in expression ==
-
-Expression can use dimension which is not defined. Return values of
-operations other than `(!)defined` are not specified and thus such
-expression is ignored.
-
-Condition with unspecified outcome (where none of expression can be
-evaluated) is marked as such and it is up to the caller to provide
-default behaviour.
-"""
-
 
 class CannotDecide(Exception):
     pass
@@ -134,117 +109,117 @@ class ContextValue(object):
 class Context(object):
     # Operators' definitions
     def _op_defined(self, dimension_name, values):
-        """ 'defined' operand """
+        """ 'is defined' operator """
         return dimension_name in self._dimensions
 
     def _op_not_defined(self, dimension_name, values):
-        """ '!defined' operand """
+        """ 'is not defined' operator """
         return dimension_name not in self._dimensions
 
     def _op_eq(self, dimension_name, values):
-        """ '=' operand """
+        """ '=' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val) == 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_not_eq(self, dimension_name, values):
-        """ '!=' operand """
+        """ '!=' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val) != 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_eq(self, dimension_name, values):
-        """ '~=' operand """
+        """ '~=' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val, minor_mode=True) == 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_not_eq(self, dimension_name, values):
-        """ '~!=' operand """
+        """ '~!=' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val, minor_mode=True) != 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_less_or_eq(self, dimension_name, values):
-        """ '~<=' operand """
+        """ '~<=' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val, minor_mode=True) <= 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_less(self, dimension_name, values):
-        """ '~<' operand """
+        """ '~<' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val, minor_mode=True) < 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_less(self, dimension_name, values):
-        """ '<' operand """
+        """ '<' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val) < 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_less_or_equal(self, dimension_name, values):
-        """ '<=' operand """
+        """ '<=' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val) <= 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_greater_or_equal(self, dimension_name, values):
-        """ '>=' operand """
+        """ '>=' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val) >= 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_greater_or_equal(self, dimension_name, values):
-        """ '~>=' operand """
+        """ '~>=' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val, minor_mode=True) >= 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_greater(self, dimension_name, values):
-        """ '>' operand """
+        """ '>' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val) > 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_greater(self, dimension_name, values):
-        """ '~>' operand """
+        """ '~>' operator """
 
-        def func(dimension_value, it_val):
+        def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(it_val, minor_mode=True) > 0
 
-        return self._op_core(dimension_name, values, func)
+        return self._op_core(dimension_name, values, comparator)
 
-    def _op_core(self, dimension_name, values, func):
+    def _op_core(self, dimension_name, values, comparator):
         """ Evaluate values from dimension vs expected values combinations """
         try:
             decided = False
             for dimension_value in self._dimensions[dimension_name]:
                 for it_val in values:
                     try:
-                        if func(dimension_value, it_val):
+                        if comparator(dimension_value, it_val):
                             return True
                         else:
                             decided = True
@@ -252,14 +227,15 @@ class Context(object):
                         pass
             if decided:
                 return False
-            raise CannotDecide("All operations where not defined")
+            # All comparissons ended as CannotDecide
+            raise CannotDecide("No values could be compared")
         except KeyError:
             raise CannotDecide(
                 "Dimension {} is not defined".format(dimension_name))
 
-    operand_map = {
-        "defined": _op_defined,
-        "!defined": _op_not_defined,
+    operator_map = {
+        "is defined": _op_defined,
+        "is not defined": _op_not_defined,
         "<": _op_less,
         "~<": _op_minor_less,
         "<=": _op_less_or_equal,
@@ -274,19 +250,25 @@ class Context(object):
         "~>": _op_minor_greater,
     }
 
-    # Triple expression: dimension operand values
+    # Triple expression: dimension operator values
     # [^=].* is necessary as .+ was able to match '= something'
     re_expression_triple = re.compile(
         r"(\w+)"
         + r"\s*("
-        + r"|".join(set(operand_map.keys()) - {"defined", "!defined"})
+        + r"|".join(set(operator_map.keys()) - {"is defined", "is not defined"})
         + r")\s*"
         + r"([^=].*)"
     )
-    # Double expression: dimension operand
+    # Double expression: dimension operator
     re_expression_double = re.compile(
-        r"(\w+)" + r"\s*(" + r"|".join(["defined", "!defined"]) + r")"
+        r"(\w+)" + r"\s*(" + r"|".join(["is defined", "is not defined"]) + r")"
     )
+
+    # To split by 'and' operator
+    re_and_split = re.compile(r'\band\b')
+
+    # To split by 'or' operator
+    re_or_split = re.compile(r'\bor\b')
 
     def __init__(self, *args, **kwargs):
         """
@@ -323,14 +305,14 @@ class Context(object):
         """
         Parses rule into expressions
 
-        Expression is a tuple of dimension_name, operand_str, list of
+        Expression is a tuple of dimension_name, operator_str, list of
         value objects. Parsed rule is nested list of expression from OR
-        and AND operands. Items of the first dimension are in OR
+        and AND operators. Items of the first dimension are in OR
         relation. Items in the second dimension are in AND relation.
 
-        expr_1 && expr_2 || expr_3 is returned as [[expr_1, expr_2], expr_3]
-        expr_4 || expr_5 is returned as [[expr_4], [expr_5]]
-        expr_6 && expr_7 is returned as [[expr_6, expr_7]]
+        expr_1 and expr_2 or expr_3 is returned as [[expr_1, expr_2], expr_3]
+        expr_4 or expr_5 is returned as [[expr_4], [expr_5]]
+        expr_6 and expr_7 is returned as [[expr_6, expr_7]]
 
         :param rule: rule to parse
         :type rule: str
@@ -344,13 +326,13 @@ class Context(object):
         for and_group in rule_parts:
             parsed_and_group = []
             for part in and_group:
-                dimension, operand, raw_values = Context.split_expression(part)
+                dimension, operator, raw_values = Context.split_expression(part)
                 if raw_values is not None:
                     values = [
                         Context.parse_value(value) for value in raw_values]
                 else:
                     values = None
-                parsed_and_group.append((dimension, operand, values))
+                parsed_and_group.append((dimension, operator, values))
             if parsed_and_group:
                 parsed_rule.append(parsed_and_group)
         return parsed_rule
@@ -364,18 +346,18 @@ class Context(object):
         """
         Split rule into nested lists, no real parsing
 
-        expr0 && expr1 || expr2 is split into [[expr0, expr1], [expr2]]
+        expr0 and expr1 or expr2 is split into [[expr0, expr1], [expr2]]
 
         :param rule: rule to split
         :type rule: str
         :raises InvalidRule: Syntax error in the rule
         """
         rule_parts = []
-        for or_group in rule.split("||"):
+        for or_group in Context.re_or_split.split(rule):
             if not or_group:
                 raise InvalidRule("empty OR expression in {}".format(rule))
             and_group = []
-            for part in or_group.split("&&"):
+            for part in Context.re_and_split.split(or_group):
                 part_stripped = part.strip()
                 if not part_stripped:
                     raise InvalidRule(
@@ -387,22 +369,22 @@ class Context(object):
     @staticmethod
     def split_expression(expression):
         """
-        Split expression to dimension name, operand and values
+        Split expression to dimension name, operator and values
 
-        When operand doesn't have right side, None is returned instead
+        When operator doesn't have right side, None is returned instead
         of the list of values.
 
         :param expression: expression to split
         :type expression: str
         :raises InvalidRule: When expression cannot be split, e.g. syntax error
-        :return: tuple(dimension name, operand, list of values)
+        :return: tuple(dimension name, operator, list of values)
         :rtype: tuple(str, str, list|None)
         """
         # Triple expressions
         match = Context.re_expression_triple.match(expression)
         if match:
-            dimension, operand, raw_values = match.groups()
-            return (dimension, operand, [
+            dimension, operator, raw_values = match.groups()
+            return (dimension, operator, [
                 val.strip() for val in raw_values.split(",")])
         # Double expressions
         match = Context.re_expression_double.match(expression)
@@ -410,7 +392,6 @@ class Context(object):
             return (match.group(1), match.group(2), None)
         raise InvalidRule("Cannot parse expression '{}'.".format(expression))
 
-    # FIXME - WIP
     def matches(self, rule):
         """
         Does the rule match the current Context?
@@ -452,5 +433,5 @@ class Context(object):
             raise CannotDecide()  # It's up to callee how to treat this
 
     def evaluate(self, expression):
-        dimension_name, operand, values = expression
-        return self.operand_map[operand](self, dimension_name, values)
+        dimension_name, operator, values = expression
+        return self.operator_map[operator](self, dimension_name, values)
