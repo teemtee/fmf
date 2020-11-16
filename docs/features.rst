@@ -176,6 +176,8 @@ the Flexible Metadata Format but freely configurable. Multiple key
 content attributes (e.g. script & backend) could be used as well.
 
 
+.. _virtual:
+
 Virtual
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
