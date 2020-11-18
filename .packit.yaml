@@ -2,15 +2,14 @@ specfile_path: fmf.spec
 synced_files:
     - fmf.spec
 
-upstream_project_name: fmf
+upstream_package_name: fmf
 downstream_package_name: fmf
-
-current_version_command: ["make", "packit-version"]
 
 actions:
   create-archive:
-  - make packit-tarball
-  - make packit-path
+  - make tarball
+  get-current-version:
+  - make version
 
 jobs:
   - job: tests
@@ -18,3 +17,23 @@ jobs:
     metadata:
       targets:
       - fedora-all
+      - epel-8
+
+  - job: copr_build
+    trigger: pull_request
+    metadata:
+      targets:
+      - fedora-all
+      - epel-8
+
+  - job: copr_build
+    trigger: commit
+    metadata:
+      branch: master
+      targets:
+      - fedora-all
+      - epel-8
+      list_on_homepage: True
+      preserve_project: True
+      owner: psss
+      project: fmf

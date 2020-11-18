@@ -44,20 +44,15 @@ source: clean
 	cp -a $(FILES) $(TMP)/$(PACKAGE)
 tarball: source man
 	cd $(TMP) && tar cfz SOURCES/$(PACKAGE).tar.gz $(PACKAGE)
+	@echo ./tmp/SOURCES/$(PACKAGE).tar.gz
+version:
+	@echo "$(VERSION)"
 rpm: tarball
 	rpmbuild --define '_topdir $(TMP)' -bb fmf.spec
 srpm: tarball
 	rpmbuild --define '_topdir $(TMP)' -bs fmf.spec
 packages: rpm srpm
 
-
-# Packit stuff
-packit-tarball: tarball
-	mv $(TMP)/SOURCES/$(PACKAGE).tar.gz .
-packit-path:
-	@printf "$(PACKAGE).tar.gz"
-packit-version:
-	@printf "$(VERSION)"
 
 # Python packaging
 wheel:
