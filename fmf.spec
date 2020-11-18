@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.12
+Version: 0.13
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -149,6 +149,15 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Wed Nov 18 2020 Petr Šplíchal <psplicha@redhat.com> - 0.13-1
+- Enable copr builds from master, simplify config
+- Adjust documentation for the new Context class
+- Add documentation for the new Context class
+- Add a new Tree.adjust() method for handling rules
+- Context: Better operator names, comments
+- Adjust the new Context implementation
+- Context implementation
+
 * Thu Jun 04 2020 Petr Šplíchal <psplicha@redhat.com> - 0.12-1
 - Do git pull in utils.fetch
 - Make fetch._run official as utils.run
