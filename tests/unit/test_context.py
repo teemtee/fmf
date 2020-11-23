@@ -23,20 +23,21 @@ class TestExample(object):
         """ Rules with single condition """
 
         # "Version" comparison if possible
-        assert env_centos.matches("distro = centos")
-        assert not env_centos.matches("distro = fedora")
-        assert env_centos.matches("distro = centos,fedora")
-        assert env_centos.matches("distro = centos-8")
-        assert env_centos.matches("distro = centos-8.4")
+        assert env_centos.matches("distro == centos")
+        assert not env_centos.matches("distro == fedora")
+        assert env_centos.matches("distro == centos,fedora")
+        assert env_centos.matches("distro == centos-8")
+        assert env_centos.matches("distro == centos-8.4")
         assert env_centos.matches("distro > centos-8.3")
         assert env_centos.matches("distro < centos-9")
 
         # Major/minor operator prefix '~' so it is
-        # False if not comparable (when 'major' differs)
+        # No minor so it can be compared
+        assert env_centos.matches("distro ~< centos-9")
+        assert not env_centos.matches("distro ~>= centos-9")
+        # Different Major for comparing Minor is not allowed
         with pytest.raises(CannotDecide):
-            env_centos.matches("distro ~< centos-9")
-        with pytest.raises(CannotDecide):
-            env_centos.matches("distro ~>= centos-9")
+            env_centos.matches("distro ~< centos-9.2")
         # Same major, can be compared
         assert env_centos.matches("distro ~>= centos-8.2")
         assert env_centos.matches("distro ~< centos-8.5")
@@ -108,6 +109,121 @@ class TestExample(object):
             "distro ~>= centos-7.4.0 and distro ~>= centos-6.9.0"
         )
 
+    def test_right_side_defines_precision(self):
+        """ Right side defines how many version parts need to match """
+        bar_830 = Context(dimension="bar-8.3.0")
+        bar_800 = Context(dimension="bar-8.0.0")
+        bar_ = Context(dimension="bar") # so essentially bar-0.0.0
+        bar_8 = Context(dimension="bar-8") # so essentially bar-8.0.0
+
+        # these are equal
+        for value in "bar bar-8 bar-8.3 bar-8.3.0".split():
+            for op in "== <= >=".split():
+                assert bar_830.matches('dimension {0} {1}'.format(op, value))
+            for op in "< > !=".split():
+                if value == 'bar' and op != '!=':
+                    continue
+                assert not bar_830.matches('dimension {0} {1}'.format(op, value))
+            # value prefixed so name doesn't match -> not equal
+            assert not bar_830.matches('dimension == prefix_{0}'.format(value))
+            assert bar_830.matches('dimension != prefix_{0}'.format(value))
+            # value prefix so name doesn't match -> cannot be compared
+            for op in "<= >=".split():
+                with pytest.raises(CannotDecide):
+                    bar_830.matches('dimension {0} prefix_{1}'.format(op, value))
+
+        # valid comparison
+        for value in "bar-7 bar-7.2 bar-8.1 bar-7.2.0 bar-8.1.0".split():
+            for op in "< <= ==".split():
+                assert not bar_830.matches("dimension {0} {1}".format(op, value))
+            for op in "> >= !=".split():
+                assert bar_830.matches("dimension {0} {1}".format(op, value))
+            assert bar_.matches("dimension != {0}".format(value))
+            assert not bar_.matches("dimension == {0}".format(value))
+
+        # these are newer
+        for value in "bar-9 bar-9.2 bar-9.2.0".split():
+            for op in "> >= ==".split():
+                assert not bar_830.matches('dimension {0} {1}'.format(op, value))
+            for op in "< <= !=".split():
+                assert bar_830.matches('dimension {0} {1}'.format(op, value))
+
+        # cannot be compared
+        for op in "< <= > >=".split():
+            with pytest.raises(CannotDecide):
+                bar_.matches("dimension {0} {1}".format(op, value))
+
+    def test_right_side_defines_precision_tilda(self):
+        """ Right side defines how many version parts need to match (~ operations) """
+        bar_830 = Context(dimension="bar-8.3.0")
+        bar_800 = Context(dimension="bar-8.0.0")
+        bar_ = Context(dimension="bar") # missing major
+        bar_8 = Context(dimension="bar-8") # so essentially bar-8.0.0
+
+        # these are equal
+        for value in "bar bar-8 bar-8.3 bar-8.3.0".split():
+            for op in "~= ~<= ~>=".split():
+                assert bar_830.matches('dimension {0} {1}'.format(op, value))
+            for op in "~< ~> ~!=".split():
+                if value == 'bar' and op != '~!=':
+                    continue
+                assert not bar_830.matches('dimension {0} {1}'.format(op, value))
+            # value prefixed so name doesn't match -> not equal
+            assert not bar_830.matches('dimension ~= prefix_{0}'.format(value))
+            assert bar_830.matches('dimension ~!= prefix_{0}'.format(value))
+            # value prefix so name doesn't match -> cannot be compared
+            for op in "~<= ~>=".split():
+                with pytest.raises(CannotDecide):
+                    bar_830.matches('dimension {0} prefix_{1}'.format(op, value))
+
+        # different major with minor comparison
+        for value in "bar-7.2 bar-7.2.0".split():
+            for op in "~< ~<= ~> ~>=".split():
+                with pytest.raises(CannotDecide):
+                    bar_830.matches("dimension {0} {1}".format(op, value))
+        # no minor compare required, so major comparison is allowed
+        for op in "~< ~<=".split():
+            assert not bar_830.matches("dimension {0} bar-7".format(op))
+        for op in "~> ~>=".split():
+            assert bar_830.matches("dimension {0} bar-7".format(op))
+
+        # these are newer
+        for value in "bar-8.4 bar-8.4.0".split():
+            for op in "~> ~>= ~=".split():
+                assert not bar_830.matches('dimension {0} {1}'.format(op, value))
+            for op in "~< ~<= ~!=".split():
+                assert bar_830.matches('dimension {0} {1}'.format(op, value))
+
+        # missing enough data to decide
+        for value in "bar-8 bar-8.3 bar-8.3.0".split():
+            for op in "~= ~<= ~>= ~< ~> ~!=".split():
+                with pytest.raises(CannotDecide):
+                    bar_.matches("dimension {0} {1}".format(op, value))
+                if value != "bar-8":
+                    with pytest.raises(CannotDecide):
+                        bar_8.matches("dimension {0} {1}".format(op, value))
+
+
+    def test_module_streams(self):
+        """ How you can use Context for modules """
+        perl = Context("module = perl:5.28")
+        mix = Context("module = perl:5.28,php:7.3")
+
+        assert perl.matches("module >= perl:5")
+        assert not perl.matches("module > perl:5")
+
+        assert perl.matches("module > perl:5.7")
+        assert perl.matches("module >= perl:5.28")
+
+        assert not perl.matches("module > perl:6")
+        assert not perl.matches("module > perl:6.2")
+        assert not perl.matches("module >= perl:6.2")
+
+        # Using ~ to compare only within same minor
+        # e.g feature in 5.28+ but dropped in perl6
+        assert perl.matches("module ~>= perl:5.28")
+        with pytest.raises(CannotDecide):
+            Context("module = perl:6.28").matches("module ~>= perl:5.28")
 
 class TestContextValue(object):
     impossible_split = ["x86_64", "ppc64", "fips", "errata"]
@@ -141,27 +257,39 @@ class TestContextValue(object):
         first = ContextValue("name")
         assert first.version_cmp(ContextValue("name")) == 0
         assert first.version_cmp(ContextValue("name"), minor_mode=True) == 0
-        assert first.version_cmp(ContextValue("name-1")) == 0
-        assert first.version_cmp(ContextValue("name-1"), minor_mode=True) == 0
-        assert first.version_cmp(ContextValue("name-1-2")) == 0
-        # Name X name-1-2 has no major nor minor on the left side
-        assert (
-            first.version_cmp(ContextValue("name-1-2"), minor_mode=True) == 0)
+        assert first.version_cmp(ContextValue("name"), ordered=True) == 0
+        assert first.version_cmp(ContextValue("name"), ordered=False) == 0
+
+        assert first.version_cmp(ContextValue("name-1"), ordered=False) == 1
+        with pytest.raises(CannotDecide):
+            first.version_cmp(ContextValue("name-1"), minor_mode=True, ordered=False)
+        with pytest.raises(CannotDecide):
+            first.version_cmp(ContextValue("name-1"), ordered=True) == -1 # name missing at least on version part
+        with pytest.raises(CannotDecide):
+            first.version_cmp(ContextValue("name-1"), minor_mode=True, ordered=True)
+
+        assert first.version_cmp(ContextValue("name-1-2"), ordered=False) == 1 # name-0.0 != name-1-2
+
+        with pytest.raises(CannotDecide):
+            first.version_cmp(ContextValue("name-1-2"), minor_mode=True, ordered=False)
 
         second = ContextValue("name-1-2-3")
-        assert second.version_cmp(ContextValue("name")) == 0
-        assert second.version_cmp(ContextValue("name"), minor_mode=True) == 0
+        assert second.version_cmp(ContextValue("name"), ordered=False) == 0
+        assert second.version_cmp(ContextValue("name"), ordered=True) == 0
+        assert second.version_cmp(ContextValue("name"), minor_mode=True, ordered=False) == 0
+        assert second.version_cmp(ContextValue("name"), minor_mode=True, ordered=True) == 0
         assert second.version_cmp(ContextValue("name-1")) == 0
-        assert (
-            second.version_cmp(ContextValue("name-1"), minor_mode=True) == 0)
+        assert second.version_cmp(ContextValue("name-1"), minor_mode=True) == 0
         # Same minor
         assert second.version_cmp(ContextValue("name-1-2")) == 0
         assert (
             second.version_cmp(ContextValue("name-1-2"), minor_mode=True) == 0)
 
         third = ContextValue("name-1-2-3")
-        assert third.version_cmp(ContextValue("aaa")) > 0
-        assert third.version_cmp(ContextValue("zzz")) < 0
+        with pytest.raises(CannotDecide):
+            third.version_cmp(ContextValue("aaa"))
+        with pytest.raises(CannotDecide):
+            third.version_cmp(ContextValue("zzz"))
         with pytest.raises(CannotDecide):
             third.version_cmp(ContextValue("aaa"), minor_mode=True)
 
@@ -171,15 +299,15 @@ class TestContextValue(object):
         assert fourth.version_cmp(ContextValue("name-2")) == 0
         assert fourth.version_cmp(ContextValue("name-2"), minor_mode=True) == 0
         assert fourth.version_cmp(ContextValue("name-3")) < 0
-        assert fourth.version_cmp(ContextValue("name-3"), minor_mode=True) < 0
+        assert fourth.version_cmp(ContextValue("name-3"), minor_mode=True) == -1
         assert fourth.version_cmp(ContextValue("name-1")) > 0
-        assert fourth.version_cmp(ContextValue("name-1"), minor_mode=True) > 0
+        assert fourth.version_cmp(ContextValue("name-1"), minor_mode=True) == 1
         with pytest.raises(CannotDecide):
             assert fourth.version_cmp(
                 ContextValue("name-1-1"), minor_mode=True)
 
         fifth = ContextValue("name-2-1")
-        for undecidable in ["name-1", "name-1-1", ""]:
+        for undecidable in ["name-1-1", ""]:
             with pytest.raises(CannotDecide):
                 fifth.version_cmp(ContextValue(undecidable), minor_mode=True)
 
@@ -211,6 +339,16 @@ class TestContextValue(object):
         f33 = ContextValue("fedora-33")
         str(f33)
         repr(f33)
+
+    def test_compare(self):
+        assert ContextValue.compare("1", "1") == 0
+        assert ContextValue.compare("a", "a") == 0
+
+        assert ContextValue.compare("rawhide", "aaa") == 1
+        assert ContextValue.compare("rawhide", "9999") == 1
+
+        assert ContextValue.compare("8", "19") == -1
+
 
 
 class TestParser(object):
@@ -350,8 +488,8 @@ class TestContext(object):
         # Whole rule cannot be decided
         for undecidable in [
             "foo = baz",
-            "foo = baz and distro ~= fedora-32",  # both are CannotDecide
-            "foo = baz and distro ~= fedora-32 or do=done",
+            "foo = baz and distro ~<= centos-7.2",  # both are CannotDecide
+            "foo = baz and distro ~<= fedora-32 or do=done",
         ]:
             with pytest.raises(CannotDecide):
                 context.matches(undecidable)
@@ -377,21 +515,23 @@ class TestContext(object):
 
         # ==
         assert context.matches("distro == fedora-32")
+        assert context.matches("distro == fedora")
         assert not context.matches("distro == centos-8")
         with pytest.raises(CannotDecide):
             context.matches("product == fedora-32")
 
         # !=
         assert not context.matches("distro != fedora-32")
+        assert not context.matches("distro != fedora")
         assert context.matches("distro != centos-8")
         with pytest.raises(CannotDecide):
             context.matches("product != fedora-32")
 
         # ~= aka major/minor mode
         assert context.matches("distro ~= fedora")
-        context.matches("distro ~= fedora-45")
-        with pytest.raises(CannotDecide):  # fedora is not centos
-            context.matches("distro ~= centos-8")
+        assert context.matches("distro ~= fedora-32")
+        assert not context.matches("distro ~= fedora-45")
+        assert not context.matches("distro ~= centos-8") # fedora is not centos
         with pytest.raises(CannotDecide):  # dimension product is not defined
             context.matches("product ~= fedora-32")
 
@@ -400,22 +540,31 @@ class TestContext(object):
         assert not context.matches("distro < fedora-32")
         with pytest.raises(CannotDecide):
             context.matches("product < centos-8")
+        # missing version parts are allowed but at least one needs to be defined
+        with pytest.raises(CannotDecide):
+            Context(distro='fedora').matches("distro < fedora-33")
+        assert Context(distro='foo-1').matches("distro < foo-1.1")
 
         # '~<':
+        assert Context(distro='centos-8.3').matches("distro ~< centos-8.4")
         assert context.matches("distro ~< fedora-33")
         with pytest.raises(CannotDecide):
             context.matches("distro ~< centos-8")
         with pytest.raises(CannotDecide):
             context.matches("product ~< centos-8")
+        assert not context.matches("distro ~< fedora") # right side ignores major
+        assert not context.matches("distro ~> fedora")
 
         # '<=':
         assert context.matches("distro <= fedora-32")
+        assert context.matches("distro <= fedora")
         assert not context.matches("distro <= fedora-30")
         with pytest.raises(CannotDecide):
             context.matches("product <= centos-8")
 
         # '~<='
         assert context.matches("distro ~<= fedora-33")
+        assert context.matches("distro ~<= fedora")
         with pytest.raises(CannotDecide):
             context.matches("distro ~<= centos-8")
         with pytest.raises(CannotDecide):
@@ -424,19 +573,21 @@ class TestContext(object):
         # '~!=':
         assert context.matches("distro ~!= fedora-33")
         assert not context.matches("distro ~!= fedora-32")
-        with pytest.raises(CannotDecide):
-            context.matches("distro ~!= centos-8")
+        assert not context.matches("distro ~!= fedora")
+        assert context.matches("distro ~!= centos-8")
         with pytest.raises(CannotDecide):
             context.matches("product ~!= centos-8")
 
         # '>=':
         assert context.matches("distro >= fedora-32")
+        assert context.matches("distro >= fedora")
         assert not context.matches("distro >= fedora-40")
         with pytest.raises(CannotDecide):
             context.matches("product >= centos-8")
 
         # '~>=':
         assert context.matches("distro ~>= fedora-32")
+        assert context.matches("distro ~>= fedora")
         assert not context.matches("distro ~>= fedora-33")
         with pytest.raises(CannotDecide):
             context.matches("distro ~>= centos-8")
@@ -446,6 +597,7 @@ class TestContext(object):
         # '>':
         assert context.matches("distro > fedora-30")
         assert not context.matches("distro > fedora-40")
+        assert not context.matches("distro > fedora")
         with pytest.raises(CannotDecide):
             context.matches("product > centos-8")
 
@@ -456,7 +608,45 @@ class TestContext(object):
             context.matches("distro ~> centos-8")
         with pytest.raises(CannotDecide):
             context.matches("product ~> centos-8")
+        assert not context.matches("distro ~> fedora")
 
+    def test_known_troublemakers(self):
+        """ Do not regress on these expressions """
+
+        # From fmf/issues/89:
+        # following is true (missing left values are treated as lower)
+        assert Context(distro='foo-1').matches('distro < foo-1.1')
+        # but only if at least one version part is defined
+        with pytest.raises(CannotDecide):
+            Context(distro='fedora').matches('distro < fedora-33')
+        # so use ~ if you need an explict Major check
+        with pytest.raises(CannotDecide):
+            Context(distro='fedora').matches('distro ~< fedora-33')
+
+        assert Context(distro='fedora-33').matches('distro == fedora')
+        with pytest.raises(CannotDecide):
+            Context("module = py:5.28").matches("module > perl:5.28")
+        with pytest.raises(CannotDecide):
+            Context("module = py:5").matches("module > perl:5.28")
+        with pytest.raises(CannotDecide):
+            Context("module = py:5").matches("module >= perl:5.28")
+        with pytest.raises(CannotDecide):
+            Context("distro = centos").matches("distro >= fedora")
+
+        assert Context("distro = centos").matches("distro != fedora")
+        assert not Context("distro = centos").matches("distro == fedora")
+
+        rhel7 = Context("distro = rhel-7")
+        assert rhel7.matches("distro == rhel")
+        assert rhel7.matches("distro == rhel-7")
+        assert not rhel7.matches("distro == rhel-7.3")
+        assert not rhel7.matches("distro == rhel-7.3.eus")
+        assert rhel7.matches("distro >= rhel-7")
+        assert not rhel7.matches("distro >= rhel-7.3")
+        assert not rhel7.matches("distro >= rhel-7.3.eus")
+        with pytest.raises(CannotDecide):
+            rhel7.matches("distro ~> rhel-7.3")
+        assert not rhel7.matches("distro > rhel")
 
 class TestOperators(object):
     """ more thorough testing for operations """
@@ -515,28 +705,26 @@ class TestOperators(object):
 
     def test_minor_eq(self):
         centos = Context(distro="centos-8.2.0")
-        for undecidable in ["fedora", "fedora-3", "centos-7"]:
-            with pytest.raises(CannotDecide):
-                centos.matches("distro ~= {}".format(undecidable))
+        for not_equal in ["fedora", "fedora-3", "centos-7"]:
+            assert not centos.matches("distro ~= {}".format(not_equal))
         assert centos.matches("distro ~= centos")
         assert centos.matches("distro ~= centos-8")
         assert centos.matches("distro ~= centos-8.2")
         assert not centos.matches("distro ~= centos-8.3")
         assert centos.matches("distro ~= centos-8.2.0")
         assert not centos.matches("distro ~= centos-8.3.0")
-        assert centos.matches("distro ~= centos-8.2.0.0")
-        assert not centos.matches("distro ~= centos-8.3.0.0")
+        with pytest.raises(CannotDecide):
+            centos.matches("distro ~= centos-8.2.0.0")
 
         multi = Context(distro=["centos-8.2.0", "centos-7.6.0"])
-        for undecidable in [
+        for not_equal in [
                 "fedora",
                 "fedora-3",
                 "rhel-7",
                 "rhel-7.8.0",
                 "centos-6",
                 "centos-6.5"]:
-            with pytest.raises(CannotDecide):
-                multi.matches("distro ~= {}".format(undecidable))
+            assert not multi.matches("distro ~= {}".format(not_equal))
         assert multi.matches("distro ~= centos")
         assert multi.matches("distro ~= centos-8")
         assert not multi.matches("distro ~= centos-8.3")
@@ -553,8 +741,6 @@ class TestOperators(object):
         assert multi_rh.matches("distro ~= rhel-8")
         assert multi_rh.matches("distro ~= fedora-40")
 
-        with pytest.raises(CannotDecide):
-            multi_rh.matches("distro ~= centos-9")
-        with pytest.raises(CannotDecide):
-            multi_rh.matches("distro ~= rhel-9")
+        assert not multi_rh.matches("distro ~= centos-9")
+        assert not multi_rh.matches("distro ~= rhel-9")
         assert not multi_rh.matches("distro ~= fedora-41")

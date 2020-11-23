@@ -9,7 +9,12 @@ Reminder: FMF doesn't know attribute name which holds rules nor
 the context used for adjusting.
 It is up to caller of fmf.base.Tree.adjust to provide it.
 
-TODO How it is supposed to be used...
+To use it from your code:
+1. Load Tree() as before
+2. Initialize Context() according your preferences
+3. Call tree's .adjust() to process the rules
+
+See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 """
 
 import re
@@ -17,19 +22,20 @@ import re
 class CannotDecide(Exception):
     pass
 
-
 class InvalidRule(Exception):
     pass
 
-
 class InvalidContext(Exception):
     pass
-
 
 class ContextValue(object):
     """ Value for dimension """
 
     def __init__(self, origin):
+        """
+        ContextValue("foo-1.2.3")
+        ContextValue(["foo", "1", "2", "3"])
+        """
         if isinstance(origin, (tuple, list)):
             self._to_compare = tuple(origin)
         else:
@@ -50,34 +56,90 @@ class ContextValue(object):
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, repr(self._to_compare))
 
-    def version_cmp(self, other, minor_mode=False):
+    def version_cmp(self, other, minor_mode=False, ordered=True):
+        """
+        Comparing two ContextValue objects
 
+        other: Right side to compare with. Defines precission
+            E.g. centos -> just compare name
+                 centos-7 -> compare name and major version
+                 centos-7.4 -> compare name, major and minor version
+                 foo-1.2.3.4 -> compare all version parts
+            If Left side (self) is missing version part it is treated as if it was lower
+            then matching version part from Right side. However Left needs
+            to contain at least version part.
+
+        minor_mode: If True then 'major' version has to match to allow
+            'minor' comparissons. Used with ~ prefixed operations (~< etc.)
+            E.g. `centos-6.3 ~< centos-7` is True because Right side doesn't care about minor
+            but `centos-6.3 ~< centos-7.2` is CannotDecide because Right side wants to
+            compare minor versions of different majors
+
+        ordered:
+            False ... return 0 when equal, 1 otherwise
+            True ... raise CannotDecide when name differ (and thus cannot be compared),
+                    otherwise return
+                        -1 when self < other
+                         0 when self == other
+                         1 when self > other
+        """
         if not isinstance(other, self.__class__):
             raise CannotDecide("Invalid types")
 
         if len(self._to_compare) == 0 or len(other._to_compare) == 0:
             raise CannotDecide("Empty name part")
 
-        if minor_mode:
-            if self._to_compare[0] != other._to_compare[0]:
-                raise CannotDecide("Name parts differ")
-            # When both have major and at least one has minor version we treat
-            # that differently
-            if (
-                len(self._to_compare) > 1
-                and len(other._to_compare) > 1
-                and (len(self._to_compare) > 2 or len(other._to_compare) > 2)
-            ):
+        if self._to_compare[0] != other._to_compare[0]:
+            if ordered:
+                raise CannotDecide("Name parts differ - cannot compare for order")
+            return 1 # not equal
+        # From here name parts are equal
+        if minor_mode and len(other._to_compare) > 1:
+            # right side cares about 'major'
+            try:
                 if self._to_compare[1] != other._to_compare[1]:
-                    raise CannotDecide("Major versions differ")
-
-        # Name parts are same and we can compare
+                    if ordered:
+                        if len(other._to_compare) > 2:
+                            # future Y comparison not allowed
+                            raise CannotDecide("Cannot compare minors between mismatched majors")
+                    else: # not equal
+                        return 1
+            except IndexError:
+                raise CannotDecide("Missing major version in the left (dimension) value")
+        # From here same major version or minor comparison is not requested
+        # Now we can compare version parts as long as other needs to
         compared = 0
-        for first, second in zip(self._to_compare, other._to_compare):
-            compared = (first > second) - (first < second)
-            if compared != 0:
+        for first, second in zip(self._to_compare[1:], other._to_compare[1:]):
+            compared = self.compare(first, second)
+            if compared != 0:  # not equal - return immediately
                 return compared
-        return compared
+        leftover_version_parts = len(other._to_compare) - len(self._to_compare)
+        if leftover_version_parts <= 0:
+            return 0 # everything wanted by right side compared thus they are equal
+        elif minor_mode:
+            # right side want to compare more but not allowed in minor_mode
+            raise CannotDecide("Not enough version parts") #FIXME
+        elif not ordered:
+            return 1 # they are not equal
+        elif len(self._to_compare) == 1:
+            raise CannotDecide("No version part defined for left side")
+        else:
+            return -1 # other is larger (more pars)
+
+    @staticmethod
+    def compare(first, second):
+        """ compare two version parts """
+        # ideally use `from packaging import version` but we need older python support too
+        # so very rough
+        try:
+            # convert to int
+            first_version = int(first)
+            second_version = int(second)
+        except ValueError:
+            # fallback to compare as strings
+            first_version = first
+            second_version = second
+        return (first_version > second_version) - (first_version < second_version)
 
     @staticmethod
     def _split_to_version(text):
@@ -107,6 +169,7 @@ class ContextValue(object):
 
 
 class Context(object):
+    """ Represents https://fmf.readthedocs.io/en/latest/context.html """
     # Operators' definitions
     def _op_defined(self, dimension_name, values):
         """ 'is defined' operator """
@@ -120,7 +183,7 @@ class Context(object):
         """ '=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val) == 0
+            return dimension_value.version_cmp(it_val, ordered=False) == 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -128,7 +191,7 @@ class Context(object):
         """ '!=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val) != 0
+            return dimension_value.version_cmp(it_val, ordered=False) != 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -136,7 +199,7 @@ class Context(object):
         """ '~=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True) == 0
+            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=False) == 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -144,7 +207,7 @@ class Context(object):
         """ '~!=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True) != 0
+            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=False) != 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -152,7 +215,7 @@ class Context(object):
         """ '~<=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True) <= 0
+            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) <= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -160,7 +223,7 @@ class Context(object):
         """ '~<' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True) < 0
+            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) < 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -168,7 +231,7 @@ class Context(object):
         """ '<' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val) < 0
+            return dimension_value.version_cmp(it_val, ordered=True) < 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -176,7 +239,7 @@ class Context(object):
         """ '<=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val) <= 0
+            return dimension_value.version_cmp(it_val, ordered=True) <= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -184,7 +247,7 @@ class Context(object):
         """ '>=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val) >= 0
+            return dimension_value.version_cmp(it_val, ordered=True) >= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -192,7 +255,7 @@ class Context(object):
         """ '~>=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True) >= 0
+            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) >= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -200,7 +263,7 @@ class Context(object):
         """ '>' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val) > 0
+            return dimension_value.version_cmp(it_val, ordered=True) > 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -208,12 +271,18 @@ class Context(object):
         """ '~>' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True) > 0
+            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) > 0
 
         return self._op_core(dimension_name, values, comparator)
 
     def _op_core(self, dimension_name, values, comparator):
-        """ Evaluate values from dimension vs expected values combinations """
+        """
+        Evaluate value from dimension vs target values combination
+
+        Stop evaluation after first True outcome
+
+        raises CannotDecide when dimension doesn't exist or no value pair could be compared
+        """
         try:
             decided = False
             for dimension_value in self._dimensions[dimension_name]:
@@ -231,7 +300,7 @@ class Context(object):
             raise CannotDecide("No values could be compared")
         except KeyError:
             raise CannotDecide(
-                "Dimension {} is not defined".format(dimension_name))
+                "Dimension {0} is not defined".format(dimension_name))
 
     operator_map = {
         "is defined": _op_defined,
@@ -251,7 +320,7 @@ class Context(object):
     }
 
     # Triple expression: dimension operator values
-    # [^=].* is necessary as .+ was able to match '= something'
+    # [^=].* is necessary as .+ matches '= something'
     re_expression_triple = re.compile(
         r"(\w+)"
         + r"\s*("
@@ -339,6 +408,7 @@ class Context(object):
 
     @staticmethod
     def parse_value(value):
+        """ Single place to convert to ContextValue """
         return ContextValue(value)
 
     @staticmethod

@@ -69,11 +69,7 @@ adjusted. For example it can be arch, distro, component, product
 or pipeline in which we run tests and so on.
 
 Each value is treated as if it was a component with version. Name
-of the dimension doesn't matter, all are treated equally. For some
-dimensions, such as ``arch``,  only comparison for equality makes
-sense. Note that the implementation does not raise an error when
-comparing ``aarch64 > x86_64``. In this case the alphabetical
-order is defined, you were warned.
+of the dimension doesn't matter, all are treated equally.
 
 The characters ``:`` or ``.`` or ``-`` are used as version
 separators and are handled in the same way. The following examples
@@ -95,6 +91,29 @@ demonstrate how the ``name`` and ``version`` parts are parsed::
 Comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Left vs Right side of the expression
+
+Value on the left always comes from dimension, it describes what is known
+about the context and should be as specific as possible (this is up to the
+calling tool). Value on the right comes from the rule and the creator of this
+rule sets how precise they want to be.
+When Left side is not specific enough its missing version parts are treated as
+if they were lower than the right side. However Left side needs to contain at least
+one version part.
+
+Equality vs comparing order
+
+It is always possible to evaluate whether two values are (not) equal.
+When names and common version parts as requested by the right side match
+then two values are equal.
+
+However order between two values is defined only if they match by name.
+If names don't match then values cannot be compared and expression is
+skipped.
+
+
+Comparing within same Major version
+
 Comparing distribution across their major versions can be tricky.
 One cannot easily say that e.g. ``centos-8.0 > centos-7.9``.
 In this case ``centos-8.0`` was released sooner than
@@ -104,20 +123,45 @@ To extend the example from motivation: How would you correctly
 enable test only on centos versions where some feature is
 available if it was added in centos-8.2 and centos-7.9?
 
+Another usage of this operations is to check for features specific
+to a major version or or module stream.
+
 The following operators make it possible to compare only within
 the same major::
 
     '~=' | '~!=' | '~<' | '~<=' | '~>' | '~>='
 
-If their major versions are different the outcome is not defined
-and as such it is skipped during evaluation. The following example
-shows how the special less than operator ``~<`` would be evaluated
-for given `centos` versions:
+If their major versions are different then their minor versions cannot
+be compared and as such are skipped during evaluation. The following
+example shows how the special less than operator ``~<`` would be evaluated
+for given `centos` versions. Note that Right side defines if minor comparison
+is being evaluated or not.
 
-==========  ========== ==========
-~<          centos-7.9 centos-8.2
-centos-7.8   True         skip
-centos-7.9   False        skip
-centos-8.1   skip         True
-centos-8.2   skip         False
-==========  ========== ==========
+
+==========  ========== ========== ==========
+~<          centos-7.9 centos-8.2 centos-8
+centos-7.8   True         skip    True
+centos-7.9   False        skip    True
+centos-7     skip         skip    True
+centos-8.1   skip         True    False
+centos-8.2   skip         False   False
+centos-8     skip         skip    False
+==========  ========== ========== ==========
+
+More examples::
+
+    centos < fedora ---> skip (cannot be decided)
+    fedora < fedora ---> False
+    fedora < fedora-33 ---> skip (left side has no version parts)
+    foo-1 < foo-1.1 ---> True (missing version part on left is padded)
+    fedora-33 < fedora ---> False (right side wants only name)
+    fedora-33 == fedora ---> True (right side wants only name)
+    fedora-33 ~= fedora ---> True (right side wants only name, no minor comparison requested)
+    fedora < fedora-33 ---> True (missing version parts are lower)
+    fedora ~< fedora-33 ---> skip (right side wants also major version to match)
+    fedora-32 ~< fedora-33 ---> True
+    centos-8.4.0 == centos ---> True
+    centos-8.4.0 < centos-9 ---> True
+    centos-8.4.0 ~< centos-9 ---> True (no minor comparison requested)
+    centos-8.4.0 ~< centos-9.2 ---> skip (minor comparison requested)
+    fedora-33 < fedora-rawhide ---> True (rawhide is newer then any number)
