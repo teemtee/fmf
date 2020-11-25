@@ -49,7 +49,6 @@ def full():
             continue: true
           - require+: [two]
             when: distro = fedora
-            continue: true
 
         /inherit:
             summary: This test just inherits all rules.
@@ -191,3 +190,9 @@ class TestAdjust(object):
         assert extend.get('duration') == '5m'
         assert extend.get('require') == ['one']
         assert 'recommend' not in extend.get()
+
+    def test_continue_default(self, full, fedora):
+        """ The continue key should default to True """
+        full.adjust(fedora)
+        extend = full.find('/extend')
+        assert extend.get('require') == ['one', 'two', 'three']

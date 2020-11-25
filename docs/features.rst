@@ -201,6 +201,39 @@ easily implemented using leaves inheriting from the same parent::
 In this way we can efficiently create virtual test cases.
 
 
+Adjust
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to adjust attribute values based on the current
+:ref:`context`, for example disable test if it's not relevant for
+given environment::
+
+    enabled: true
+    adjust:
+        enabled: false
+        when: distro ~< fedora-33
+        because: the feature was added in Fedora 33
+
+Note that this functionality reserves the following attributes for
+its usage:
+
+when
+    The condition to be evaluated in order to decide if the
+    metadata should be merged. This is a **required** key.
+
+continue
+    By default, all provided rules are evaluated. When set to
+    ``false``, the first successful rule finishes the evaluation
+    and the rest is ignored.
+
+because
+    An optional comment with justification of the adjustment.
+    Should be a plain string.
+
+Name of the attribute which contains rules to be evaluated can be
+arbitrary. In the example the default key ``adjust`` is used.
+
+
 Format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -295,7 +295,7 @@ class Tree(object):
                 raise utils.FormatError("No condition defined in adjust rule.")
 
             # The optional 'continue' key should be a bool
-            continue_ = rule.pop('continue', False)
+            continue_ = rule.pop('continue', True)
             if not isinstance(continue_, bool):
                 raise utils.FormatError(
                     "The 'continue' value should be bool, "

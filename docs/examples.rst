@@ -5,31 +5,6 @@
 Let's have a look at a couple of real-life examples!
 
 
-Context
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You can easily adjust attribute values based on the current
-:ref:`context`, for example disable test if it's not relevant for
-given environment::
-
-    enabled: true
-    adjust:
-        enabled: false
-        when: distro = centos
-        because: Not supported here
-
-Note that this functionality reserves the following two attributes
-for its usage:
-
-when
-    for listing context rules (required)
-because
-    to store comment (optional)
-
-Name of the attribute which contains rules to be evaluated can be
-arbitrary. In the example the default key ``adjust`` is used.
-
-
 Coverage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
