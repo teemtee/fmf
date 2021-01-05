@@ -5,6 +5,13 @@ time: 10
 vars:
     x: 1
     y: 2
+dict:
+    a: 1
+    b:
+        c:
+            d: deep
+        e: stable
+    c: cc
 
 # Child extends values instead of replacing them
 /extended:
@@ -13,7 +20,12 @@ vars:
     time+: 5
     vars+:
         z: 3
+        x+: 2
     disabled+: true
+    dict+:
+        b+:
+            c+:
+                d+: hole
 
 # Minus suffix removes or subtracts parent values
 /reduced:
@@ -21,3 +33,20 @@ vars:
     tags-: [Tier2]
     time-: 5
     vars-: [z]
+    dict-:
+        a-: -1
+        b-:
+            c-:
+                d-: ep
+        c: xx
+
+/mixing:
+    time-: 6
+    description+: extended
+    dict+:
+        a-: -1
+        b+:
+            c+:
+                d-: ep
+            e+: much
+        c: yy

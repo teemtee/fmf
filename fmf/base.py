@@ -122,6 +122,15 @@ class Tree(object):
         except ValueError:
             raise utils.FormatError("Invalid version format")
 
+    def _merge_dict(self, dict1, dict2):
+        for key in dict2:
+            if key.endswith("-"):
+                self._merge_minus(dict1, key[:-1], dict2[key])
+            elif key.endswith("+"):
+                self._merge_plus(dict1, key[:-1], dict2[key])
+            else:
+                dict1[key] = dict2[key]
+
     def _merge_plus(self, data, key, value):
         """ Handle extending attributes using the '+' suffix """
         # Nothing to do if key not in parent
@@ -130,7 +139,7 @@ class Tree(object):
             return
         # Use dict.update() for merging dictionaries
         if type(data[key]) == type(value) == dict:
-            data[key].update(value)
+            self._merge_dict(data[key], value)
             return
         # Attempt to apply the plus operator
         try:
@@ -161,6 +170,9 @@ class Tree(object):
         elif type(data[key]) == dict and type(value) == list:
             for item in value:
                 data[key].pop(item, None)
+        elif type(data[key]) == type(value) == dict:
+            self._merge_dict(data[key], value)
+            return
         else:
             raise utils.MergeError(
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
