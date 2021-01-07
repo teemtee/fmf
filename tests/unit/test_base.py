@@ -104,9 +104,8 @@ class TestTree(object):
         assert('Specific' in child.data['description'])
         assert(child.data['tags'] == ['Tier1', 'Tier2', 'Tier3'])
         assert(child.data['time'] == 15)
-        assert(child.data['vars'] == dict(x=3, y=2, z=3))
+        assert(child.data['vars'] == dict(x=1, y=2, z=3))
         assert(child.data['disabled'] == True)
-        assert(child.data['dict'] ==  {'a': 1, 'b': {'c': {'d': 'deephole'}, 'e': 'stable'}, 'c': 'cc'})
         assert('time+' not in child.data)
         with pytest.raises(utils.MergeError):
             child.data["time+"] = "string"
@@ -119,7 +118,7 @@ class TestTree(object):
         assert('description' not in child.data['description'])
         assert(child.data['tags'] == ['Tier1'])
         assert(child.data['time'] == 5)
-        assert(child.data['vars'] == dict(x=1, y=2))
+        assert(child.data['vars'] == dict(x=1))
         assert('time+' not in child.data)
         with pytest.raises(utils.MergeError):
             child.data["disabled-"] = True
@@ -128,18 +127,11 @@ class TestTree(object):
         with pytest.raises(utils.MergeError):
             child.data["time-"] = "bad"
             child.inherit()
-        assert(child.data['dict'] == {'a': 2, 'b': {'c': {'d': 'de'}, 'e': 'stable'}, 'c': 'xx'})
 
-    def test_merge_mixing(self):
-        """ Reducing attributes using the '-' suffix """
-        child = self.merge.find('/parent/mixing')
-        print(child.data)
-        assert('General' in child.data['description'])
-        assert ('extended' in child.data['description'])
-        assert(child.data['time'] == 4)
-        assert('time+' not in child.data)
-        assert(child.data['dict'] == {'a': 2, 'b': {'c': {'d': 'de'}, 'e': 'stablemuch'}, 'c': 'yy'})
-
+    def test_merge_deep(self):
+        """ Merging a deeply nested dictionary """
+        child = self.merge.find('/parent/buried')
+        assert(child.data['very']['deep']['dict'] == dict(x=2, y=1, z=0))
 
     def test_get(self):
         """ Get attributes """
