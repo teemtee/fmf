@@ -60,38 +60,41 @@ class ContextValue(object):
         """
         Comparing two ContextValue objects
 
-        other: Right side to compare with. Defines precission
+        other: The right side to compare with. Defines precision.
             E.g. centos -> just compare name
                  centos-7 -> compare name and major version
                  centos-7.4 -> compare name, major and minor version
                  foo-1.2.3.4 -> compare all version parts
-            If Left side (self) is missing version part it is treated as if it was lower
-            then matching version part from Right side. However Left needs
-            to contain at least version part.
+            If the left side (self) is missing the version part it is
+            treated as if it was lower then matching version part from
+            the right side. However the left side needs to contain at
+            least one version part.
 
         minor_mode: If True then 'major' version has to match to allow
-            'minor' comparissons. Used with ~ prefixed operations (~< etc.)
-            E.g. `centos-6.3 ~< centos-7` is True because Right side doesn't care about minor
-            but `centos-6.3 ~< centos-7.2` is CannotDecide because Right side wants to
-            compare minor versions of different majors
+            'minor' comparisons. Used with ~ prefixed operations (~< etc.)
+            E.g. `centos-6.3 ~< centos-7` is True because the right side
+            doesn't care about minor but `centos-6.3 ~< centos-7.2` is
+            CannotDecide because the right side wants to compare minor
+            versions of different majors.
 
         ordered:
             False ... return 0 when equal, 1 otherwise
-            True ... raise CannotDecide when name differ (and thus cannot be compared),
-                    otherwise return
+            True ... raise CannotDecide when name differ (and thus
+                     cannot be compared), otherwise return
                         -1 when self < other
                          0 when self == other
                          1 when self > other
         """
         if not isinstance(other, self.__class__):
-            raise CannotDecide("Invalid types")
+            raise CannotDecide("Invalid types.")
 
         if len(self._to_compare) == 0 or len(other._to_compare) == 0:
-            raise CannotDecide("Empty name part")
+            raise CannotDecide("Empty name part.")
 
         if self._to_compare[0] != other._to_compare[0]:
             if ordered:
-                raise CannotDecide("Name parts differ - cannot compare for order")
+                raise CannotDecide(
+                    "Name parts differ, cannot compare for order.")
             return 1 # not equal
         # From here name parts are equal
         if minor_mode and len(other._to_compare) > 1:
@@ -101,11 +104,14 @@ class ContextValue(object):
                     if ordered:
                         if len(other._to_compare) > 2:
                             # future Y comparison not allowed
-                            raise CannotDecide("Cannot compare minors between mismatched majors")
+                            raise CannotDecide(
+                                "Cannot compare minors between "
+                                "mismatched majors.")
                     else: # not equal
                         return 1
             except IndexError:
-                raise CannotDecide("Missing major version in the left (dimension) value")
+                raise CannotDecide(
+                    "Missing major version in the left (dimension) value.")
         # From here same major version or minor comparison is not requested
         # Now we can compare version parts as long as other needs to
         compared = 0
@@ -115,22 +121,24 @@ class ContextValue(object):
                 return compared
         leftover_version_parts = len(other._to_compare) - len(self._to_compare)
         if leftover_version_parts <= 0:
-            return 0 # everything wanted by right side compared thus they are equal
+            # Everything wanted by right side compared thus they are equal
+            return 0
         elif minor_mode:
-            # right side want to compare more but not allowed in minor_mode
-            raise CannotDecide("Not enough version parts") #FIXME
+            # The right side wants to compare more
+            # but this is not allowed in minor_mode
+            raise CannotDecide("Not enough version parts.") #FIXME
         elif not ordered:
             return 1 # they are not equal
         elif len(self._to_compare) == 1:
-            raise CannotDecide("No version part defined for left side")
+            raise CannotDecide("No version part defined for left side.")
         else:
             return -1 # other is larger (more pars)
 
     @staticmethod
     def compare(first, second):
         """ compare two version parts """
-        # ideally use `from packaging import version` but we need older python support too
-        # so very rough
+        # Ideally use `from packaging import version` but we need older
+        # python support too so very rough
         try:
             # convert to int
             first_version = int(first)
@@ -139,7 +147,9 @@ class ContextValue(object):
             # fallback to compare as strings
             first_version = first
             second_version = second
-        return (first_version > second_version) - (first_version < second_version)
+        return (
+                (first_version > second_version) -
+                (first_version < second_version))
 
     @staticmethod
     def _split_to_version(text):
@@ -199,7 +209,8 @@ class Context(object):
         """ '~=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=False) == 0
+            return dimension_value.version_cmp(
+                it_val, minor_mode=True, ordered=False) == 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -207,7 +218,8 @@ class Context(object):
         """ '~!=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=False) != 0
+            return dimension_value.version_cmp(
+                it_val, minor_mode=True, ordered=False) != 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -215,7 +227,8 @@ class Context(object):
         """ '~<=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) <= 0
+            return dimension_value.version_cmp(
+                it_val, minor_mode=True, ordered=True) <= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -223,7 +236,8 @@ class Context(object):
         """ '~<' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) < 0
+            return dimension_value.version_cmp(
+                it_val, minor_mode=True, ordered=True) < 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -255,7 +269,8 @@ class Context(object):
         """ '~>=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) >= 0
+            return dimension_value.version_cmp(
+                it_val, minor_mode=True, ordered=True) >= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -271,7 +286,8 @@ class Context(object):
         """ '~>' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) > 0
+            return dimension_value.version_cmp(
+                it_val, minor_mode=True, ordered=True) > 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -281,7 +297,8 @@ class Context(object):
 
         Stop evaluation after first True outcome
 
-        raises CannotDecide when dimension doesn't exist or no value pair could be compared
+        Raises CannotDecide when dimension doesn't exist or no value
+        pair could be compared.
         """
         try:
             decided = False
@@ -297,10 +314,10 @@ class Context(object):
             if decided:
                 return False
             # All comparissons ended as CannotDecide
-            raise CannotDecide("No values could be compared")
+            raise CannotDecide("No values could be compared.")
         except KeyError:
             raise CannotDecide(
-                "Dimension {0} is not defined".format(dimension_name))
+                "Dimension {0} is not defined.".format(dimension_name))
 
     operator_map = {
         "is defined": _op_defined,
@@ -425,13 +442,13 @@ class Context(object):
         rule_parts = []
         for or_group in Context.re_or_split.split(rule):
             if not or_group:
-                raise InvalidRule("empty OR expression in {}".format(rule))
+                raise InvalidRule("Empty OR expression in {}.".format(rule))
             and_group = []
             for part in Context.re_and_split.split(or_group):
                 part_stripped = part.strip()
                 if not part_stripped:
                     raise InvalidRule(
-                        "empty AND expression in {}".format(rule))
+                        "Empty AND expression in {}.".format(rule))
                 and_group.append(part_stripped)
             rule_parts.append(and_group)
         return rule_parts

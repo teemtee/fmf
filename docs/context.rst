@@ -91,52 +91,71 @@ demonstrate how the ``name`` and ``version`` parts are parsed::
 Comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Left vs Right side of the expression
+Value on the left always comes from dimension, it describes what
+is known about the context and should be as specific as possible
+(this is up to the calling tool). Value on the right comes from
+the rule and the creator of this rule sets how precise they want
+to be.
 
-Value on the left always comes from dimension, it describes what is known
-about the context and should be as specific as possible (this is up to the
-calling tool). Value on the right comes from the rule and the creator of this
-rule sets how precise they want to be.
-When Left side is not specific enough its missing version parts are treated as
-if they were lower than the right side. However Left side needs to contain at least
-one version part.
+When the left side is not specific enough its missing version
+parts are treated as if they were lower than the right side.
+However, the left side needs to contain at least one version
+part::
 
-Equality vs comparing order
-
-It is always possible to evaluate whether two values are (not) equal.
-When names and common version parts as requested by the right side match
-then two values are equal.
-
-However order between two values is defined only if they match by name.
-If names don't match then values cannot be compared and expression is
-skipped.
+    git-2.3.4 < git-3   # True
+    git-2 < git-3.2.1   # True
+    git < git-3.2.1     # CannotDecide
 
 
-Comparing within same Major version
+Equality vs Comparison
+----------------------
 
-Comparing distribution across their major versions can be tricky.
-One cannot easily say that e.g. ``centos-8.0 > centos-7.9``.
-In this case ``centos-8.0`` was released sooner than
-``centos-7.9`` so is it really newer?
+It is always possible to evaluate whether two values are (not)
+equal. When the name and common version parts requested by the
+right side match then the two values are equal::
 
-To extend the example from motivation: How would you correctly
-enable test only on centos versions where some feature is
-available if it was added in centos-8.2 and centos-7.9?
+    git-2.3.4 == git-2.3.4
+    git-2.3.4 == git-2.3
+    git-2.3.4 == git-2
+    git-2.3.4 == git
+    git-2.3.4 != git-1
+    git-2.3.4 != fmf
 
-Another usage of this operations is to check for features specific
-to a major version or or module stream.
+However, comparing order of two values is defined only if they
+match by name. If names don't match then values cannot be
+compared and the expression is skipped::
+
+    git-2.3.4 >= git-2     # True
+    git-2.3.4 >= git-3     # False
+    git-2.3.4 >= fmf-2     # CannotDecide
+
+
+Major Version
+-------------
+
+Comparing distributions across their major versions can be tricky.
+One cannot easily say that e.g. ``centos-8.0 > centos-7.9``. In
+this case ``centos-8.0`` was released sooner than ``centos-7.9``
+so is it really newer?
+
+Quite often new features are implemented in given minor version
+such as ``centos-7.9`` or ``centos-8.2`` which does not mean they
+are available in ``centos-8.1`` so it is not possible to apply a
+single rule such as ``distro >= centos-7.9`` to cover this case.
+
+Another usage for this operators is to check for features specific
+to a particular major version or a module stream.
 
 The following operators make it possible to compare only within
-the same major::
+the same major version::
 
     '~=' | '~!=' | '~<' | '~<=' | '~>' | '~>='
 
-If their major versions are different then their minor versions cannot
-be compared and as such are skipped during evaluation. The following
-example shows how the special less than operator ``~<`` would be evaluated
-for given `centos` versions. Note that Right side defines if minor comparison
-is being evaluated or not.
-
+If their major versions are different then their minor versions
+cannot be compared and as such are skipped during evaluation. The
+following example shows how the special less than operator ``~<``
+would be evaluated for given `centos` versions. Note that the
+right side defines if the minor comparison is evaluated or not.
 
 ==========  ========== ========== ==========
 ~<          centos-7.9 centos-8.2 centos-8
@@ -148,7 +167,8 @@ centos-8.2   skip         False   False
 centos-8     skip         skip    False
 ==========  ========== ========== ==========
 
-More examples::
+Here is a couple of examples to get a better idea of how the
+comparison works for some special cases::
 
     centos < fedora ---> skip (cannot be decided)
     fedora < fedora ---> False
