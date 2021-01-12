@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.13
+Version: 0.14
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -149,6 +149,15 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Tue Jan 12 2021 Petr Šplíchal <psplicha@redhat.com> - 0.14-1
+- Adjust context docs, fix typos, style cleanup
+- Left vs Right side in Context matches
+- Simplify deep merging, adjust test suite a bit
+- Implement recursive merging of data
+- Remove the duplicate build job from packit config
+- Adjust 'make test' to work under virtualenv
+- Update the adjust continue key default to True
+
 * Wed Nov 18 2020 Petr Šplíchal <psplicha@redhat.com> - 0.13-1
 - Enable copr builds from master, simplify config
 - Adjust documentation for the new Context class
