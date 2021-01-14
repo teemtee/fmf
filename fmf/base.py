@@ -9,6 +9,7 @@ import re
 import copy
 import yaml
 import subprocess
+from lockfile import LockFile, LockTimeout
 
 import fmf.context
 import fmf.utils as utils
@@ -23,6 +24,8 @@ from pprint import pformat as pretty
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
+# maximum seconds to process fmf structure + possibly fetch the repo
+REMOTE_NODE_LOCK_TIMEOUT = 60 + utils.FETCH_LOCK_TIMEOUT
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  YAML
@@ -557,16 +560,28 @@ class Tree(object):
         # Fetch remote git repository
         if 'url' in reference:
             path = reference.get('path', '.').lstrip('/')
-            repository = utils.fetch(
-                reference.get('url'), reference.get('ref'))
-            root = os.path.join(repository, path)
+            # lock for the intention to fetch/read git from URL to the cache
+            lock_path = os.path.join('/tmp', reference["url"].replace('/', '_'))
+            try:
+                with LockFile(lock_path, timeout=REMOTE_NODE_LOCK_TIMEOUT) as lock:
+                    # write PID to lockfile so we know which process got it
+                    with open(lock.lock_file, 'w') as fw:
+                        fw.write(str(os.getpid()))
+                    repository = utils.fetch(
+                        reference.get('url'), reference.get('ref'))
+                    root = os.path.join(repository, path)
+                    tree = Tree(root)
+            except LockTimeout:
+                raise utils.GeneralError("Failed to acquire lock for {0} within {1} seconds".format(
+                        lock_path, REMOTE_NODE_LOCK_TIMEOUT))
         # Use local files
         else:
             root = reference.get('path', '.')
             if not root.startswith('/') and root != '.':
                 raise utils.ReferenceError(
                     'Relative path "%s" specified.' % root)
-        found_node = Tree(root).find(reference.get('name', '/'))
+            tree = Tree(root)
+        found_node = tree.find(reference.get('name', '/'))
         if found_node is None:
             raise utils.ReferenceError(
                 "No tree node found for '{0}' reference".format(reference))

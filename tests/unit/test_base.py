@@ -4,6 +4,8 @@ from __future__ import unicode_literals, absolute_import
 
 import os
 import pytest
+import threading
+import queue
 import tempfile
 import fmf.utils as utils
 import fmf.cli
@@ -283,3 +285,30 @@ class TestRemote(object):
         # No git repository
         tree = Tree(Tree.init(tmpdir))
         assert tree.commit is False
+
+    def test_tree_concurrent(self):
+        def get_node(ref):
+            try:
+                node = Tree.node(dict(url=FMF_REPO, ref=ref))
+                q.put(True)
+            except Exception as error:
+                q.put(error)
+        possible_refs = [None, '0.12', 'fa05dd9']
+        q = queue.Queue()
+        threads = []
+        for i in range(10):
+            # args varies based on current thread index
+            threads.append(threading.Thread(target=get_node,
+                args=(possible_refs[i%len(possible_refs)],)))
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        # for number of threads check their results
+        all_good = True
+        for t in threads:
+            value = q.get()
+            if isinstance(value, Exception):
+                print(value) # so it is visible in the output
+                all_good = False
+        assert all_good

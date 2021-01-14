@@ -4,6 +4,9 @@ from __future__ import unicode_literals, absolute_import
 
 import os
 import pytest
+import shutil
+import threading
+import queue
 import fmf.utils as utils
 from fmf.utils import filter, listed, run
 
@@ -254,3 +257,35 @@ class TestFetch(object):
         repo = utils.fetch(GIT_REPO, ref)
         out, err = run(["git", "rev-parse", "HEAD"],repo)
         assert out == old_ref
+
+    def test_fetch_concurrent(self):
+        def do_fetch():
+            try:
+                repo = utils.fetch(GIT_REPO, '0.10')
+                q.put(True)
+            except Exception as error:
+                q.put(error)
+
+        # make sure cache is empty (is there a better way how to target repo?)
+        repo = utils.fetch(GIT_REPO, '0.10')
+        shutil.rmtree(repo)
+
+        q = queue.Queue()
+        threads = []
+        for i in range(10):
+            threads.append(threading.Thread(target=do_fetch))
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        # for number of threads check their results
+        all_good = True
+        for t in threads:
+            value = q.get()
+            if isinstance(value, Exception):
+                print(value) # so it is visible in the output
+                all_good = False
+        assert all_good
+
+
+

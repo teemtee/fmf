@@ -12,6 +12,7 @@ import time
 import shutil
 import logging
 import subprocess
+from lockfile import LockFile, LockTimeout
 from pprint import pformat as pretty
 
 
@@ -38,6 +39,9 @@ VERSION = 1
 
 # Cache expiration in seconds
 CACHE_EXPIRATION = 1200
+
+# Lock timeout in seconds for fetch
+FETCH_LOCK_TIMEOUT = 5 * 60
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Exceptions
@@ -531,9 +535,15 @@ def fetch(url, ref=None, destination=None, env=None):
         if not os.path.isdir(cache):
             try:
                 os.makedirs(cache)
-            except OSError:
-                raise GeneralError(
-                    "Failed to create cache directory '{0}'.".format(cache))
+            except OSError as error:
+                # python2 doesn't have exist_ok=True, emulating it here
+                # we don't care if cache wasn't created by this process
+                # errno-17 is file exists
+                if error.errno == 17 and os.path.isdir(fmf_cache):
+                    pass
+                else:
+                    raise GeneralError(
+                        "Failed to create cache directory '{0}'.".format(cache))
         directory = url.replace('/', '_')
         destination = os.path.join(cache, directory)
     else:
@@ -543,31 +553,40 @@ def fetch(url, ref=None, destination=None, env=None):
     if ref is None:
         ref = '__DEFAULT__'
 
+    # lock for possibly shared cache directory, it has .lock extension automatically
+    # all in with statement to correctly remove lock on exception
+    log.debug("Acquire lock for {0}".format(destination))
     try:
-        # FIXME Implement locking
-        # Clone the repository
-        if not os.path.isdir(os.path.join(destination, '.git')):
-            run(['git', 'clone', url, destination], cwd=cache, env=env)
-            # Store the default branch from the origin as a DEFAULT ref
-            head = os.path.join(destination, '.git/refs/remotes/origin/HEAD')
-            default = os.path.join(destination, '.git/refs/heads/__DEFAULT__')
-            shutil.copyfile(head, default)
-        # Fetch changes if we are too old
-        fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
-        try:
-            age = time.time() - os.path.getmtime(fetch_head_file)
-        except OSError:
-            age = CACHE_EXPIRATION
-        if age >= CACHE_EXPIRATION:
-            run(['git', 'fetch'], cwd=destination)
-        # Checkout branch
-        run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
-        # Reset to origin to get possible changes but no exit code check
-        # ref could be tag or commit where it is expected to fail
-        run(['git', 'reset', '--hard', "origin/{0}".format(ref)],
-            cwd=destination, check_exit_code=False, env=env)
+        with LockFile(destination, timeout=FETCH_LOCK_TIMEOUT) as lock:
+            # write own PID into lockfile to be able to investigate which process got it
+            with open(lock.lock_file, 'w') as fw:
+                fw.write(str(os.getpid()))
+            # Clone the repository
+            if not os.path.isdir(os.path.join(destination, '.git')):
+                run(['git', 'clone', url, destination], cwd=cache, env=env)
+                # Store the default branch from the origin as a DEFAULT ref
+                head = os.path.join(destination, '.git/refs/remotes/origin/HEAD')
+                default = os.path.join(destination, '.git/refs/heads/__DEFAULT__')
+                shutil.copyfile(head, default)
+            # Fetch changes if we are too old
+            fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
+            try:
+                age = time.time() - os.path.getmtime(fetch_head_file)
+            except OSError:
+                age = CACHE_EXPIRATION
+            if age >= CACHE_EXPIRATION:
+                run(['git', 'fetch'], cwd=destination)
+            # Checkout branch
+            run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
+            # Reset to origin to get possible changes but no exit code check
+            # ref could be tag or commit where it is expected to fail
+            run(['git', 'reset', '--hard', "origin/{0}".format(ref)],
+                cwd=destination, check_exit_code=False, env=env)
     except (OSError, subprocess.CalledProcessError) as error:
         raise GeneralError("{0}".format(error))
+    except LockTimeout:
+        raise GeneralError("Failed to acquire lock for {0} within {1} seconds".format(
+            destination, FETCH_LOCK_TIMEOUT))
 
     return destination
 
