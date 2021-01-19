@@ -572,3 +572,19 @@ class Tree(object):
                 "No tree node found for '{0}' reference".format(reference))
         # FIXME Should be able to remove .cache if required
         return found_node
+
+
+    def copy(self):
+        """
+        Create and return a deep copy of the node and its subtree
+
+        It is possible to call copy() on any node in the tree, not
+        only on the tree root node. Note that in that case, parent
+        node and the rest of the tree attached to it is not copied
+        in order to save memory.
+        """
+        original_parent = self.parent
+        self.parent = None
+        duplicate = copy.deepcopy(self)
+        self.parent = duplicate.parent = original_parent
+        return duplicate

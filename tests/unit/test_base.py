@@ -190,6 +190,40 @@ class TestTree(object):
         os.chmod(inaccessible, 511)
         rmtree(directory)
 
+    def test_node_copy_complete(self):
+        """ Create deep copy of the whole tree """
+        original = self.merge
+        duplicate = original.copy()
+        duplicate.data['x'] = 1
+        assert original.parent is None
+        assert duplicate.parent is None
+        assert original.get('x') is None
+        assert duplicate.get('x') == 1
+
+    def test_node_copy_child(self):
+        """ Duplicate child changes do not affect original """
+        original = self.merge
+        duplicate = original.copy()
+        original_child = original.find('/parent/extended')
+        duplicate_child = duplicate.find('/parent/extended')
+        original_child.data['original'] = True
+        duplicate_child.data['duplicate'] = True
+        assert original_child.get('original') is True
+        assert duplicate_child.get('original') is None
+        assert original_child.get('duplicate') is None
+        assert duplicate_child.get('duplicate') is True
+
+    def test_node_copy_subtree(self):
+        """ Create deep copy of a subtree """
+        original = self.merge.find('/parent/extended')
+        duplicate = original.copy()
+        duplicate.data['x'] = 1
+        assert original.parent == duplicate.parent
+        assert duplicate.parent.name == '/parent'
+        assert duplicate.get('x') == 1
+        assert original.get('x') is None
+
+
 class TestRemote(object):
     """ Get tree node data using remote reference """
 
