@@ -14,7 +14,7 @@ from filelock import Timeout, FileLock
 import fmf.context
 import fmf.utils as utils
 from io import open
-from fmf.utils import log
+from fmf.utils import log, dict_to_yaml
 from pprint import pformat as pretty
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -73,6 +73,7 @@ class Tree(object):
         self.version = utils.VERSION
         self.original_data = dict()
         self._commit = None
+        self._raw_data = dict()
 
         # Special handling for top parent
         if self.parent is None:
@@ -400,6 +401,7 @@ class Tree(object):
         # Save source file
         if source is not None:
             self.children[name].sources.append(source)
+            self.children[name]._raw_data = data
 
     def grow(self, path):
         """
@@ -446,6 +448,7 @@ class Tree(object):
             # Handle main.fmf as data for self
             if filename == MAIN:
                 self.sources.append(fullpath)
+                self._raw_data = data
                 self.update(data)
             # Handle other *.fmf files as children
             else:
@@ -606,3 +609,77 @@ class Tree(object):
         duplicate = copy.deepcopy(self)
         self.parent = duplicate.parent = original_parent
         return duplicate
+
+    def _get_raw_data_node(self):
+        """
+        Get tuple
+          - node where _raw_data are stored
+          - list if keys for current node inside raw data
+        """
+        raw_data_node = self
+        id_list = list()
+        while True:
+            raw_data = raw_data_node._raw_data
+            if raw_data:
+                return raw_data_node, id_list
+            elif not raw_data_node.parent:
+                raise utils.RootError("Cannot find root node with _raw_data, very strange")
+            else:
+                id_list.insert(0, "/" + raw_data_node.name.rsplit("/")[-1])
+                raw_data_node = raw_data_node.parent
+
+    def _get_node_raw_data(self, default=None):
+        """
+        Get dictionary of _raw_data for current node
+        in case of None add to the current node key default element
+        """
+        raw_data_node, id_list = self._get_raw_data_node()
+        raw_data = raw_data_node._raw_data
+        for key in id_list:
+            if default is not None and raw_data[key] is None:
+                raw_data[key] = default
+            raw_data = raw_data[key]
+        return raw_data
+
+    def modify(self, *data, method="update"):
+        """
+        Modify node metadata (original data stored in file) via method.
+        supported dictionary methods are: update(default), pop, clear
+        and data is attribute of the method
+
+        Modification will invalidate affected node data and childs, please reload the Tree
+
+        Be aware that it modify raw data in file:
+        If you have defined "key+: fist" in the file for node and
+        you will add "key: second" it will lead  to "secondfirst" output for node
+
+        Data are always stored into the last sourced fmf file of the modified node
+          (e.g no inheritance and no elasticity)
+        """
+        node_data = self._get_node_raw_data(default=dict())
+        if method in ["update", "pop"]:
+            for item in data:
+                getattr(node_data, method)(item)
+        elif method == "clear":
+            if data:
+                raise AttributeError("Unexpected argument for clear method", data)
+            else:
+                node_data.clear()
+        else:
+            raise ValueError("Unsupported method: {} (you can use dictionary methods: update, pop, clear)".format(method))
+        return self
+
+    def save(self):
+        """
+        Store data back to fmf files after modification
+        """
+        raw_data_node, _ = self._get_raw_data_node()
+        target_file = raw_data_node.sources[-1]
+        with open(target_file, "w") as fd:
+            fd.write(dict_to_yaml(raw_data_node._raw_data))
+
+    def __enter__(self):
+        return self._get_node_raw_data(default=dict())
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.save()

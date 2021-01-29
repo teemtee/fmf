@@ -2,7 +2,11 @@
     priority: high
     /ftp:
         requirement: Download a file using the ftp protocol.
+        adjust:
+        - enabled: false
+          when: arch != x86_64
         coverage: wget/protocols/ftp
+        tester+: Noname <noname@redhat.com>
     /http:
         requirement: Download a file using the http protocol.
         coverage: wget/protocols/http

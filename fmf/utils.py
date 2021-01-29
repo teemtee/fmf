@@ -14,6 +14,8 @@ import logging
 import subprocess
 from filelock import Timeout, FileLock
 from pprint import pformat as pretty
+import io
+import yaml
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -657,3 +659,28 @@ def run(command, cwd=None, check_exit_code=True, env=None):
 
 # Create the default output logger
 log = Logging('fmf').logger
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Convert dict to yaml
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def dict_to_yaml(data, width=None, sort=False):
+    """ Convert dictionary into yaml """
+    output = io.StringIO()
+    try:
+        yaml.safe_dump(
+            data, output, sort_keys=sort,
+            encoding='utf-8', allow_unicode=True,
+            width=width, indent=4, default_flow_style=False)
+    except TypeError:
+        # FIXME: Temporary workaround for rhel-8 to disable key sorting
+        # https://stackoverflow.com/questions/31605131/
+        # https://github.com/psss/tmt/issues/207
+        representer = lambda self, data: self.represent_mapping(
+            'tag:yaml.org,2002:map', data.items())
+        yaml.add_representer(dict, representer, Dumper=yaml.SafeDumper)
+        yaml.safe_dump(
+            data, output, encoding='utf-8', allow_unicode=True,
+            width=width, indent=4, default_flow_style=False)
+    return output.getvalue()
