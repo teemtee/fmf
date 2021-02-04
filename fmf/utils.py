@@ -9,6 +9,7 @@ import re
 import sys
 import copy
 import time
+import shutil
 import logging
 import subprocess
 from pprint import pformat as pretty
@@ -512,12 +513,13 @@ class Coloring(object):
 #  Fetch Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def fetch(url, ref='master'):
+def fetch(url, ref=None):
     """
     Fetch remote git repository and return local directory
 
     Fetch git repository from provided url into a local cache
     directory, checkout requested ref and return path to the repo.
+    If no ref is provided, the default branch from the origin is used.
     """
 
     # Prepare the destination path and the cache directory
@@ -532,11 +534,19 @@ def fetch(url, ref='master'):
     directory = url.replace('/', '_')
     destination = os.path.join(fmf_cache, directory)
 
+    # Use the default branch from origin of no ref provided
+    if ref is None:
+        ref = '__DEFAULT__'
+
     try:
         # FIXME Implement locking
         # Clone the repository
         if not os.path.isdir(destination):
             run(['git', 'clone', url, destination], cwd=fmf_cache)
+            # Store the default branch from the origin as a DEFAULT ref
+            head = os.path.join(destination, '.git/refs/remotes/origin/HEAD')
+            default = os.path.join(destination, '.git/refs/heads/__DEFAULT__')
+            shutil.copyfile(head, default)
         # Fetch changes if we are too old
         fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
         try:
@@ -578,9 +588,10 @@ def run(command, cwd=None, check_exit_code=True):
     if hasattr(stdout, 'decode'):
         stdout = stdout.decode('utf-8')
         stderr = stderr.decode('utf-8')
-    log.debug("stdout: {0}".format(stdout))
-    log.debug("stderr: {0}".format(stderr))
-    log.debug("exit_code: {0}".format(process.returncode))
+    log.debug("stdout: {0}".format(stdout.strip()))
+    log.debug("stderr: {0}".format(stderr.strip()))
+    log.debug("exit_code: {0}{1}".format(
+        process.returncode, ('' if check_exit_code else ' (ignored)')))
     if check_exit_code and process.returncode != 0:
         raise subprocess.CalledProcessError(
             process.returncode, ' '.join(command))

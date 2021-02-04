@@ -134,7 +134,7 @@ url
 ref
     Branch, tag or commit specifying the desired git revision.
     This is used to perform a ``git checkout`` in the repository.
-    Optional, by default the ``master`` branch is used.
+    If not provided, the ``default branch`` is used.
 path
     Path to the metadata tree root. Should be relative to the git
     repository root if ``url`` provided, absolute local filesystem
@@ -152,7 +152,7 @@ Here's a full fmf identifier example::
     name: /download/test
 
 Use default values for ``ref`` and ``path`` to reference the
-latest version of the smoke plan from the ``master`` branch::
+latest version of the smoke plan from the default branch::
 
     url: https://github.com/psss/fmf
     name: /plans/smoke

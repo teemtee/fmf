@@ -8,6 +8,7 @@ import fmf.utils as utils
 from fmf.utils import filter, listed, run
 
 GIT_REPO = 'https://github.com/psss/fmf.git'
+GIT_REPO_FEDORA = 'https://src.fedoraproject.org/rpms/tmt'
 
 class TestFilter(object):
     """ Function filter() """
@@ -155,6 +156,30 @@ class TestColoring(object):
 class TestFetch(object):
     """ Remote reference from fmf github """
 
+    def test_fetch_default_branch(self):
+        # On GitHub 'master' is the default
+        repo = utils.fetch(GIT_REPO)
+        output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
+        assert 'master' in output
+        # Fedora uses 'rawide'
+        repo = utils.fetch(GIT_REPO_FEDORA)
+        output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
+        assert 'rawhide' in output
+
+    def test_switch_branches(self):
+        # Default branch
+        repo = utils.fetch(GIT_REPO)
+        output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
+        assert 'master' in output
+        # Custom commit
+        repo = utils.fetch(GIT_REPO, '0.12')
+        output, _ = run(['git', 'rev-parse', 'HEAD'], repo)
+        assert '6570aa5' in output
+        # Back to the default branch
+        repo = utils.fetch(GIT_REPO)
+        output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
+        assert 'master' in output
+
     def test_fetch_valid_id(self):
         repo = utils.fetch(GIT_REPO, '0.10')
         assert utils.os.path.isfile(utils.os.path.join(repo, 'fmf.spec'))
@@ -185,11 +210,11 @@ class TestFetch(object):
         repo = utils.fetch(GIT_REPO, ref)
         out, err = run(["git", "rev-parse", "HEAD"], repo)
         old_ref = out
-        # move head one commit back, doesn't invalidates FETCH!
+        # Move head one commit back, doesn't invalidate FETCH!
         out, err = run(["git", "reset", "--hard", "HEAD^1"], repo)
         out, err = run(["git", "rev-parse", "HEAD"], repo)
         assert out != old_ref
-        # fetch again, it should move the head back to origin/master
+        # Fetch again, it should move the head back to origin/master
         repo = utils.fetch(GIT_REPO, ref)
         out, err = run(["git", "rev-parse", "HEAD"],repo)
         assert out == old_ref

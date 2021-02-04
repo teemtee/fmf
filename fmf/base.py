@@ -545,7 +545,7 @@ class Tree(object):
         Keys supported in the reference:
 
         url .... git repository url (optional)
-        ref .... branch, tag or commit ('master' by default)
+        ref .... branch, tag or commit (default branch if not provided)
         path ... metadata tree root ('.' by default)
         name ... tree node name ('/' by default)
 
@@ -558,7 +558,7 @@ class Tree(object):
         if 'url' in reference:
             path = reference.get('path', '.').lstrip('/')
             repository = utils.fetch(
-                reference.get('url'), reference.get('ref', 'master'))
+                reference.get('url'), reference.get('ref'))
             root = os.path.join(repository, path)
         # Use local files
         else:
