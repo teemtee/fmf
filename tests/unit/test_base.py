@@ -18,6 +18,7 @@ from shutil import rmtree
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
 EXAMPLES = PATH + "/../../examples/"
+FMF_REPO = 'https://github.com/psss/fmf.git'
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -195,7 +196,7 @@ class TestRemote(object):
     @pytest.mark.web
     def test_tree_node_remote(self):
         reference = {
-            'url': 'https://github.com/psss/fmf.git',
+            'url': FMF_REPO,
             'ref': '0.10',
             'path': 'examples/deep',
             'name': '/one/two/three',
@@ -233,3 +234,18 @@ class TestRemote(object):
     def test_tree_node_relative_path(self):
         with pytest.raises(utils.ReferenceError):
             Tree.node(dict(path='some/relative/path'))
+
+    def test_tree_commit(self, tmpdir):
+        # Tag
+        node = Tree.node(dict(url=FMF_REPO, ref='0.12'))
+        assert node.commit == '6570aa5f10729991625d74036473a71f384d745b'
+        # Hash
+        node = Tree.node(dict(url=FMF_REPO, ref='fa05dd9'))
+        assert 'fa05dd9' in node.commit
+        assert 'fa05dd9' in node.commit # return already detected value
+        # Data
+        node = Tree(dict(x=1))
+        assert node.commit is False
+        # No git repository
+        tree = Tree(Tree.init(tmpdir))
+        assert tree.commit is False

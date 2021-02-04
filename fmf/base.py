@@ -8,6 +8,7 @@ import os
 import re
 import copy
 import yaml
+import subprocess
 
 import fmf.context
 import fmf.utils as utils
@@ -68,6 +69,7 @@ class Tree(object):
         self.root = None
         self.version = utils.VERSION
         self.original_data = dict()
+        self._commit = None
 
         # Special handling for top parent
         if self.parent is None:
@@ -91,6 +93,32 @@ class Tree(object):
             self.inherit()
 
         log.debug("New tree '{0}' created.".format(self))
+
+    @property
+    def commit(self):
+        """
+        Commit hash if tree grows under a git repo, False otherwise
+
+        Return current commit hash if the metadata tree root is located
+        under a git repository. For metadata initialized from a dict or
+        local directory with no git repo 'False' is returned instead.
+        """
+        if self._commit != None:
+            return self._commit
+
+        # No root, no commit (tree parsed from a dictionary)
+        if self.root is None:
+            self._commit = False
+            return self._commit
+
+        # Check root directory for current commit
+        try:
+            output, _ = utils.run(
+                ['git', 'rev-parse', '--verify', 'HEAD'], cwd=self.root)
+            self._commit = output.strip()
+        except subprocess.CalledProcessError:
+            self._commit = False
+        return self._commit
 
     def __unicode__(self):
         """ Use tree name as identifier """
