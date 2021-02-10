@@ -513,26 +513,31 @@ class Coloring(object):
 #  Fetch Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def fetch(url, ref=None):
+def fetch(url, ref=None, destination=None, env=None):
     """
     Fetch remote git repository and return local directory
 
     Fetch git repository from provided url into a local cache
     directory, checkout requested ref and return path to the repo.
     If no ref is provided, the default branch from the origin is used.
+    If destination is provided, directory should not exist or needs to be empty
+    Use env as dictionary to set environment variables for git calls
     """
 
-    # Prepare the destination path and the cache directory
-    cache = os.path.expanduser(os.environ.get('XDG_CACHE_HOME', '~/.cache'))
-    fmf_cache = os.path.join(cache, 'fmf')
-    if not os.path.isdir(fmf_cache):
-        try:
-            os.makedirs(fmf_cache)
-        except OSError:
-            raise GeneralError(
-                "Failed to create cache directory '{0}'.".format(fmf_cache))
-    directory = url.replace('/', '_')
-    destination = os.path.join(fmf_cache, directory)
+    if destination is None:
+        # Prepare the destination path and the cache directory
+        cache = os.path.expanduser(os.environ.get('XDG_CACHE_HOME', '~/.cache'))
+        fmf_cache = os.path.join(cache, 'fmf')
+        if not os.path.isdir(fmf_cache):
+            try:
+                os.makedirs(fmf_cache)
+            except OSError:
+                raise GeneralError(
+                    "Failed to create cache directory '{0}'.".format(fmf_cache))
+        directory = url.replace('/', '_')
+        destination = os.path.join(fmf_cache, directory)
+    else:
+        fmf_cache = os.path.dirname(destination)
 
     # Use the default branch from origin of no ref provided
     if ref is None:
@@ -542,7 +547,7 @@ def fetch(url, ref=None):
         # FIXME Implement locking
         # Clone the repository
         if not os.path.isdir(destination):
-            run(['git', 'clone', url, destination], cwd=fmf_cache)
+            run(['git', 'clone', url, destination], cwd=fmf_cache, env=env)
             # Store the default branch from the origin as a DEFAULT ref
             head = os.path.join(destination, '.git/refs/remotes/origin/HEAD')
             default = os.path.join(destination, '.git/refs/heads/__DEFAULT__')
@@ -556,11 +561,11 @@ def fetch(url, ref=None):
         if age >= CACHE_EXPIRATION:
             run(['git', 'fetch'], cwd=destination)
         # Checkout branch
-        run(['git', 'checkout', '-f', ref], cwd=destination)
+        run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
         # Reset to origin to get possible changes but no exit code check
         # ref could be tag or commit where it is expected to fail
         run(['git', 'reset', '--hard', "origin/{0}".format(ref)],
-            cwd=destination, check_exit_code=False)
+            cwd=destination, check_exit_code=False, env=env)
     except (OSError, subprocess.CalledProcessError) as error:
         raise GeneralError("{0}".format(error))
 
@@ -571,18 +576,19 @@ def fetch(url, ref=None):
 #  Run command
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def run(command, cwd=None, check_exit_code=True):
+def run(command, cwd=None, check_exit_code=True, env=None):
     """
     Run command and return stdout,stderr touple
 
     :command as list (name, arg1, arg2...)
     :cwd Path to directory where to run the command
     :check_exit_code raise CalledProcessError if exit code is non-zero
+    :env dictionary of the environment variables for the command
     """
     log.debug("Running command: '{0}'.".format(' '.join(command)))
 
     process = subprocess.Popen(
-        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     # Python 3 returns byte stream
     if hasattr(stdout, 'decode'):

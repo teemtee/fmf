@@ -204,6 +204,40 @@ class TestFetch(object):
             monkeypatch.setenv("XDG_CACHE_HOME", "/etc")
             utils.fetch(GIT_REPO)
 
+    def test_destination(self, tmpdir):
+        # not exists
+        dest = str(tmpdir.join('branch_new'))
+        repo = utils.fetch(GIT_REPO, destination=dest)
+        assert repo == dest
+
+        # is an empty directory
+        dest = str(tmpdir.mkdir('another'))
+        repo = utils.fetch(GIT_REPO, destination=dest)
+        assert repo == dest
+
+    def test_invalid_destination(self, tmpdir):
+        # is a file
+        dest = tmpdir.join('file')
+        dest.write('content')
+        with pytest.raises(utils.GeneralError):
+            repo = utils.fetch(GIT_REPO, destination=str(dest))
+
+        # is a directory but not empty
+        dest = tmpdir.mkdir('yet_another')
+        dest.join('some_file').write('content')
+        with pytest.raises(utils.GeneralError):
+            repo = utils.fetch(GIT_REPO, destination=str(dest))
+
+    def test_env(self):
+        # nonexistent repo on github makes git to ask for password
+        # set handler for user input as echo to return immediately
+        with pytest.raises(utils.GeneralError) as exc_info:
+            utils.fetch('https://github.com/psss/fmf-nope-nope.git',
+                        env={"GIT_ASKPASS": "echo"})
+        # assert 'git clone' string in exception's message
+        assert "git clone" in exc_info.value.args[0]
+
+
     @pytest.mark.parametrize("ref", ["master", "0.10", "8566a39"])
     def test_out_of_sync_ref(self, ref):
         """ Solve Your branch is behind ... """
