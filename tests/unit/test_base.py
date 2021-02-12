@@ -297,14 +297,15 @@ class TestRemote(object):
         q = queue.Queue()
         threads = []
         for i in range(10):
-            # args varies based on current thread index
-            threads.append(threading.Thread(target=get_node,
-                args=(possible_refs[i%len(possible_refs)],)))
+            # Arguments vary based on current thread index
+            threads.append(threading.Thread(
+                target=get_node,
+                args=(possible_refs[i % len(possible_refs)],)))
         for t in threads:
             t.start()
         for t in threads:
             t.join()
-        # for number of threads check their results
+        # For number of threads check their results
         all_good = True
         for t in threads:
             value = q.get()

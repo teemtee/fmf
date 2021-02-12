@@ -536,14 +536,15 @@ def fetch(url, ref=None, destination=None, env=None):
             try:
                 os.makedirs(cache)
             except OSError as error:
-                # python2 doesn't have exist_ok=True, emulating it here
-                # we don't care if cache wasn't created by this process
+                # Python 2 doesn't have exist_ok=True, emulating it here.
+                # We don't care if cache wasn't created by this process.
                 # errno-17 is file exists
                 if error.errno == 17 and os.path.isdir(fmf_cache):
                     pass
                 else:
                     raise GeneralError(
-                        "Failed to create cache directory '{0}'.".format(cache))
+                        "Failed to create cache directory '{0}'.".format(
+                            cache))
         directory = url.replace('/', '_')
         destination = os.path.join(cache, directory)
     else:
@@ -553,20 +554,24 @@ def fetch(url, ref=None, destination=None, env=None):
     if ref is None:
         ref = '__DEFAULT__'
 
-    # lock for possibly shared cache directory, it has .lock extension automatically
-    # all in with statement to correctly remove lock on exception
-    log.debug("Acquire lock for {0}".format(destination))
+    # Lock for possibly shared cache directory, it has the '.lock'
+    # extension added automatically. Everything under the with statement
+    # to correctly remove lock upon exception.
+    log.debug("Acquire lock for '{0}'.".format(destination))
     try:
         with LockFile(destination, timeout=FETCH_LOCK_TIMEOUT) as lock:
-            # write own PID into lockfile to be able to investigate which process got it
-            with open(lock.lock_file, 'w') as fw:
-                fw.write(str(os.getpid()))
+            # Write own PID into lockfile to be able to investigate
+            # which process got it
+            with open(lock.lock_file, 'w') as lock_file:
+                lock_file.write(str(os.getpid()))
             # Clone the repository
             if not os.path.isdir(os.path.join(destination, '.git')):
                 run(['git', 'clone', url, destination], cwd=cache, env=env)
                 # Store the default branch from the origin as a DEFAULT ref
-                head = os.path.join(destination, '.git/refs/remotes/origin/HEAD')
-                default = os.path.join(destination, '.git/refs/heads/__DEFAULT__')
+                head = os.path.join(
+                    destination, '.git/refs/remotes/origin/HEAD')
+                default = os.path.join(
+                    destination, '.git/refs/heads/__DEFAULT__')
                 shutil.copyfile(head, default)
             # Fetch changes if we are too old
             fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
@@ -585,7 +590,8 @@ def fetch(url, ref=None, destination=None, env=None):
     except (OSError, subprocess.CalledProcessError) as error:
         raise GeneralError("{0}".format(error))
     except LockTimeout:
-        raise GeneralError("Failed to acquire lock for {0} within {1} seconds".format(
+        raise GeneralError(
+            "Failed to acquire lock for '{0}' within {1} seconds.".format(
             destination, FETCH_LOCK_TIMEOUT))
 
     return destination

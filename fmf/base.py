@@ -24,8 +24,8 @@ from pprint import pformat as pretty
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
-# maximum seconds to process fmf structure + possibly fetch the repo
-REMOTE_NODE_LOCK_TIMEOUT = 60 + utils.FETCH_LOCK_TIMEOUT
+# Maximum seconds to process fmf structure + possibly fetch the repo
+NODE_LOCK_TIMEOUT = 60 + utils.FETCH_LOCK_TIMEOUT
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  YAML
@@ -560,20 +560,22 @@ class Tree(object):
         # Fetch remote git repository
         if 'url' in reference:
             path = reference.get('path', '.').lstrip('/')
-            # lock for the intention to fetch/read git from URL to the cache
-            lock_path = os.path.join('/tmp', reference["url"].replace('/', '_'))
+            # Lock for the intention to fetch/read git from URL to the cache
+            lock_path = os.path.join(
+                '/tmp', reference["url"].replace('/', '_'))
             try:
-                with LockFile(lock_path, timeout=REMOTE_NODE_LOCK_TIMEOUT) as lock:
-                    # write PID to lockfile so we know which process got it
-                    with open(lock.lock_file, 'w') as fw:
-                        fw.write(str(os.getpid()))
+                with LockFile(lock_path, timeout=NODE_LOCK_TIMEOUT) as lock:
+                    # Write PID to lockfile so we know which process got it
+                    with open(lock.lock_file, 'w') as lock_file:
+                        lock_file.write(str(os.getpid()))
                     repository = utils.fetch(
                         reference.get('url'), reference.get('ref'))
                     root = os.path.join(repository, path)
                     tree = Tree(root)
             except LockTimeout:
-                raise utils.GeneralError("Failed to acquire lock for {0} within {1} seconds".format(
-                        lock_path, REMOTE_NODE_LOCK_TIMEOUT))
+                raise utils.GeneralError(
+                    "Failed to acquire lock for {0} within {1} seconds".format(
+                    lock_path, NODE_LOCK_TIMEOUT))
         # Use local files
         else:
             root = reference.get('path', '.')
@@ -587,7 +589,6 @@ class Tree(object):
                 "No tree node found for '{0}' reference".format(reference))
         # FIXME Should be able to remove .cache if required
         return found_node
-
 
     def copy(self):
         """
