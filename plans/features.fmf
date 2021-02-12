@@ -1,7 +1,4 @@
 summary:
-    Essential command line features
+    Verify command line features
 discover:
     how: fmf
-    repository: https://github.com/psss/fmf
-execute:
-    how: beakerlib

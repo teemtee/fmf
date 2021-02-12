@@ -1,8 +1,0 @@
-summary:
-    Ensure that documentation is present
-discover:
-    how: fmf
-    repository: https://github.com/psss/fmf
-    filter: coverage:/stories/docs.*
-execute:
-    how: beakerlib

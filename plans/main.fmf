@@ -1,0 +1,15 @@
+# Run on localhost by default
+provision:
+    how: local
+
+# Use the internal executor
+execute:
+    how: tmt
+
+# Install packages
+#prepare:
+#  - name: fmf
+#    how: install
+#    package: fmf
+#    copr: psss/fmf
+#    directory: tmp/RPMS/noarch

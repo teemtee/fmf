@@ -1,8 +1,12 @@
-tmp
 build
 dist
-
 *.egg
 *.egg-info
-
 .pytest_cache
+*,cover
+.coverage
+/tmp/
+docs/_build
+docs/spec
+docs/stories
+__pycache__
