@@ -517,27 +517,27 @@ def fetch(url, ref=None, destination=None, env=None):
     """
     Fetch remote git repository and return local directory
 
-    Fetch git repository from provided url into a local cache
-    directory, checkout requested ref and return path to the repo.
-    If no ref is provided, the default branch from the origin is used.
-    If destination is provided, directory should not exist or needs to be empty
-    Use env as dictionary to set environment variables for git calls
+    Fetch git repository from provided url into a local cache directory,
+    checkout requested ref and return path to the repo. If no ref is
+    provided, the default branch from the origin is used. If destination
+    directory is provided, it should not exist or needs to be empty. Use
+    dictionary env to set environment variables for git calls.
     """
 
     if destination is None:
         # Prepare the destination path and the cache directory
-        cache = os.path.expanduser(os.environ.get('XDG_CACHE_HOME', '~/.cache'))
-        fmf_cache = os.path.join(cache, 'fmf')
-        if not os.path.isdir(fmf_cache):
+        cache = os.path.join(os.path.expanduser(
+            os.environ.get('XDG_CACHE_HOME', '~/.cache')), 'fmf')
+        if not os.path.isdir(cache):
             try:
-                os.makedirs(fmf_cache)
+                os.makedirs(cache)
             except OSError:
                 raise GeneralError(
-                    "Failed to create cache directory '{0}'.".format(fmf_cache))
+                    "Failed to create cache directory '{0}'.".format(cache))
         directory = url.replace('/', '_')
-        destination = os.path.join(fmf_cache, directory)
+        destination = os.path.join(cache, directory)
     else:
-        fmf_cache = os.path.dirname(destination)
+        cache = os.path.dirname(destination.rstrip('/'))
 
     # Use the default branch from origin of no ref provided
     if ref is None:
@@ -546,8 +546,8 @@ def fetch(url, ref=None, destination=None, env=None):
     try:
         # FIXME Implement locking
         # Clone the repository
-        if not os.path.isdir(destination):
-            run(['git', 'clone', url, destination], cwd=fmf_cache, env=env)
+        if not os.path.isdir(os.path.join(destination, '.git')):
+            run(['git', 'clone', url, destination], cwd=cache, env=env)
             # Store the default branch from the origin as a DEFAULT ref
             head = os.path.join(destination, '.git/refs/remotes/origin/HEAD')
             default = os.path.join(destination, '.git/refs/heads/__DEFAULT__')
@@ -578,17 +578,18 @@ def fetch(url, ref=None, destination=None, env=None):
 
 def run(command, cwd=None, check_exit_code=True, env=None):
     """
-    Run command and return stdout,stderr touple
+    Run command and return a (stdout, stderr) tuple
 
     :command as list (name, arg1, arg2...)
-    :cwd Path to directory where to run the command
+    :cwd path to directory where to run the command
     :check_exit_code raise CalledProcessError if exit code is non-zero
     :env dictionary of the environment variables for the command
     """
     log.debug("Running command: '{0}'.".format(' '.join(command)))
 
     process = subprocess.Popen(
-        command, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command, cwd=cwd, env=env,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     # Python 3 returns byte stream
     if hasattr(stdout, 'decode'):
