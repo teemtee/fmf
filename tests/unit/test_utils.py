@@ -233,8 +233,13 @@ class TestFetch(object):
         # Is a directory, but not empty
         dest = tmpdir.mkdir('yet_another')
         dest.join('some_file').write('content')
-        with pytest.raises(utils.GeneralError):
+        with pytest.raises(utils.GeneralError) as error:
             repo = utils.fetch(GIT_REPO, destination=str(dest))
+        # Git's error message
+        assert ("already exists and is not an empty"
+            in error.value.args[1].stderr)
+        # We report same error message as before
+        assert str(error.value) == str(error.value.args[1])
 
     def test_env(self):
         # Nonexistent repo on github makes git to ask for password

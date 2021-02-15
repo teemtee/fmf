@@ -68,6 +68,12 @@ class MergeError(GeneralError):
 class ReferenceError(GeneralError):
     """ Referenced tree node cannot be found """
 
+class FetchError(GeneralError):
+    """ Fatal error in helper command while fetching """
+    # Keep previously used format of the message
+    def __str__(self):
+        return self.args[0] if self.args else ''
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Utils
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -553,6 +559,8 @@ def fetch(url, ref=None, destination=None, env=None):
     provided, the default branch from the origin is used. If destination
     directory is provided, it should not exist or needs to be empty. Use
     dictionary env to set environment variables for git calls.
+
+    Raises FetchError upon failure with the original exception included.
     """
 
     if destination is None:
@@ -605,7 +613,7 @@ def fetch(url, ref=None, destination=None, env=None):
             "Failed to acquire lock for '{0}' within {1} seconds.".format(
             destination, FETCH_LOCK_TIMEOUT))
     except (OSError, subprocess.CalledProcessError) as error:
-        raise GeneralError("{0}".format(error))
+        raise FetchError("{0}".format(error), error)
 
     return destination
 
@@ -639,7 +647,8 @@ def run(command, cwd=None, check_exit_code=True, env=None):
         process.returncode, ('' if check_exit_code else ' (ignored)')))
     if check_exit_code and process.returncode != 0:
         raise subprocess.CalledProcessError(
-            process.returncode, ' '.join(command))
+            process.returncode, ' '.join(command),
+            output=stdout, stderr=stderr)
     return stdout, stderr
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
