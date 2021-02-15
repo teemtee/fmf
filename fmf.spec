@@ -49,10 +49,10 @@ BuildRequires: python2-devel
 BuildRequires: python2-setuptools
 BuildRequires: pytest
 BuildRequires: PyYAML
-BuildRequires: python2-lockfile
+BuildRequires: python2-filelock
 %{?python_provide:%python_provide python2-%{name}}
 Requires:       PyYAML
-Requires:       python2-lockfile
+Requires:       python2-filelock
 
 %description -n python2-%{name}
 The fmf Python module and command line tool implement a flexible
@@ -71,12 +71,12 @@ BuildRequires: python%{python3_pkgversion}-devel
 BuildRequires: python%{python3_pkgversion}-setuptools
 BuildRequires: python%{python3_pkgversion}-pytest
 BuildRequires: python%{python3_pkgversion}-PyYAML
-BuildRequires: python%{python3_pkgversion}-lockfile
+BuildRequires: python%{python3_pkgversion}-filelock
 BuildRequires: git-core
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
 %if %{with oldreqs}
 Requires:       python%{python3_pkgversion}-PyYAML
-Requires:       python%{python3_pkgversion}-lockfile
+Requires:       python%{python3_pkgversion}-filelock
 %endif
 
 %description -n python%{python3_pkgversion}-%{name}

@@ -21,7 +21,7 @@ __desc__ = 'Flexible Metadata Format'
 __scripts__ = ['bin/fmf']
 __irequires__ = [
     'PyYAML',
-    'lockfile'
+    'filelock'
 ]
 
 pip_src = 'https://pypi.python.org/packages/source'

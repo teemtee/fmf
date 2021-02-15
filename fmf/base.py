@@ -9,7 +9,7 @@ import re
 import copy
 import yaml
 import subprocess
-from lockfile import LockFile, LockTimeout
+from filelock import Timeout, FileLock
 
 import fmf.context
 import fmf.utils as utils
@@ -560,11 +560,13 @@ class Tree(object):
         # Fetch remote git repository
         if 'url' in reference:
             path = reference.get('path', '.').lstrip('/')
-            # Lock for the intention to fetch/read git from URL to the cache
+            # Create lock path to fetch/read git from URL to the cache
+            cache_dir = utils.get_cache_directory()
+            # Use .read.lock suffix (different from the inner fetch lock)
             lock_path = os.path.join(
-                '/tmp', reference["url"].replace('/', '_'))
+                cache_dir, reference["url"].replace('/', '_')) + '.read.lock'
             try:
-                with LockFile(lock_path, timeout=NODE_LOCK_TIMEOUT) as lock:
+                with FileLock(lock_path, timeout=NODE_LOCK_TIMEOUT) as lock:
                     # Write PID to lockfile so we know which process got it
                     with open(lock.lock_file, 'w') as lock_file:
                         lock_file.write(str(os.getpid()))
@@ -572,7 +574,7 @@ class Tree(object):
                         reference.get('url'), reference.get('ref'))
                     root = os.path.join(repository, path)
                     tree = Tree(root)
-            except LockTimeout:
+            except Timeout:
                 raise utils.GeneralError(
                     "Failed to acquire lock for {0} within {1} seconds".format(
                     lock_path, NODE_LOCK_TIMEOUT))

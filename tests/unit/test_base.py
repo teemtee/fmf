@@ -4,6 +4,7 @@ from __future__ import unicode_literals, absolute_import
 
 import os
 import pytest
+import time
 import threading
 import queue
 import tempfile
@@ -313,3 +314,40 @@ class TestRemote(object):
                 print(value) # so it is visible in the output
                 all_good = False
         assert all_good
+
+    def test_tree_concurrent_timeout(self, monkeypatch, tmpdir):
+        # Much shorter timeout
+        monkeypatch.setattr('fmf.base.NODE_LOCK_TIMEOUT', 2)
+
+        def long_fetch(*args, **kwargs):
+            # Longer than timeout
+            time.sleep(7)
+            return str(tmpdir)
+
+        # Prepare some content in the repo
+        tmpdir.join('main.fmf').write('test: echo yes')
+
+        # Patch fetch to sleep and later return tmpdir path
+        monkeypatch.setattr('fmf.utils.fetch', long_fetch)
+
+        # Background thread to get node() acquiring lock
+        def target():
+            Tree.node({
+                'url': 'localhost',
+                'name': '/',
+                })
+        thread = threading.Thread(target=target)
+        thread.start()
+
+        # Small sleep to mitigate race
+        time.sleep(2)
+
+        # "Real" fetch shouldn't get the lock
+        with pytest.raises(utils.GeneralError):
+            Tree.node({
+                'url': 'localhost',
+                'name': '/',
+                })
+
+        # Wait on parallel thread to finish
+        thread.join()

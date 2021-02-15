@@ -8,7 +8,9 @@ import shutil
 import threading
 import queue
 import fmf.utils as utils
+import time
 from fmf.utils import filter, listed, run
+
 
 GIT_REPO = 'https://github.com/psss/fmf.git'
 GIT_REPO_FEDORA = 'https://src.fedoraproject.org/rpms/tmt'
@@ -287,5 +289,29 @@ class TestFetch(object):
                 all_good = False
         assert all_good
 
+    def test_fetch_concurrent_timeout(self, monkeypatch, tmpdir):
+        # Much shorter timeout
+        monkeypatch.setattr('fmf.utils.FETCH_LOCK_TIMEOUT', 2)
 
+        def long_run(*args, **kwargs):
+            # Longer than timeout
+            time.sleep(7)
 
+        # Patch run to use sleep instead
+        monkeypatch.setattr('fmf.utils.run', long_run)
+
+        # Background thread to fetch() the same destination acquiring lock
+        def target():
+            utils.fetch(GIT_REPO, '0.10', destination=str(tmpdir))
+        thread = threading.Thread(target=target)
+        thread.start()
+
+        # Small sleep to mitigate race
+        time.sleep(2)
+
+        # "Real" fetch shouldn't get the lock
+        with pytest.raises(utils.GeneralError):
+            utils.fetch(GIT_REPO, '0.10', destination=str(tmpdir))
+
+        # Wait on parallel thread to finish
+        thread.join()

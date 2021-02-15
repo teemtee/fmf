@@ -12,7 +12,7 @@ import time
 import shutil
 import logging
 import subprocess
-from lockfile import LockFile, LockTimeout
+from filelock import Timeout, FileLock
 from pprint import pformat as pretty
 
 
@@ -514,6 +514,33 @@ class Coloring(object):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Cache directory
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def get_cache_directory():
+    """
+    Return cache directory, create it if necessary
+
+    Raise GeneralError if it is not possible to create it.
+    """
+    cache = os.path.join(os.path.expanduser(
+        os.environ.get('XDG_CACHE_HOME', '~/.cache')), 'fmf')
+    if not os.path.isdir(cache):
+        try:
+            os.makedirs(cache)
+        except OSError as error:
+            # Python 2 doesn't have exist_ok=True, emulating it here.
+            # We don't care if cache wasn't created by this process.
+            # errno-17 is file exists
+            if error.errno == 17 and os.path.isdir(fmf_cache):
+                pass # pragma: no cover
+            else:
+                raise GeneralError(
+                    "Failed to create cache directory '{0}'.".format(cache))
+    return cache
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -529,22 +556,8 @@ def fetch(url, ref=None, destination=None, env=None):
     """
 
     if destination is None:
-        # Prepare the destination path and the cache directory
-        cache = os.path.join(os.path.expanduser(
-            os.environ.get('XDG_CACHE_HOME', '~/.cache')), 'fmf')
-        if not os.path.isdir(cache):
-            try:
-                os.makedirs(cache)
-            except OSError as error:
-                # Python 2 doesn't have exist_ok=True, emulating it here.
-                # We don't care if cache wasn't created by this process.
-                # errno-17 is file exists
-                if error.errno == 17 and os.path.isdir(fmf_cache):
-                    pass
-                else:
-                    raise GeneralError(
-                        "Failed to create cache directory '{0}'.".format(
-                            cache))
+        # Prepare the destination path
+        cache = get_cache_directory()
         directory = url.replace('/', '_')
         destination = os.path.join(cache, directory)
     else:
@@ -554,14 +567,14 @@ def fetch(url, ref=None, destination=None, env=None):
     if ref is None:
         ref = '__DEFAULT__'
 
-    # Lock for possibly shared cache directory, it has the '.lock'
-    # extension added automatically. Everything under the with statement
-    # to correctly remove lock upon exception.
+    # Lock for possibly shared cache directory. Add the extension
+    # '.fetch.lock' manually in the constructor. Everything under the
+    # with statement to correctly remove lock upon exception.
     log.debug("Acquire lock for '{0}'.".format(destination))
     try:
-        with LockFile(destination, timeout=FETCH_LOCK_TIMEOUT) as lock:
-            # Write own PID into lockfile to be able to investigate
-            # which process got it
+        lock_path = destination + '.fetch.lock'
+        with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
+            # Write PID to lockfile so we know which process got it
             with open(lock.lock_file, 'w') as lock_file:
                 lock_file.write(str(os.getpid()))
             # Clone the repository
@@ -587,12 +600,12 @@ def fetch(url, ref=None, destination=None, env=None):
             # ref could be tag or commit where it is expected to fail
             run(['git', 'reset', '--hard', "origin/{0}".format(ref)],
                 cwd=destination, check_exit_code=False, env=env)
-    except (OSError, subprocess.CalledProcessError) as error:
-        raise GeneralError("{0}".format(error))
-    except LockTimeout:
+    except Timeout:
         raise GeneralError(
             "Failed to acquire lock for '{0}' within {1} seconds.".format(
             destination, FETCH_LOCK_TIMEOUT))
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise GeneralError("{0}".format(error))
 
     return destination
 
