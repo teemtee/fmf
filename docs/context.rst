@@ -170,18 +170,11 @@ centos-8     skip         skip    False
 Here is a couple of examples to get a better idea of how the
 comparison works for some special cases::
 
-    centos < fedora ---> skip (cannot be decided)
-    fedora < fedora ---> False
     fedora < fedora-33 ---> skip (left side has no version parts)
-    foo-1 < foo-1.1 ---> True (missing version part on left is padded)
-    fedora-33 < fedora ---> False (right side wants only name)
     fedora-33 == fedora ---> True (right side wants only name)
-    fedora-33 ~= fedora ---> True (right side wants only name, no minor comparison requested)
-    fedora < fedora-33 ---> True (missing version parts are lower)
-    fedora ~< fedora-33 ---> skip (right side wants also major version to match)
-    fedora-32 ~< fedora-33 ---> True
+    fedora-33 < fedora-rawhide ---> True (rawhide is newer then any number)
+
     centos-8.4.0 == centos ---> True
     centos-8.4.0 < centos-9 ---> True
     centos-8.4.0 ~< centos-9 ---> True (no minor comparison requested)
     centos-8.4.0 ~< centos-9.2 ---> skip (minor comparison requested)
-    fedora-33 < fedora-rawhide ---> True (rawhide is newer then any number)
