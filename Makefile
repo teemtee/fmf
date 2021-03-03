@@ -10,9 +10,9 @@ FILES = LICENSE README.rst \
 all: docs packages
 .PHONY: docs hooks
 
-# Temporary directory
+# Temporary directory, include .fmf to prevent exploring tests there
 tmp:
-	mkdir $(TMP)
+	mkdir -p $(TMP)/.fmf
 
 
 # Run the test suite, optionally with coverage
