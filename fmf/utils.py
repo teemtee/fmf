@@ -41,6 +41,8 @@ VERSION = 1
 
 # Cache expiration in seconds
 CACHE_EXPIRATION = 1200
+# Placeholder for customized location
+_CACHE_DIRECTORY = None
 
 # Lock timeout in seconds for fetch
 FETCH_LOCK_TIMEOUT = 5 * 60
@@ -527,12 +529,23 @@ class Coloring(object):
 
 def get_cache_directory():
     """
-    Return cache directory, create it if necessary
+    Return cache directory, created by this call if necessary
+
+    Cache directory is (first existing):
+    - Value of FMF_CACHE_DIRECTORY environment variable
+    - Value set by the last call of `set_cache_directory()`
+    - $XDG_CACHE_HOME/fmf
+    - ~/.cache/fmf
 
     Raise GeneralError if it is not possible to create it.
     """
-    cache = os.path.join(os.path.expanduser(
-        os.environ.get('XDG_CACHE_HOME', '~/.cache')), 'fmf')
+    cache = (
+        os.environ.get('FMF_CACHE_DIRECTORY', _CACHE_DIRECTORY)
+        or os.path.join(
+                os.path.expanduser(
+                    os.environ.get('XDG_CACHE_HOME', '~/.cache')),
+                'fmf')
+        )
     if not os.path.isdir(cache):
         try:
             os.makedirs(cache)
@@ -540,13 +553,17 @@ def get_cache_directory():
             # Python 2 doesn't have exist_ok=True, emulating it here.
             # We don't care if cache wasn't created by this process.
             # errno-17 is file exists
-            if error.errno == 17 and os.path.isdir(fmf_cache):
+            if error.errno == 17 and os.path.isdir(cache):
                 pass # pragma: no cover
             else:
                 raise GeneralError(
                     "Failed to create cache directory '{0}'.".format(cache))
     return cache
 
+def set_cache_directory(cache_directory):
+    """ Set preferred cache directory """
+    global _CACHE_DIRECTORY
+    _CACHE_DIRECTORY = cache_directory
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Remote Repository

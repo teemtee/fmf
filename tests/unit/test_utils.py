@@ -209,6 +209,19 @@ class TestFetch(object):
             monkeypatch.setenv("XDG_CACHE_HOME", "/etc")
             utils.fetch(GIT_REPO)
 
+    def test_custom_directory(self, monkeypatch, tmpdir):
+        target = str(tmpdir.join('dir'))
+        utils.set_cache_directory(target)
+        cache = utils.get_cache_directory()
+        assert target == cache
+
+        # Environment takes precedence
+        target_env = str(tmpdir.join('from_env'))
+        utils.set_cache_directory(target) # no-op since it stays same
+        monkeypatch.setenv("FMF_CACHE_DIRECTORY", target_env)
+        cache = utils.get_cache_directory()
+        assert target_env == cache
+
     @pytest.mark.parametrize("trailing", ['', '/'])
     def test_destination(self, tmpdir, trailing):
         # Does not exist

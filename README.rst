@@ -157,6 +157,15 @@ or use PIP::
 See documentation for more details about installation options.
 
 
+Variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here is the list of environment variables understood by fmf:
+
+FMF_CACHE_DIRECTORY
+    Directory used to cache git clone calls for fmf identifiers.
+
+
 Links
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
