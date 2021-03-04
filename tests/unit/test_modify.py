@@ -3,26 +3,22 @@
 from __future__ import unicode_literals, absolute_import
 
 import unittest
+import pytest
 import os
+import re
 import tempfile
-from fmf.base import Tree
-from shutil import rmtree, copytree
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Constants
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+from fmf.base import Tree
+from fmf.utils import GeneralError
+from shutil import rmtree, copytree
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
 EXAMPLES = PATH + "/../../examples/"
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Tree
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 class TestModify(unittest.TestCase):
-    """ Tree class """
+    """ Verify storing modifed data to disk """
 
     def setUp(self):
         self.wget_path = EXAMPLES + "wget"
@@ -37,9 +33,12 @@ class TestModify(unittest.TestCase):
         """ Inheritance and data types """
         item = self.wget.find('/recursion/deep')
         item_parent = self.wget.find('/recursion')
-        # reload the data
-        item.modify(dict(depth=2000, new="some")).save()
-        item.parent.modify(dict(parent_attr="value")).save()
+        # Modify data and store to disk
+        with item as data:
+            data.update(dict(depth=2000, new="two\nlines"))
+        with item.parent as data:
+            data.update(dict(parent_attr="value"))
+        # Reload the data and verify
         self.wget = Tree(self.tempdir)
         item = self.wget.find('/recursion/deep')
         self.assertEqual(item.data['tags'], ['Tier2'])
@@ -47,50 +46,66 @@ class TestModify(unittest.TestCase):
         self.assertEqual(item.data['depth'], 2000)
         self.assertIn('depth', item.data)
         self.assertNotIn('depth', item.parent.data)
-        self.assertEqual(item.data['new'], "some")
+        self.assertEqual(item.data['new'], "two\nlines")
         self.assertEqual(item.data['parent_attr'], "value")
+        with open(os.path.join(self.tempdir, 'recursion/deep.fmf')) as file:
+            self.assertTrue(re.search('two\n +lines', file.read()))
 
     def test_deep_modify(self):
-        req = self.wget.find('/requirements')
-        proto = self.wget.find('/requirements/protocols')
+        """ Deep structures """
+        requirements = self.wget.find('/requirements')
+        protocols = self.wget.find('/requirements/protocols')
         ftp = self.wget.find('/requirements/protocols/ftp')
-
-        req.modify(dict(new="some")).save()
-        proto.modify(dict(coverage="changed", new_attr="val")).save()
-        ftp.modify(dict(server="vsftpd")).save()
-        # reload the data
+        # Modify data and store to disk
+        with requirements as data:
+            data['new'] = 'some'
+        with protocols as data:
+            data.update(dict(coverage="changed", new_attr="val"))
+        with ftp as data:
+            data['server'] = 'vsftpd'
+        # Reload the data and verify
         self.wget = Tree(self.tempdir)
-        req = self.wget.find('/requirements')
-        proto = self.wget.find('/requirements/protocols')
+        requirements = self.wget.find('/requirements')
+        protocols = self.wget.find('/requirements/protocols')
         ftp = self.wget.find('/requirements/protocols/ftp')
-        self.assertEqual(req.data["new"], "some")
-        self.assertEqual(proto.data["new"], "some")
+        self.assertEqual(requirements.data["new"], "some")
+        self.assertEqual(protocols.data["new"], "some")
         self.assertEqual(ftp.data["new"], "some")
-        self.assertNotIn("server",proto.data)
+        self.assertNotIn("server",protocols.data)
         self.assertIn("server", ftp.data)
-        self.assertNotIn("new_attr", req.data)
-        self.assertIn("new_attr", proto.data)
+        self.assertNotIn("new_attr", requirements.data)
+        self.assertIn("new_attr", protocols.data)
         self.assertIn("new_attr", ftp.data)
-        self.assertEqual(proto.data["coverage"], "changed")
+        self.assertEqual(protocols.data["coverage"], "changed")
         self.assertIn('adjust', ftp.data)
         self.assertEqual(ftp.data['adjust'][0]['enabled'], False)
         self.assertEqual(ftp.data['adjust'][0]['when'], "arch != x86_64")
 
+    def test_deep_hierarchy(self):
+        """ Multiple virtual hierarchy levels shortcut """
+        with open(os.path.join(self.tempdir, 'deep.fmf'), 'w') as file:
+            file.write('/one/two/three:\n x: 1\n')
+        deep = Tree(self.tempdir).find('/deep/one/two/three')
+        with deep as data:
+            data['y'] = 2
+        deep = Tree(self.tempdir).find('/deep/one/two/three')
+        self.assertEqual(deep.get('x'), 1)
+        self.assertEqual(deep.get('y'), 2)
+
     def test_modify_empty(self):
-        """
-        It must not raise error when empty elemenent node
-        """
-        self.wget.find('/download/requirements/spider').modify(dict(x=1)).save()
+        """ Nodes with no content should be handled as an empty dict """
+        with self.wget.find('/download/requirements/spider') as data:
+            data['x'] = 1
         self.wget = Tree(self.tempdir)
         node = self.wget.find('/download/requirements/spider')
         self.assertEqual(node.data['x'], 1)
 
     def test_modify_pop(self):
-        """
-        pop elements from node
-        """
+        """ Pop elements from node data """
         item = '/requirements/protocols/ftp'
-        self.wget.find(item).modify("coverage", "tester+", method="pop").save()
+        with self.wget.find(item) as data:
+            data.pop('coverage')
+            data.pop('tester+')
         self.wget = Tree(self.tempdir)
         node = self.wget.find(item)
         self.assertNotIn('coverage', node.data)
@@ -98,11 +113,10 @@ class TestModify(unittest.TestCase):
         self.assertIn('requirement', node.data)
 
     def test_modify_clear(self):
-        """
-        clear data in node
-        """
+        """ Clear node data """
         item = '/requirements/protocols/ftp'
-        self.wget.find(item).modify(method="clear").save()
+        with self.wget.find(item) as data:
+            data.clear()
         self.wget = Tree(self.tempdir)
         node = self.wget.find(item)
         self.assertNotIn('coverage', node.data)
@@ -110,11 +124,10 @@ class TestModify(unittest.TestCase):
         self.assertNotIn('requirement', node.data)
 
     def test_modify_unsupported_method(self):
-        """
-        raise error for unsupported method
-        """
-        item = '/requirements/protocols/ftp'
-        self.assertRaises(ValueError, self.wget.find(item).modify, method="keys")
+        """ Raise error for trees initialized from a dict """
+        with pytest.raises(GeneralError, match='No raw data'):
+            with Tree(dict(x=1)) as data:
+                data['y'] = 2
 
     def test_context_manager(self):
         """

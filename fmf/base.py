@@ -610,76 +610,80 @@ class Tree(object):
         self.parent = duplicate.parent = original_parent
         return duplicate
 
-    def _get_raw_data_node(self):
+    def _locate_raw_data(self):
         """
-        Get tuple
-          - node where _raw_data are stored
-          - list if keys for current node inside raw data
+        Detect location of raw data from which the node has been created
+
+        Find the closest parent node which has raw data defined. In the
+        raw data identify the dictionary corresponding to the current
+        node, create if needed. Detect the raw data source filename.
+
+        Return tuple with the following three items:
+
+        node_data ... dictionary containing raw data for the current node
+        full_data ... full raw data from the closest parent node
+        source ... file system path where the full raw data are stored
+
         """
-        raw_data_node = self
-        id_list = list()
+        # List of node names in the virtual hierarchy
+        hierarchy = list()
+
+        # Find the closest parent with raw data defined
+        node = self
         while True:
-            raw_data = raw_data_node._raw_data
-            if raw_data:
-                return raw_data_node, id_list
-            elif not raw_data_node.parent:
-                raise utils.RootError("Cannot find root node with _raw_data, very strange")
-            else:
-                id_list.insert(0, "/" + raw_data_node.name.rsplit("/")[-1])
-                raw_data_node = raw_data_node.parent
+            # Raw data found
+            full_data = node._raw_data
+            if full_data:
+                break
+            # No raw data, perhaps a Tree initialized from a dict?
+            if not node.parent:
+                raise utils.GeneralError(
+                    "No raw data found, does the Tree grow on a filesystem?")
+            # Extend virtual hierarchy with the current node name, go up
+            hierarchy.insert(0, "/" + node.name.rsplit("/")[-1])
+            node = node.parent
 
-    def _get_node_raw_data(self, default=None):
-        """
-        Get dictionary of _raw_data for current node
-        in case of None add to the current node key default element
-        """
-        raw_data_node, id_list = self._get_raw_data_node()
-        raw_data = raw_data_node._raw_data
-        for key in id_list:
-            if default is not None and raw_data[key] is None:
-                raw_data[key] = default
-            raw_data = raw_data[key]
-        return raw_data
+        # Localize node data dictionary in the virtual hierarchy
+        node_data = full_data
+        for key in hierarchy:
+            # Create a virtual hierarchy level if missing
+            if key not in node_data:
+                node_data[key] = dict()
+            # Initialize as an empty dict if leaf node is empty
+            if node_data[key] is None:
+                node_data[key] = dict()
+            node_data = node_data[key]
 
-    def modify(self, *data, method="update"):
-        """
-        Modify node metadata (original data stored in file) via method.
-        supported dictionary methods are: update(default), pop, clear
-        and data is attribute of the method
-
-        Modification will invalidate affected node data and childs, please reload the Tree
-
-        Be aware that it modify raw data in file:
-        If you have defined "key+: fist" in the file for node and
-        you will add "key: second" it will lead  to "secondfirst" output for node
-
-        Data are always stored into the last sourced fmf file of the modified node
-          (e.g no inheritance and no elasticity)
-        """
-        node_data = self._get_node_raw_data(default=dict())
-        if method in ["update", "pop"]:
-            for item in data:
-                getattr(node_data, method)(item)
-        elif method == "clear":
-            if data:
-                raise AttributeError("Unexpected argument for clear method", data)
-            else:
-                node_data.clear()
-        else:
-            raise ValueError("Unsupported method: {} (you can use dictionary methods: update, pop, clear)".format(method))
-        return self
-
-    def save(self):
-        """
-        Store data back to fmf files after modification
-        """
-        raw_data_node, _ = self._get_raw_data_node()
-        target_file = raw_data_node.sources[-1]
-        with open(target_file, "w") as fd:
-            fd.write(dict_to_yaml(raw_data_node._raw_data))
+        # The full raw data were read from the last source
+        return node_data, full_data, node.sources[-1]
 
     def __enter__(self):
-        return self._get_node_raw_data(default=dict())
+        """
+        Experimental: Modify metadata and store changes to disk
+
+        This provides an experimental support for storing modified node
+        data to disk. For now, the implementation is very simple, data
+        are always stored into the last source file from which node data
+        were read.
+
+        The provided object contains only raw data. There is no support
+        for inheritance, elasticity or data merging. For example, if you
+        have defined "key+: value" in the file for node and you will add
+        "key: other" it will result into "othervalue".
+
+        Example usage:
+
+            with Tree('.').find('/tests/core/smoke') as test:
+                test['tier'] = 0
+
+        Note that white space will be stripped and comments removed as
+        export to yaml does not preserve this information. The feature
+        is experimental and can be later modified, use at your own risk.
+        """
+        return self._locate_raw_data()[0]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.save()
+        """ Experimental: Store modified metadata to disk """
+        _, full_data, source = self._locate_raw_data()
+        with open(source, "w") as file:
+            file.write(dict_to_yaml(full_data))

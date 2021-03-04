@@ -665,6 +665,28 @@ log = Logging('fmf').logger
 #  Convert dict to yaml
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Special hack to store multiline text with the '|' style
+# See https://stackoverflow.com/questions/45004464/
+# Python 2 version
+try:  # pragma: no cover
+    yaml.SafeDumper.orig_represent_unicode = yaml.SafeDumper.represent_unicode
+    def repr_unicode(dumper, data):
+        if '\n' in data:
+            return dumper.represent_scalar(
+                u'tag:yaml.org,2002:str', data, style='|')
+        return dumper.orig_represent_unicode(data)
+    yaml.add_representer(unicode, repr_unicode, Dumper=yaml.SafeDumper)
+# Python 3 version
+except AttributeError:
+    yaml.SafeDumper.orig_represent_str = yaml.SafeDumper.represent_str
+    def repr_str(dumper, data):
+        if '\n' in data:
+            return dumper.represent_scalar(
+                u'tag:yaml.org,2002:str', data, style='|')
+        return dumper.orig_represent_str(data)
+    yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
+
+
 def dict_to_yaml(data, width=None, sort=False):
     """ Convert dictionary into yaml """
     output = io.StringIO()
@@ -673,7 +695,7 @@ def dict_to_yaml(data, width=None, sort=False):
             data, output, sort_keys=sort,
             encoding='utf-8', allow_unicode=True,
             width=width, indent=4, default_flow_style=False)
-    except TypeError:
+    except TypeError:  # pragma: no cover
         # FIXME: Temporary workaround for rhel-8 to disable key sorting
         # https://stackoverflow.com/questions/31605131/
         # https://github.com/psss/tmt/issues/207
