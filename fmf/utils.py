@@ -12,6 +12,7 @@ import time
 import shutil
 import logging
 import subprocess
+import collections
 from filelock import Timeout, FileLock
 from pprint import pformat as pretty
 
@@ -162,6 +163,36 @@ def split(values, separator=re.compile("[ ,]+")):
 def info(message, newline=True):
     """ Log provided info message to the standard error output """
     sys.stderr.write(message + ("\n" if newline else ""))
+
+
+def validate_fmf_id(fmf_id):
+    """
+    Validate given FMF id and return a human readable error.
+    Return a tuple (boolean, message) as the result of validation.
+    The boolean specifies the validation result and the message
+    the validation error. In case the FMF id is valid, return an empty
+    string as the message.
+    """
+    fmf_id = collections.defaultdict(lambda: None, fmf_id)
+    # validate remote id and translate to human readable errors
+    try:
+        from fmf.base import Tree
+        Tree.node(fmf_id)
+    except GeneralError as error:
+        # map fmf errors to more user friendly alternatives
+        error_map = [
+            ('git clone', f'repo \'{fmf_id["url"]}\' cannot be cloned'),
+            ('git checkout', f'git ref \'{fmf_id["ref"]}\' is invalid'),
+            ('directory path', f'path \'{fmf_id["path"]}\' is invalid'),
+            ('tree root',
+             f'No tree found in repo \'{fmf_id["url"]}\', '
+              'missing .fmf directory?'
+             )
+        ]
+        errors = list(filter(lambda a: a[0] in str(error), error_map))
+        return (False, errors[0][1] if errors else str(error))
+
+    return (True, '')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Filtering
