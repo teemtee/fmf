@@ -177,6 +177,33 @@ class TestTree(object):
             tree = fmf.Tree(path)
         rmtree(path)
 
+    def test_yaml_duplicate_keys(self):
+        """ Handle YAML duplicate keys """
+        path = tempfile.mkdtemp()
+        fmf.cli.main("fmf init", path)
+
+        # Simple test
+        with open(os.path.join(path, "main.fmf"), "w") as main:
+            main.write("a: b\na: c\n")
+        with pytest.raises(utils.FileError):
+            fmf.Tree(path)
+
+        # Add some hierarchy
+        subdir = os.path.join(path, "dir")
+        os.makedirs(subdir)
+        with open(os.path.join(subdir, "a.fmf"), "w") as new_file:
+            new_file.write("a: d\n")
+        with pytest.raises(utils.FileError):
+            fmf.Tree(path)
+
+        # Remove duplicate key, check that inheritance doesn't
+        # raise an exception
+        with open(os.path.join(path, "main.fmf"), "w") as main:
+            main.write("a: b\n")
+        fmf.Tree(path)
+
+        rmtree(path)
+
     def test_inaccessible_directories(self):
         """ Inaccessible directories should be silently ignored """
         directory = tempfile.mkdtemp()

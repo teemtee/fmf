@@ -8,6 +8,8 @@ import os
 import re
 import copy
 import yaml
+import yaml.resolver
+import yaml.constructor
 import subprocess
 from filelock import Timeout, FileLock
 
@@ -42,8 +44,27 @@ except ImportError: # pragma: no cover
 # https://stackoverflow.com/questions/2890146/
 def construct_yaml_str(self, node):
     return self.construct_scalar(node)
+
+
+# Raise an exception on duplicate keys
+# https://gist.github.com/pypt/94d747fe5180851196eb
+def unique_key_constructor(loader, node, deep=False):
+    """ YAML constructor that checks for duplicate keys """
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        value = loader.construct_object(value_node, deep=deep)
+        if key in mapping:
+            raise yaml.constructor.ConstructorError(
+                f"Duplicate key '{key}' detected.")
+        mapping[key] = value
+    return loader.construct_mapping(node, deep)
+
+
 YamlLoader.add_constructor(
-    'tag:yaml.org,2002:str', construct_yaml_str)
+    yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG, construct_yaml_str)
+YamlLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_key_constructor)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Metadata
@@ -442,7 +463,7 @@ class Tree(object):
                 with open(fullpath, encoding='utf-8') as datafile:
                     data = yaml.load(datafile, Loader=YamlLoader)
             except yaml.error.YAMLError as error:
-                    raise(utils.FileError("Failed to parse '{0}'\n{1}".format(
+                    raise(utils.FileError("Failed to parse '{0}'.\n{1}".format(
                             fullpath, error)))
             log.data(pretty(data))
             # Handle main.fmf as data for self
