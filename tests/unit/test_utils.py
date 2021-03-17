@@ -163,51 +163,56 @@ class TestFetch(object):
 
     def test_fetch_default_branch(self):
         # On GitHub 'master' is the default
-        repo = utils.fetch(GIT_REPO)
+        repo = utils.fetch_repo(GIT_REPO)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
         assert 'master' in output
         # Fedora uses 'rawide'
-        repo = utils.fetch(GIT_REPO_FEDORA)
+        repo = utils.fetch_repo(GIT_REPO_FEDORA)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
         assert 'rawhide' in output
 
     def test_switch_branches(self):
         # Default branch
-        repo = utils.fetch(GIT_REPO)
+        repo = utils.fetch_repo(GIT_REPO)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
         assert 'master' in output
         # Custom commit
-        repo = utils.fetch(GIT_REPO, '0.12')
+        repo = utils.fetch_repo(GIT_REPO, '0.12')
         output, _ = run(['git', 'rev-parse', 'HEAD'], repo)
         assert '6570aa5' in output
         # Back to the default branch
-        repo = utils.fetch(GIT_REPO)
+        repo = utils.fetch_repo(GIT_REPO)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
         assert 'master' in output
 
     def test_fetch_valid_id(self):
-        repo = utils.fetch(GIT_REPO, '0.10')
+        repo = utils.fetch_repo(GIT_REPO, '0.10')
+        assert utils.os.path.isfile(utils.os.path.join(repo, 'fmf.spec'))
+
+    def test_fetch_deprecation(self):
+        with pytest.warns(FutureWarning):
+            repo = utils.fetch(GIT_REPO, '0.10')
         assert utils.os.path.isfile(utils.os.path.join(repo, 'fmf.spec'))
 
     def test_fetch_invalid_url(self):
         with pytest.raises(utils.GeneralError):
-            utils.fetch('invalid')
+            utils.fetch_repo('invalid')
 
     def test_fetch_invalid_ref(self):
         with pytest.raises(utils.GeneralError):
-            utils.fetch(GIT_REPO, 'invalid')
+            utils.fetch_repo(GIT_REPO, 'invalid')
 
     def test_cache_expiration(self):
-        repo = utils.fetch(GIT_REPO)
+        repo = utils.fetch_repo(GIT_REPO)
         fetch_head = (os.path.join(repo, '.git', 'FETCH_HEAD'))
         os.remove(fetch_head)
-        repo = utils.fetch(GIT_REPO)
+        repo = utils.fetch_repo(GIT_REPO)
         assert os.path.isfile(fetch_head)
 
     def test_invalid_cache_directory(self, monkeypatch):
         with pytest.raises(utils.GeneralError):
             monkeypatch.setenv("XDG_CACHE_HOME", "/etc")
-            utils.fetch(GIT_REPO)
+            utils.fetch_repo(GIT_REPO)
 
     def test_custom_directory(self, monkeypatch, tmpdir):
         target = str(tmpdir.join('dir'))
@@ -226,13 +231,13 @@ class TestFetch(object):
     def test_destination(self, tmpdir, trailing):
         # Does not exist
         dest = str(tmpdir.join('branch_new' + trailing))
-        repo = utils.fetch(GIT_REPO, destination=dest)
+        repo = utils.fetch_repo(GIT_REPO, destination=dest)
         assert repo == dest
         assert os.path.isfile(os.path.join(repo,'fmf.spec'))
 
         # Is an empty directory
         dest = str(tmpdir.mkdir('another' + trailing))
-        repo = utils.fetch(GIT_REPO, destination=dest)
+        repo = utils.fetch_repo(GIT_REPO, destination=dest)
         assert repo == dest
         assert os.path.isfile(os.path.join(repo,'fmf.spec'))
 
@@ -241,13 +246,13 @@ class TestFetch(object):
         dest = tmpdir.join('file')
         dest.write('content')
         with pytest.raises(utils.GeneralError):
-            repo = utils.fetch(GIT_REPO, destination=str(dest))
+            repo = utils.fetch_repo(GIT_REPO, destination=str(dest))
 
         # Is a directory, but not empty
         dest = tmpdir.mkdir('yet_another')
         dest.join('some_file').write('content')
         with pytest.raises(utils.GeneralError) as error:
-            repo = utils.fetch(GIT_REPO, destination=str(dest))
+            repo = utils.fetch_repo(GIT_REPO, destination=str(dest))
         # Git's error message
         assert ("already exists and is not an empty"
             in error.value.args[1].stderr)
@@ -258,7 +263,7 @@ class TestFetch(object):
         # Nonexistent repo on github makes git to ask for password
         # Set handler for user input as echo to return immediately
         with pytest.raises(utils.GeneralError) as error:
-            utils.fetch('https://github.com/psss/fmf-nope-nope.git',
+            utils.fetch_repo('https://github.com/psss/fmf-nope-nope.git',
                         env={"GIT_ASKPASS": "echo"})
         # Assert 'git clone' string in exception's message
         assert "git clone" in error.value.args[0]
@@ -266,7 +271,7 @@ class TestFetch(object):
     @pytest.mark.parametrize("ref", ["master", "0.10", "8566a39"])
     def test_out_of_sync_ref(self, ref):
         """ Solve Your branch is behind ... """
-        repo = utils.fetch(GIT_REPO, ref)
+        repo = utils.fetch_repo(GIT_REPO, ref)
         out, err = run(["git", "rev-parse", "HEAD"], repo)
         old_ref = out
         # Move head one commit back, doesn't invalidate FETCH!
@@ -274,26 +279,26 @@ class TestFetch(object):
         out, err = run(["git", "rev-parse", "HEAD"], repo)
         assert out != old_ref
         # Fetch again, it should move the head back to origin/master
-        repo = utils.fetch(GIT_REPO, ref)
+        repo = utils.fetch_repo(GIT_REPO, ref)
         out, err = run(["git", "rev-parse", "HEAD"],repo)
         assert out == old_ref
 
     def test_fetch_concurrent(self):
-        def do_fetch():
+        def do_fetch_repo():
             try:
-                repo = utils.fetch(GIT_REPO, '0.10')
+                repo = utils.fetch_repo(GIT_REPO, '0.10')
                 q.put(True)
             except Exception as error:
                 q.put(error)
 
         # make sure cache is empty (is there a better way how to target repo?)
-        repo = utils.fetch(GIT_REPO, '0.10')
+        repo = utils.fetch_repo(GIT_REPO, '0.10')
         shutil.rmtree(repo)
 
         q = queue.Queue()
         threads = []
         for i in range(10):
-            threads.append(threading.Thread(target=do_fetch))
+            threads.append(threading.Thread(target=do_fetch_repo))
         for t in threads:
             t.start()
         for t in threads:
@@ -318,9 +323,9 @@ class TestFetch(object):
         # Patch run to use sleep instead
         monkeypatch.setattr('fmf.utils.run', long_run)
 
-        # Background thread to fetch() the same destination acquiring lock
+        # Background thread to fetch_repo() the same destination acquiring lock
         def target():
-            utils.fetch(GIT_REPO, '0.10', destination=str(tmpdir))
+            utils.fetch_repo(GIT_REPO, '0.10', destination=str(tmpdir))
         thread = threading.Thread(target=target)
         thread.start()
 
@@ -329,7 +334,38 @@ class TestFetch(object):
 
         # "Real" fetch shouldn't get the lock
         with pytest.raises(utils.GeneralError):
-            utils.fetch(GIT_REPO, '0.10', destination=str(tmpdir))
+            utils.fetch_repo(GIT_REPO, '0.10', destination=str(tmpdir))
+
+        # Wait on parallel thread to finish
+        thread.join()
+
+    def test_fetch_tree_concurrent_timeout(self, monkeypatch, tmpdir):
+        # Much shorter timeouts
+        monkeypatch.setattr('fmf.utils.FETCH_LOCK_TIMEOUT', 1)
+        monkeypatch.setattr('fmf.utils.NODE_LOCK_TIMEOUT', 2)
+
+        real_fetch_repo = utils.fetch_repo
+        def long_fetch_repo(*args, **kwargs):
+            time.sleep(4)
+            return real_fetch_repo(*args, **kwargs)
+
+        # Patch fetch_repo with delay
+        monkeypatch.setattr('fmf.utils.fetch_repo', long_fetch_repo)
+        # Without remembering get_cache_directory value
+        monkeypatch.setattr('fmf.utils._CACHE_DIRECTORY', str(tmpdir))
+
+        # Background thread to fetch_tree() the same destination acquiring lock
+        def target():
+            utils.fetch_tree(GIT_REPO, '0.10')
+        thread = threading.Thread(target=target)
+        thread.start()
+
+        # Small sleep to mitigate race
+        time.sleep(1)
+
+        # "Real" fetch shouldn't get the lock
+        with pytest.raises(utils.GeneralError):
+            utils.fetch_tree(GIT_REPO, '0.10')
 
         # Wait on parallel thread to finish
         thread.join()

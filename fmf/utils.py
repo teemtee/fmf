@@ -16,6 +16,9 @@ from filelock import Timeout, FileLock
 from pprint import pformat as pretty
 import io
 import yaml
+import warnings
+
+import fmf.base
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,6 +49,8 @@ _CACHE_DIRECTORY = None
 
 # Lock timeout in seconds for fetch
 FETCH_LOCK_TIMEOUT = 5 * 60
+# Maximum seconds to process fmf structure + possibly fetch the repo
+NODE_LOCK_TIMEOUT = 60 + FETCH_LOCK_TIMEOUT
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Exceptions
@@ -565,11 +570,65 @@ def set_cache_directory(cache_directory):
     global _CACHE_DIRECTORY
     _CACHE_DIRECTORY = cache_directory
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Fetch Tree from the Remote Repository
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def fetch_tree(url, ref=None, path='.'):
+    """
+    Get initialized Tree from a remote git repository
+
+    url .... git repository url (required)
+    ref .... branch, tag or commit (default branch if None)
+    path ... metadata tree root (default to '.')
+
+    See :meth:`fmf.base.Tree.node` to canonical default values.
+
+    Remote repository is cached locally (see :func:`get_cache_directory`),
+    local directory with cache is locked during reading.
+
+    Raises GeneralError when lock couldn't be acquired.
+    """
+    # Create lock path to fetch/read git from URL to the cache
+    cache_dir = get_cache_directory()
+    # Use .read.lock suffix (different from the inner fetch lock)
+    lock_path = os.path.join(
+        cache_dir, url.replace('/', '_')) + '.read.lock'
+    try:
+        with FileLock(lock_path, timeout=NODE_LOCK_TIMEOUT) as lock:
+            # Write PID to lockfile so we know which process got it
+            with open(lock.lock_file, 'w') as lock_file:
+                lock_file.write(str(os.getpid()))
+            repository = fetch_repo(url, ref)
+            root = os.path.join(repository, path)
+            return fmf.base.Tree(root)
+    except Timeout:
+        raise GeneralError(
+            "Failed to acquire lock for {0} within {1} seconds".format(
+            lock_path, NODE_LOCK_TIMEOUT))
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Deprecated 'fetch' method (deprecated from 0.15)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def fetch(url, ref=None, destination=None, env=None):
+    """ Deprecated: Use :func:`fetch_repo` instead """
+    # DeprecationWarning is hidden by default (unless -Wall or -Wonce option)
+    # so using FutureWarning to have this visible by default
+    warnings.warn(
+        "Use 'utils.fetch_repo()' instead, "
+        "this method will be removed in the future.",
+        FutureWarning, stacklevel=2)
+    return fetch_repo(url, ref, destination, env)
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def fetch(url, ref=None, destination=None, env=None):
+def fetch_repo(url, ref=None, destination=None, env=None):
     """
     Fetch remote git repository and return local directory
 

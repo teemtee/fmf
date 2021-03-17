@@ -11,7 +11,6 @@ import yaml
 import yaml.resolver
 import yaml.constructor
 import subprocess
-from filelock import Timeout, FileLock
 
 import fmf.context
 import fmf.utils as utils
@@ -26,8 +25,6 @@ from pprint import pformat as pretty
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
-# Maximum seconds to process fmf structure + possibly fetch the repo
-NODE_LOCK_TIMEOUT = 60 + utils.FETCH_LOCK_TIMEOUT
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  YAML
@@ -583,25 +580,10 @@ class Tree(object):
 
         # Fetch remote git repository
         if 'url' in reference:
-            path = reference.get('path', '.').lstrip('/')
-            # Create lock path to fetch/read git from URL to the cache
-            cache_dir = utils.get_cache_directory()
-            # Use .read.lock suffix (different from the inner fetch lock)
-            lock_path = os.path.join(
-                cache_dir, reference["url"].replace('/', '_')) + '.read.lock'
-            try:
-                with FileLock(lock_path, timeout=NODE_LOCK_TIMEOUT) as lock:
-                    # Write PID to lockfile so we know which process got it
-                    with open(lock.lock_file, 'w') as lock_file:
-                        lock_file.write(str(os.getpid()))
-                    repository = utils.fetch(
-                        reference.get('url'), reference.get('ref'))
-                    root = os.path.join(repository, path)
-                    tree = Tree(root)
-            except Timeout:
-                raise utils.GeneralError(
-                    "Failed to acquire lock for {0} within {1} seconds".format(
-                    lock_path, NODE_LOCK_TIMEOUT))
+            tree = utils.fetch_tree(
+                    reference.get('url'),
+                    reference.get('ref'),
+                    reference.get('path', '.').lstrip('/'))
         # Use local files
         else:
             root = reference.get('path', '.')
@@ -613,7 +595,6 @@ class Tree(object):
         if found_node is None:
             raise utils.ReferenceError(
                 "No tree node found for '{0}' reference".format(reference))
-        # FIXME Should be able to remove .cache if required
         return found_node
 
     def copy(self):

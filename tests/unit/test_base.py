@@ -344,7 +344,7 @@ class TestRemote(object):
 
     def test_tree_concurrent_timeout(self, monkeypatch, tmpdir):
         # Much shorter timeout
-        monkeypatch.setattr('fmf.base.NODE_LOCK_TIMEOUT', 2)
+        monkeypatch.setattr('fmf.utils.NODE_LOCK_TIMEOUT', 2)
 
         def long_fetch(*args, **kwargs):
             # Longer than timeout
