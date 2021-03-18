@@ -52,6 +52,11 @@ FETCH_LOCK_TIMEOUT = 5 * 60
 # Maximum seconds to process fmf structure + possibly fetch the repo
 NODE_LOCK_TIMEOUT = 60 + FETCH_LOCK_TIMEOUT
 
+# Suffix of lock file for reading
+LOCK_SUFFIX_READ = '.read.lock'
+# Suffix of lock file for fetching
+LOCK_SUFFIX_FETCH = '.fetch.lock'
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Exceptions
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -532,7 +537,7 @@ class Coloring(object):
 #  Cache directory
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def get_cache_directory():
+def get_cache_directory(create=True):
     """
     Return cache directory, created by this call if necessary
 
@@ -551,7 +556,7 @@ def get_cache_directory():
                     os.environ.get('XDG_CACHE_HOME', '~/.cache')),
                 'fmf')
         )
-    if not os.path.isdir(cache):
+    if not os.path.isdir(cache) and create:
         try:
             os.makedirs(cache)
         except OSError as error:
@@ -570,6 +575,43 @@ def set_cache_directory(cache_directory):
     global _CACHE_DIRECTORY
     _CACHE_DIRECTORY = cache_directory
 
+def set_cache_expiration(seconds):
+    """ Seconds until cache expires """
+    global CACHE_EXPIRATION
+    CACHE_EXPIRATION = int(seconds)
+
+def clean_cache_directory():
+    """ Delete used cache directory if it exists """
+    cache = get_cache_directory(create=False)
+    if os.path.isdir(cache):
+        shutil.rmtree(cache)
+
+def invalidate_cache():
+    """ Force fetch next time cache is used regardless its age """
+    # Missing FETCH_HEAD means `git fetch` will happen
+    cache = get_cache_directory(create=False)
+    # Cache not exists, nothing to do
+    if not os.path.isdir(cache):
+        return # pragma: no cover
+    issues = []
+    for root, dirs, files in os.walk(cache, topdown=True):
+        if '.git' not in dirs:
+            continue
+        # Content of root is path to git repo
+        fetch_head = os.path.join(root, '.git', 'FETCH_HEAD')
+        try:
+            if os.path.isfile(fetch_head):
+                lock_path = root + LOCK_SUFFIX_FETCH
+                log.debug("Remove '{0}'.".format(fetch_head))
+                with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
+                    os.remove(fetch_head)
+        except (IOError, Timeout) as error: # pragma: no cover
+            issues.append(
+                "Couldn't remove file '{0}': {1}".format(fetch_head, error))
+        # Already found a .git so no need to continue inside the root
+        dirs.clear()
+    if issues: # pragma: no cover
+        raise GeneralError("\n".join(issues))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Tree from the Remote Repository
@@ -592,9 +634,9 @@ def fetch_tree(url, ref=None, path='.'):
     """
     # Create lock path to fetch/read git from URL to the cache
     cache_dir = get_cache_directory()
-    # Use .read.lock suffix (different from the inner fetch lock)
+    # Use LOCK_SUFFIX_READ suffix (different from the inner fetch lock)
     lock_path = os.path.join(
-        cache_dir, url.replace('/', '_')) + '.read.lock'
+        cache_dir, url.replace('/', '_')) + LOCK_SUFFIX_READ
     try:
         with FileLock(lock_path, timeout=NODE_LOCK_TIMEOUT) as lock:
             # Write PID to lockfile so we know which process got it
@@ -654,11 +696,11 @@ def fetch_repo(url, ref=None, destination=None, env=None):
         ref = '__DEFAULT__'
 
     # Lock for possibly shared cache directory. Add the extension
-    # '.fetch.lock' manually in the constructor. Everything under the
-    # with statement to correctly remove lock upon exception.
+    # LOCK_SUFFIX_FETCH manually in the constructor. Everything under
+    # the with statement to correctly remove lock upon exception.
     log.debug("Acquire lock for '{0}'.".format(destination))
     try:
-        lock_path = destination + '.fetch.lock'
+        lock_path = destination + LOCK_SUFFIX_FETCH
         with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
             # Write PID to lockfile so we know which process got it
             with open(lock.lock_file, 'w') as lock_file:
