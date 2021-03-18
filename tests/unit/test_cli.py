@@ -149,3 +149,12 @@ class TestCommandLine(object):
         output = fmf.cli.main(
             "fmf ls --condition \"execute['wrong key'] == 0\"", path)
         assert output == ''
+
+    def test_clean(self, tmpdir, monkeypatch):
+        """ Cache cleanup """
+        # Do not manipulate with real, user's cache
+        monkeypatch.setattr('fmf.utils._CACHE_DIRECTORY', str(tmpdir))
+        testing_file = tmpdir.join("something")
+        testing_file.write("content")
+        fmf.cli.main("fmf clean")
+        assert not os.path.isfile(str(testing_file))

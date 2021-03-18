@@ -8,6 +8,7 @@ Available commands are::
     fmf ls      List identifiers of available objects
     fmf show    Show metadata of available objects
     fmf init    Initialize a new metadata tree
+    fmf clean   Remove cache directory and its content
 
 See online documentation for more details and examples:
 
@@ -124,6 +125,12 @@ class Parser(object):
         self.options = self.parser.parse_args(self.arguments[2:])
         self.show(brief=True)
 
+    def command_clean(self):
+        """ Clean cache """
+        self.parser = argparse.ArgumentParser(
+            description="Remove cache directory and its content")
+        self.clean()
+
     def command_show(self):
         """ Show metadata """
         self.parser = argparse.ArgumentParser(
@@ -182,6 +189,16 @@ class Parser(object):
             utils.info("Found {0}.".format(
                 utils.listed(len(output), "object")))
         self.output = joined
+
+    def clean(self):
+        """ Remove cache directory """
+        try:
+            cache = utils.get_cache_directory(create=False)
+            utils.clean_cache_directory()
+            print("Cache directory '{0}' has been removed.".format(cache))
+        except Exception as error: # pragma: no cover
+            utils.log.error(
+                "Unable to remove cache, exception was: {0}".format(error))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Main

@@ -36,6 +36,7 @@ There are following commands available::
     fmf ls      List identifiers of available objects
     fmf show    Show metadata of available objects
     fmf init    Initialize a new metadata tree
+    fmf clean   Remove cache directory and its content
 
 
 Examples
@@ -204,7 +205,7 @@ Miroslav Vadkerti, Lukáš Zachar and František Nečas.
 Copyright
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Copyright (c) 2018 Red Hat, Inc.
+Copyright (c) 2018-2021 Red Hat, Inc.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License as
