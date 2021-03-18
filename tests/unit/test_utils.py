@@ -156,6 +156,21 @@ class TestColoring(object):
         utils.Coloring().set()
         text = utils.color("text", "lightblue", enabled=True)
 
+class TestCache(object):
+    """ Local cache manipulation """
+    def test_clean_cache_directory(self, tmpdir):
+        utils.set_cache_directory(str(tmpdir))
+        file_inside = tmpdir.join('some_file')
+        file_inside.write('content')
+        assert os.path.isfile(str(file_inside))
+        utils.clean_cache_directory()
+        assert not os.path.isdir(str(tmpdir))
+        utils.set_cache_directory(None)
+
+    def test_set_cache_expiration(self):
+        with pytest.raises(ValueError):
+            utils.set_cache_expiration('string')
+
 
 @pytest.mark.web
 class TestFetch(object):
@@ -369,3 +384,12 @@ class TestFetch(object):
 
         # Wait on parallel thread to finish
         thread.join()
+
+    def test_force_cache_fetch(self, monkeypatch, tmpdir):
+        # Own cache dir without remembering get_cache_directory value
+        monkeypatch.setattr('fmf.utils._CACHE_DIRECTORY', str(tmpdir))
+        repo = utils.fetch_repo(GIT_REPO, '0.10')
+        fetch_head = (os.path.join(repo, '.git', 'FETCH_HEAD'))
+        assert os.path.isfile(fetch_head)
+        utils.invalidate_cache()
+        assert not os.path.isfile(fetch_head)
