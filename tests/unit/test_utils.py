@@ -6,14 +6,18 @@ import os
 import pytest
 import shutil
 import threading
-import queue
 import fmf.utils as utils
 import time
 from fmf.utils import filter, listed, run
 
+try:
+    import queue
+except ImportError:
+    import Queue as queue
+
 
 GIT_REPO = 'https://github.com/psss/fmf.git'
-GIT_REPO_FEDORA = 'https://src.fedoraproject.org/rpms/tmt'
+GIT_REPO_MAIN = 'https://github.com/beakerlib/example'
 
 class TestFilter(object):
     """ Function filter() """
@@ -181,10 +185,10 @@ class TestFetch(object):
         repo = utils.fetch_repo(GIT_REPO)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
         assert 'master' in output
-        # Fedora uses 'rawide'
-        repo = utils.fetch_repo(GIT_REPO_FEDORA)
+        # The beakerlib library example uses main
+        repo = utils.fetch_repo(GIT_REPO_MAIN)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
-        assert 'rawhide' in output
+        assert 'main' in output
 
     def test_switch_branches(self):
         # Default branch
@@ -204,6 +208,8 @@ class TestFetch(object):
         repo = utils.fetch_repo(GIT_REPO, '0.10')
         assert utils.os.path.isfile(utils.os.path.join(repo, 'fmf.spec'))
 
+    @pytest.mark.skipif(
+        not hasattr(pytest, "warns"), reason="Missing pytest.warns")
     def test_fetch_deprecation(self):
         with pytest.warns(FutureWarning):
             repo = utils.fetch(GIT_REPO, '0.10')
@@ -224,6 +230,7 @@ class TestFetch(object):
         repo = utils.fetch_repo(GIT_REPO)
         assert os.path.isfile(fetch_head)
 
+    @pytest.mark.skipif(os.geteuid() == 0, reason="Running as root")
     def test_invalid_cache_directory(self, monkeypatch):
         with pytest.raises(utils.GeneralError):
             monkeypatch.setenv("XDG_CACHE_HOME", "/etc")
@@ -270,7 +277,7 @@ class TestFetch(object):
             repo = utils.fetch_repo(GIT_REPO, destination=str(dest))
         # Git's error message
         assert ("already exists and is not an empty"
-            in error.value.args[1].stderr)
+            in error.value.args[1].output)
         # We report same error message as before
         assert str(error.value) == str(error.value.args[1])
 

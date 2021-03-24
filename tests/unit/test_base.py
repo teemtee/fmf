@@ -6,12 +6,16 @@ import os
 import pytest
 import time
 import threading
-import queue
 import tempfile
 import fmf.utils as utils
 import fmf.cli
 from fmf.base import Tree
 from shutil import rmtree
+
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -299,6 +303,7 @@ class TestRemote(object):
         with pytest.raises(utils.ReferenceError):
             Tree.node(dict(path='some/relative/path'))
 
+    @pytest.mark.web
     def test_tree_commit(self, tmpdir):
         # Tag
         node = Tree.node(dict(url=FMF_REPO, ref='0.12'))
@@ -311,9 +316,10 @@ class TestRemote(object):
         node = Tree(dict(x=1))
         assert node.commit is False
         # No git repository
-        tree = Tree(Tree.init(tmpdir))
+        tree = Tree(Tree.init(str(tmpdir)))
         assert tree.commit is False
 
+    @pytest.mark.web
     def test_tree_concurrent(self):
         def get_node(ref):
             try:

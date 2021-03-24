@@ -105,6 +105,7 @@ class TestCommandLine(object):
         assert "deep" in output
         assert "/recursion" not in output
 
+    @pytest.mark.skipif(os.geteuid() == 0, reason="Running as root")
     def test_init(self):
         """ Initialize metadata tree """
         path = tempfile.mkdtemp()

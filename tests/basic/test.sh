@@ -5,7 +5,7 @@
 
 # Run all phases by default
 phase=${1:-all}
-examples="/usr/share/doc/fmf/examples/wget"
+examples=$(ls -d /usr/share/doc/fmf*/examples/wget)
 
 rlJournalStart
     rlPhaseStartSetup

@@ -14,9 +14,13 @@ import logging
 import subprocess
 from filelock import Timeout, FileLock
 from pprint import pformat as pretty
-import io
 import yaml
 import warnings
+# Use six only on python2
+if sys.version[0] == '2':
+    from six import StringIO
+else:
+    from io import StringIO
 
 import fmf.base
 
@@ -609,7 +613,7 @@ def invalidate_cache():
             issues.append(
                 "Couldn't remove file '{0}': {1}".format(fetch_head, error))
         # Already found a .git so no need to continue inside the root
-        dirs.clear()
+        del dirs[:]
     if issues: # pragma: no cover
         raise GeneralError("\n".join(issues))
 
@@ -767,8 +771,7 @@ def run(command, cwd=None, check_exit_code=True, env=None):
         process.returncode, ('' if check_exit_code else ' (ignored)')))
     if check_exit_code and process.returncode != 0:
         raise subprocess.CalledProcessError(
-            process.returncode, ' '.join(command),
-            output=stdout, stderr=stderr)
+            process.returncode, ' '.join(command), output=stdout + stderr)
     return stdout, stderr
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -807,7 +810,7 @@ except AttributeError:
 
 def dict_to_yaml(data, width=None, sort=False):
     """ Convert dictionary into yaml """
-    output = io.StringIO()
+    output = StringIO()
     try:
         yaml.safe_dump(
             data, output, sort_keys=sort,
@@ -823,4 +826,8 @@ def dict_to_yaml(data, width=None, sort=False):
         yaml.safe_dump(
             data, output, encoding='utf-8', allow_unicode=True,
             width=width, indent=4, default_flow_style=False)
-    return output.getvalue()
+    # For Python 2 we need to decode the string
+    try:
+        return output.getvalue().decode('utf-8')
+    except AttributeError:
+        return output.getvalue()

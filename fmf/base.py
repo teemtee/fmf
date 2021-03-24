@@ -53,7 +53,7 @@ def unique_key_constructor(loader, node, deep=False):
         value = loader.construct_object(value_node, deep=deep)
         if key in mapping:
             raise yaml.constructor.ConstructorError(
-                f"Duplicate key '{key}' detected.")
+                "Duplicate key '{}' detected.".format(key))
         mapping[key] = value
     return loader.construct_mapping(node, deep)
 
@@ -687,5 +687,5 @@ class Tree(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """ Experimental: Store modified metadata to disk """
         _, full_data, source = self._locate_raw_data()
-        with open(source, "w") as file:
+        with open(source, "w", encoding='utf-8') as file:
             file.write(dict_to_yaml(full_data))

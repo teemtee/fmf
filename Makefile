@@ -36,7 +36,7 @@ man: source
 
 
 # RPM packaging
-source: clean
+source: clean tmp
 	mkdir -p $(TMP)/SOURCES
 	mkdir -p $(TMP)/$(PACKAGE)
 	cp -a $(FILES) $(TMP)/$(PACKAGE)

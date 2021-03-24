@@ -4,7 +4,7 @@
 . /usr/share/beakerlib/beakerlib.sh || exit 1
 
 PACKAGE="fmf"
-EXAMPLES="/usr/share/doc/fmf/examples"
+EXAMPLES=$(ls -d /usr/share/doc/fmf*/examples)
 
 rlJournalStart
     rlPhaseStartSetup

@@ -4,6 +4,7 @@ from __future__ import unicode_literals, absolute_import
 
 import unittest
 import pytest
+import io
 import os
 import re
 import tempfile
@@ -144,3 +145,14 @@ class TestModify(unittest.TestCase):
         self.assertIn('tester', node.data)
         self.assertIn('requirement', node.data)
         self.assertIn("server", node.data)
+
+    def test_modify_unicode(self):
+        """ Ensure that unicode characters are properly handled """
+        path = os.path.join(self.tempdir, 'unicode.fmf')
+        with io.open(path, 'w', encoding='utf-8') as file:
+            file.write('jméno: Leoš')
+        with Tree(self.tempdir).find('/unicode') as data:
+            data['příjmení'] = 'Janáček'
+        reloaded = Tree(self.tempdir).find('/unicode')
+        assert reloaded.get('jméno') == 'Leoš'
+        assert reloaded.get('příjmení') == 'Janáček'

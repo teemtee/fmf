@@ -28,7 +28,11 @@ Source0: https://github.com/psss/fmf/releases/download/%{version}/fmf-%{version}
 %endif
 
 # Main tmt package requires the Python module
+%if %{with python2}
+Requires: python2-%{name} == %{version}-%{release}
+%else
 Requires: python%{python3_pkgversion}-%{name} == %{version}-%{release}
+%endif
 
 %description
 The fmf Python module and command line tool implement a flexible
@@ -50,9 +54,13 @@ BuildRequires: python2-setuptools
 BuildRequires: pytest
 BuildRequires: PyYAML
 BuildRequires: python2-filelock
+BuildRequires: python2-six
+BuildRequires: git-core
 %{?python_provide:%python_provide python2-%{name}}
 Requires:       PyYAML
 Requires:       python2-filelock
+Requires:       python2-six
+Requires:       git-core
 
 %description -n python2-%{name}
 The fmf Python module and command line tool implement a flexible
@@ -61,7 +69,7 @@ stored close to the source code. Thanks to hierarchical structure
 with support for inheritance and elasticity it provides an
 efficient way to organize data into well-sized text documents.
 This package contains the Python 2 module.
-%endif
+%else
 
 
 # Python 3
@@ -74,6 +82,7 @@ BuildRequires: python%{python3_pkgversion}-PyYAML
 BuildRequires: python%{python3_pkgversion}-filelock
 BuildRequires: git-core
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
+Requires:       git-core
 %if %{with oldreqs}
 Requires:       python%{python3_pkgversion}-PyYAML
 Requires:       python%{python3_pkgversion}-filelock
@@ -86,6 +95,7 @@ stored close to the source code. Thanks to hierarchical structure
 with support for inheritance and elasticity it provides an
 efficient way to organize data into well-sized text documents.
 This package contains the Python 3 module.
+%endif
 
 
 %prep
@@ -99,9 +109,9 @@ export LANG=en_US.utf-8
 
 %if %{with python2}
 %py2_build
-%endif
-
+%else
 %py3_build
+%endif
 
 
 %install
@@ -111,9 +121,9 @@ export LANG=en_US.utf-8
 
 %if %{with python2}
 %py2_install
-%endif
-
+%else
 %py3_install
+%endif
 
 mkdir -p %{buildroot}%{_mandir}/man1
 install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
@@ -126,9 +136,9 @@ export LANG=en_US.utf-8
 
 %if %{with python2}
 %{__python2} -m pytest -vv -m 'not web'
-%endif
-
+%else
 %{__python3} -m pytest -vv -m 'not web'
+%endif
 
 
 %{!?_licensedir:%global license %%doc}
@@ -144,12 +154,12 @@ export LANG=en_US.utf-8
 %{python2_sitelib}/%{name}/
 %{python2_sitelib}/%{name}-*.egg-info
 %license LICENSE
-%endif
-
+%else
 %files -n python%{python3_pkgversion}-%{name}
 %{python3_sitelib}/%{name}/
 %{python3_sitelib}/%{name}-*.egg-info
 %license LICENSE
+%endif
 
 
 %changelog

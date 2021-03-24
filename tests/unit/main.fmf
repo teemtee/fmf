@@ -1,0 +1,13 @@
+summary: Python unit tests
+description:
+    Run all available python unit tests using pytest.
+test: python3 -m pytest -v
+framework: shell
+require:
+  - python3-pytest
+tier: 0
+
+adjust:
+    test: python2 -m pytest -v
+    require: python2-pytest
+    when: distro == rhel-7, centos-7

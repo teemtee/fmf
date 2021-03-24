@@ -18,6 +18,7 @@ jobs:
       targets:
       - fedora-all
       - epel-8
+      - epel-7
 
   - job: copr_build
     trigger: commit
