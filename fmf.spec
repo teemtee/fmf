@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.14
+Version: 0.15
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -153,6 +153,27 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Wed Mar 24 2021 Petr Šplíchal <psplicha@redhat.com> - 0.15-1
+- Implement the new 'fmf clean' command
+- Functions to manipulate cache
+- Fetch the whole tree using utils.fetch_tree()
+- Raise FileException on duplicate YAML keys
+- Allow to set desired cache location
+- Adjust support for storing modified data to disk
+- Add support for storing modified metadata to disk
+- Prevent exploring tests in the tmt directory
+- Simplify special distro comparison examples
+- Store command output in run(), fetch() exceptions
+- Use filelock for locking, expand test coverage
+- Adjust locking for Tree.node() and utils.fetch()
+- Use locking to checkout/read tree
+- Enable integration testing with tmt, some cleanup
+- Implement a new method copy() for cloning nodes
+- Adjust fetch() with custom destination and env
+- Support calls fetch(destination, env) and run(env)
+- Use the origin default branch instead of master
+- Store commit hash if the tree is under a git repo
+
 * Tue Jan 12 2021 Petr Šplíchal <psplicha@redhat.com> - 0.14-1
 - Adjust context docs, fix typos, style cleanup
 - Left vs Right side in Context matches
