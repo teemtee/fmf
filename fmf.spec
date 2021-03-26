@@ -135,9 +135,9 @@ export LANG=en_US.utf-8
 %endif
 
 %if %{with python2}
-%{__python2} -m pytest -vv -m 'not web'
+%{__python2} -m pytest -vv -c tests/unit/pytest.ini -m 'not web'
 %else
-%{__python3} -m pytest -vv -m 'not web'
+%{__python3} -m pytest -vv -c tests/unit/pytest.ini -m 'not web'
 %endif
 
 

@@ -348,20 +348,17 @@ class TestRemote(object):
                 all_good = False
         assert all_good
 
-    def test_tree_concurrent_timeout(self, monkeypatch, tmpdir):
+    def test_tree_concurrent_timeout(self, monkeypatch):
         # Much shorter timeout
         monkeypatch.setattr('fmf.utils.NODE_LOCK_TIMEOUT', 2)
 
         def long_fetch(*args, **kwargs):
             # Longer than timeout
             time.sleep(7)
-            return str(tmpdir)
-
-        # Prepare some content in the repo
-        tmpdir.join('main.fmf').write('test: echo yes')
+            return EXAMPLES
 
         # Patch fetch to sleep and later return tmpdir path
-        monkeypatch.setattr('fmf.utils.fetch', long_fetch)
+        monkeypatch.setattr('fmf.utils.fetch_repo', long_fetch)
 
         # Background thread to get node() acquiring lock
         def target():

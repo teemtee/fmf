@@ -339,11 +339,15 @@ class TestFetch(object):
         monkeypatch.setattr('fmf.utils.FETCH_LOCK_TIMEOUT', 2)
 
         def long_run(*args, **kwargs):
-            # Longer than timeout
-            time.sleep(7)
+            # Runs several times inside fetch so it is longer than timeout
+            time.sleep(2)
+
+        def no_op(*args, **kwargs):
+            pass
 
         # Patch run to use sleep instead
         monkeypatch.setattr('fmf.utils.run', long_run)
+        monkeypatch.setattr('fmf.utils.shutil.copyfile', no_op)
 
         # Background thread to fetch_repo() the same destination acquiring lock
         def target():
