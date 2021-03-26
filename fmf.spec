@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.15
+Version: 0.15.2
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -163,6 +163,10 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Fri Mar 26 2021 Petr Šplíchal <psplicha@redhat.com> - 0.15.2-1
+- Do not use mutable objects as default arguments
+- A bunch of adjustments for the epel-7 build
+
 * Wed Mar 24 2021 Petr Šplíchal <psplicha@redhat.com> - 0.15-1
 - Implement the new 'fmf clean' command
 - Functions to manipulate cache
