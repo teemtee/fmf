@@ -502,8 +502,14 @@ class Tree(object):
                 return node
         return None
 
-    def prune(self, whole=False, keys=[], names=[], filters=[], conditions=[]):
+    def prune(self, whole=False, keys=None, names=None, filters=None,
+              conditions=None):
         """ Filter tree nodes based on given criteria """
+        keys = keys or []
+        names = names or []
+        filters = filters or []
+        conditions = conditions or []
+
         for node in self.climb(whole):
             # Select only nodes with key content
             if not all([key in node.data for key in keys]):
@@ -526,8 +532,9 @@ class Tree(object):
             # All criteria met, thus yield the node
             yield node
 
-    def show(self, brief=False, formatting=None, values=[]):
+    def show(self, brief=False, formatting=None, values=None):
         """ Show metadata """
+        values = values or []
         # Show nothing if there's nothing
         if not self.data:
             return None
