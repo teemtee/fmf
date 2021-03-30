@@ -419,7 +419,7 @@ class Tree(object):
         # Save source file
         if source is not None:
             self.children[name].sources.append(source)
-            self.children[name]._raw_data = data
+            self.children[name]._raw_data = copy.deepcopy(data)
 
     def grow(self, path):
         """
@@ -466,7 +466,7 @@ class Tree(object):
             # Handle main.fmf as data for self
             if filename == MAIN:
                 self.sources.append(fullpath)
-                self._raw_data = data
+                self._raw_data = copy.deepcopy(data)
                 self.update(data)
             # Handle other *.fmf files as children
             else:

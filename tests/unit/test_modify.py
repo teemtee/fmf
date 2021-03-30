@@ -10,6 +10,7 @@ import re
 import tempfile
 
 from fmf.base import Tree
+from fmf.context import Context
 from fmf.utils import GeneralError
 from shutil import rmtree, copytree
 
@@ -156,3 +157,15 @@ class TestModify(unittest.TestCase):
         reloaded = Tree(self.tempdir).find('/unicode')
         assert reloaded.get('jméno') == 'Leoš'
         assert reloaded.get('příjmení') == 'Janáček'
+
+    def test_modify_after_adjust(self):
+        """ Preserve original data even when adjust is used """
+        item = '/requirements/protocols/ftp'
+        wget = Tree(self.tempdir)
+        # Expects new attribute + original data
+        expected = {'new_attr': "new_value"}
+        expected.update(wget.find(item).copy().get())
+        wget.adjust(Context(arch='ppc64le'))
+        with wget.find(item) as data:
+            data['new_attr'] = "new_value"
+        assert expected == Tree(self.tempdir).find(item).get()
