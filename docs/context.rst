@@ -56,10 +56,20 @@ Lazy evaluation
     evaluation is lazy. It stops immediately when we know the
     final result.
 
-Expression skipping
+Boolean operations with CannotDecide
     When a dimension or outcome of the operation is not defined,
-    the expression is skipped over.
+    the expression is treated as CannotDecide.
 
+    Boolean operations with CannotDecide
+
+============  ===  ============  ============
+CannotDecide  and  True          CannotDecide
+CannotDecide  and  False         False
+CannotDecide  or   True          True
+CannotDecide  or   False         CannotDecide
+CannotDecide  and  CannotDecide  CannotDecide
+CannotDecide  or   CannotDecide  CannotDecide
+============  ===  ============  ============
 
 Dimensions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,7 +133,7 @@ right side match then the two values are equal::
 
 However, comparing order of two values is defined only if they
 match by name. If names don't match then values cannot be
-compared and the expression is skipped::
+compared and the expression has CannotDecide outcome::
 
     git-2.3.4 >= git-2     # True
     git-2.3.4 >= git-3     # False

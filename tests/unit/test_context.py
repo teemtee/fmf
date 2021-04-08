@@ -490,6 +490,8 @@ class TestContext(object):
             "foo = baz",
             "foo = baz and distro ~<= centos-7.2",  # both are CannotDecide
             "foo = baz and distro ~<= fedora-32 or do=done",
+            "foo = bar and distro = centos-8.2.0", # CannotDecide and True
+            "foo = bar or distro = centos-8.9.0", # CannotDecide or False
         ]:
             with pytest.raises(CannotDecide):
                 context.matches(undecidable)
@@ -647,6 +649,46 @@ class TestContext(object):
         with pytest.raises(CannotDecide):
             rhel7.matches("distro ~> rhel-7.3")
         assert not rhel7.matches("distro > rhel")
+
+        # https://github.com/psss/fmf/pull/128#pullrequestreview-631589335
+        expr = "distro < fedora-33 or distro < centos-6.9"
+        # Checking `CannotDecide or False`
+        for distro in "fedora-33 fedora-34 centos-7.7".split():
+            with pytest.raises(CannotDecide):
+                Context(distro=distro).matches(expr)
+        # Checking `CannotDecide or True`
+        assert Context(distro="centos-6.5").matches(expr)
+
+    def test_cannotdecides(self):
+        # https://github.com/psss/fmf/issues/117
+        # CannotDecide and True = True and CannotDecide = CannotDecide
+        # CannotDecide and False = False and CannotDecide = False
+        # CannotDecide or True = True or CannotDecide = True
+        # CannotDecide or False = False or CannotDecide = CannotDecide
+        _true = "foo == bar"
+        _false = "foo != bar"
+        _cannot = "baz == bar"
+        env = Context(foo="bar")
+        for a, op, b in [
+            (_cannot, 'and', _true),
+            (_true, 'and', _cannot),
+            (_cannot, 'or', _false),
+            (_false, 'or', _cannot),
+            ]:
+            exp = "{0} {1} {2}".format(a, op, b)
+            with pytest.raises(CannotDecide):
+                env.matches(exp)
+        for outcome, a, op ,b in [
+            (False, _cannot, 'and', _false),
+            (False, _false, 'and', _cannot),
+            (True, _cannot, 'or', _true),
+            (True, _true, 'or', _cannot),
+            ]:
+            exp = "{0} {1} {2}".format(a, op, b)
+            assert env.matches(exp) == outcome
+
+        assert env.matches("{0} and {1} or {2}".format(_cannot, _false, _true))
+        assert not env.matches("{0} or {1} and {2}".format(_false, _cannot, _false))
 
 class TestOperators(object):
     """ more thorough testing for operations """
