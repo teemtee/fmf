@@ -96,7 +96,9 @@ class TestExample(object):
 
         # Here comes minor compare into the play as it skip incomparable majors
         # All outcomes are exactly as we need them to be
-        assert not centos.matches(
+        # tmt uses undecided='skip' so rule is skipped
+        with pytest.raises(CannotDecide):
+            centos.matches(
             "distro ~>= centos-7.4.0 or distro ~>= centos-6.9.0"
         )
         assert not centos.matches(
@@ -105,7 +107,9 @@ class TestExample(object):
         assert centos6.matches(
             "distro ~>= centos-7.4.0 or distro ~>= centos-6.9.0"
         )
-        assert centos6.matches(
+        # tmt uses undecided='skip' so rule is skipped
+        with pytest.raises(CannotDecide):
+            centos6.matches(
             "distro ~>= centos-7.4.0 and distro ~>= centos-6.9.0"
         )
 
@@ -479,12 +483,7 @@ class TestContext(object):
         # Some operators cannot be decided
         assert context.matches("distro = centos-8.2.0 or foo=bar")
         assert context.matches("foo=bar or distro = centos-8.2.0")
-        assert context.matches(
-            "foo=bar and distro = centos-8.2.0"
-        )  # skip over 'foo' part since it is not defined
         assert not context.matches("foo=bar and distro = rhel")
-        assert not context.matches("foo=bar or distro = centos-8.9.0")
-
         # Whole rule cannot be decided
         for undecidable in [
             "foo = baz",
