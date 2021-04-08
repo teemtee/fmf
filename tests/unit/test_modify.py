@@ -132,9 +132,7 @@ class TestModify(unittest.TestCase):
                 data['y'] = 2
 
     def test_context_manager(self):
-        """
-        try to use context manager for save node data
-        """
+        """ Use context manager to save node data """
         item = '/requirements/protocols/ftp'
         with self.wget.find(item) as data:
             data.pop("coverage")
