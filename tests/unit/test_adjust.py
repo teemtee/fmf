@@ -1,6 +1,8 @@
 # coding: utf-8
 
 from __future__ import unicode_literals, absolute_import
+
+import copy
 import pytest
 import yaml
 
@@ -122,6 +124,11 @@ class TestAdjust(object):
     def test_adjusted(self, mini, centos):
         mini.adjust(centos)
         assert mini.get('enabled') is False
+
+    def test_keep_original_adjust_rules(self, mini, centos):
+        original_adjust = copy.deepcopy(mini.get('adjust'))
+        mini.adjust(centos)
+        assert mini.get('adjust') == original_adjust
 
     def test_skipped(self, mini, fedora):
         mini.adjust(fedora)

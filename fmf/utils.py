@@ -17,7 +17,7 @@ from pprint import pformat as pretty
 import yaml
 import warnings
 # Use six only on python2
-if sys.version[0] == '2':
+if sys.version[0] == '2': # pragma: no cover
     from six import StringIO
 else:
     from io import StringIO

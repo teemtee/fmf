@@ -318,7 +318,7 @@ class Tree(object):
 
         # Adjust rules should be a dictionary or a list of dictionaries
         try:
-            rules = self.data.pop(key)
+            rules = copy.deepcopy(self.data[key])
             log.debug("Applying adjust rules for '{}'.".format(self))
             log.data(rules)
             if isinstance(rules, dict):
