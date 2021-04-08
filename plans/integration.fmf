@@ -8,3 +8,6 @@ discover:
 prepare:
     how: install
     package: tmt-all
+adjust:
+    enabled: false
+    when: distro == centos-7
