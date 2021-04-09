@@ -169,22 +169,22 @@ right side defines if the minor comparison is evaluated or not.
 
 ==========  ========== ========== ==========
 ~<          centos-7.9 centos-8.2 centos-8
-centos-7.8   True         skip    True
-centos-7.9   False        skip    True
-centos-7     skip         skip    True
-centos-8.1   skip         True    False
-centos-8.2   skip         False   False
-centos-8     skip         skip    False
+centos-7.8   True        cannot    True
+centos-7.9   False       cannot    True
+centos-7     cannot      cannot    True
+centos-8.1   cannot      True      False
+centos-8.2   cannot      False     False
+centos-8     cannot      cannot    False
 ==========  ========== ========== ==========
 
 Here is a couple of examples to get a better idea of how the
 comparison works for some special cases::
 
-    fedora < fedora-33 ---> skip (left side has no version parts)
+    fedora < fedora-33 ---> cannot (left side has no version parts)
     fedora-33 == fedora ---> True (right side wants only name)
-    fedora-33 < fedora-rawhide ---> True (rawhide is newer then any number)
+    fedora-33 < fedora-rawhide ---> True (rawhide is newer than any number)
 
     centos-8.4.0 == centos ---> True
     centos-8.4.0 < centos-9 ---> True
     centos-8.4.0 ~< centos-9 ---> True (no minor comparison requested)
-    centos-8.4.0 ~< centos-9.2 ---> skip (minor comparison requested)
+    centos-8.4.0 ~< centos-9.2 ---> cannot (minor comparison requested)
