@@ -701,7 +701,7 @@ class Tree(object):
         """
         Dictionary method to get child node or data item
 
-        get children have to start with '/'
+        To get a child the key has to start with a '/'.
         as identification of child item string
         """
         if key.startswith("/"):
