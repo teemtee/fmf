@@ -696,3 +696,15 @@ class Tree(object):
         _, full_data, source = self._locate_raw_data()
         with open(source, "w", encoding='utf-8') as file:
             file.write(dict_to_yaml(full_data))
+
+    def __getitem__(self, key):
+        """
+        Dictionary method to get child node or data item
+
+        get children have to start with '/'
+        as identification of child item string
+        """
+        if key.startswith("/"):
+            return self.children[key[1:]]
+        else:
+            return self.data[key]
