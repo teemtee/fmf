@@ -678,7 +678,7 @@ class TestContext(object):
             exp = "{0} {1} {2}".format(a, op, b)
             with pytest.raises(CannotDecide):
                 env.matches(exp)
-        for outcome, a, op ,b in [
+        for outcome, a, op, b in [
             (False, _cannot, 'and', _false),
             (False, _false, 'and', _cannot),
             (True, _cannot, 'or', _true),

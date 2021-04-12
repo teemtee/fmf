@@ -58,18 +58,17 @@ Lazy evaluation
 
 Boolean operations with CannotDecide
     When a dimension or outcome of the operation is not defined,
-    the expression is treated as CannotDecide.
+    the expression is treated as ``CannotDecide``.
 
-    Boolean operations with CannotDecide
+    Boolean operations with ``CannotDecide``::
 
-============  ===  ============  ============
-CannotDecide  and  True          CannotDecide
-CannotDecide  and  False         False
-CannotDecide  or   True          True
-CannotDecide  or   False         CannotDecide
-CannotDecide  and  CannotDecide  CannotDecide
-CannotDecide  or   CannotDecide  CannotDecide
-============  ===  ============  ============
+        CannotDecide  and  True         ==  CannotDecide
+        CannotDecide  and  False        ==  False
+        CannotDecide  or   True         ==  True
+        CannotDecide  or   False        ==  CannotDecide
+        CannotDecide  and  CannotDecide ==  CannotDecide
+        CannotDecide  or   CannotDecide ==  CannotDecide
+
 
 Dimensions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,7 +132,7 @@ right side match then the two values are equal::
 
 However, comparing order of two values is defined only if they
 match by name. If names don't match then values cannot be
-compared and the expression has CannotDecide outcome::
+compared and the expression has ``CannotDecide`` outcome::
 
     git-2.3.4 >= git-2     # True
     git-2.3.4 >= git-3     # False
@@ -167,15 +166,15 @@ following example shows how the special less than operator ``~<``
 would be evaluated for given `centos` versions. Note that the
 right side defines if the minor comparison is evaluated or not.
 
-==========  ========== ========== ==========
-~<          centos-7.9 centos-8.2 centos-8
-centos-7.8   True        cannot    True
-centos-7.9   False       cannot    True
-centos-7     cannot      cannot    True
-centos-8.1   cannot      True      False
-centos-8.2   cannot      False     False
-centos-8     cannot      cannot    False
-==========  ========== ========== ==========
+==========  ============ ============ ==========
+~<          centos-7.9   centos-8.2   centos-8
+centos-7.8  True         CannotDecide True
+centos-7.9  False        CannotDecide True
+centos-7    CannotDecide CannotDecide True
+centos-8.1  CannotDecide True         False
+centos-8.2  CannotDecide False        False
+centos-8    CannotDecide CannotDecide False
+==========  ============ ============ ==========
 
 Here is a couple of examples to get a better idea of how the
 comparison works for some special cases::
