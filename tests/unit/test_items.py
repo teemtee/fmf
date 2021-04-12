@@ -18,14 +18,15 @@ class TestGetItems(unittest.TestCase):
         self.wget_path = EXAMPLES + "wget"
         self.wget = Tree(self.wget_path)
 
-
     def test_item_child(self):
         item = self.wget['/recursion']['/deep']
         self.assertEqual(item.get("depth"), 1000)
+        self.assertEqual(item.name,'/recursion/deep')
 
     def test_item_data(self):
         item = self.wget['/recursion']['/deep']
         self.assertEqual(item["depth"], 1000)
+        self.assertEqual(item.name, '/recursion/deep')
 
     def test_not_existing_key_child(self):
         with self.assertRaises(KeyError):
