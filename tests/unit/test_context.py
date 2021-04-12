@@ -657,6 +657,7 @@ class TestContext(object):
                 Context(distro=distro).matches(expr)
         # Checking `CannotDecide or True`
         assert Context(distro="centos-6.5").matches(expr)
+        assert Context(distro="fedora-32").matches(expr)
 
     def test_cannotdecides(self):
         # https://github.com/psss/fmf/issues/117
