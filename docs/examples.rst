@@ -22,7 +22,7 @@ example ``wget/requirements.fmf``::
         /https:
             requirement: Download a file using the https protocol.
             coverage: wget/protocols/https
-    
+
     /download:
         priority: medium
         /output-document-pipe:
@@ -31,7 +31,7 @@ example ``wget/requirements.fmf``::
         /output-document-file:
             requirement: Save content to a file.
             coverage: wget/download
-    
+
     /upload:
         priority: medium
         /post-file:
@@ -59,7 +59,7 @@ Or integrated with test case metadata, e.g.
     tags: [Tier2, TierSecurity]
     test: runtest.sh
     time: 3 min
-    
+
     /requirements:
         requirement: Various download options working correctly
         priority: low

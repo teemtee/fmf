@@ -19,14 +19,18 @@ See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 
 import re
 
+
 class CannotDecide(Exception):
     pass
+
 
 class InvalidRule(Exception):
     pass
 
+
 class InvalidContext(Exception):
     pass
+
 
 class ContextValue(object):
     """ Value for dimension """
@@ -93,9 +97,8 @@ class ContextValue(object):
 
         if self._to_compare[0] != other._to_compare[0]:
             if ordered:
-                raise CannotDecide(
-                    "Name parts differ, cannot compare for order.")
-            return 1 # not equal
+                raise CannotDecide("Name parts differ, cannot compare for order.")
+            return 1  # not equal
         # From here name parts are equal
         if minor_mode and len(other._to_compare) > 1:
             # right side cares about 'major'
@@ -105,13 +108,14 @@ class ContextValue(object):
                         if len(other._to_compare) > 2:
                             # future Y comparison not allowed
                             raise CannotDecide(
-                                "Cannot compare minors between "
-                                "mismatched majors.")
-                    else: # not equal
+                                "Cannot compare minors between " "mismatched majors."
+                            )
+                    else:  # not equal
                         return 1
             except IndexError:
                 raise CannotDecide(
-                    "Missing major version in the left (dimension) value.")
+                    "Missing major version in the left (dimension) value."
+                )
         # From here same major version or minor comparison is not requested
         # Now we can compare version parts as long as other needs to
         compared = 0
@@ -126,13 +130,13 @@ class ContextValue(object):
         elif minor_mode:
             # The right side wants to compare more
             # but this is not allowed in minor_mode
-            raise CannotDecide("Not enough version parts.") #FIXME
+            raise CannotDecide("Not enough version parts.")  # FIXME
         elif not ordered:
-            return 1 # they are not equal
+            return 1  # they are not equal
         elif len(self._to_compare) == 1:
             raise CannotDecide("No version part defined for left side.")
         else:
-            return -1 # other is larger (more pars)
+            return -1  # other is larger (more pars)
 
     @staticmethod
     def compare(first, second):
@@ -147,9 +151,7 @@ class ContextValue(object):
             # fallback to compare as strings
             first_version = first
             second_version = second
-        return (
-                (first_version > second_version) -
-                (first_version < second_version))
+        return (first_version > second_version) - (first_version < second_version)
 
     @staticmethod
     def _split_to_version(text):
@@ -180,6 +182,7 @@ class ContextValue(object):
 
 class Context(object):
     """ Represents https://fmf.readthedocs.io/en/latest/context.html """
+
     # Operators' definitions
     def _op_defined(self, dimension_name, values):
         """ 'is defined' operator """
@@ -209,8 +212,9 @@ class Context(object):
         """ '~=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=False) == 0
+            return (
+                dimension_value.version_cmp(it_val, minor_mode=True, ordered=False) == 0
+            )
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -218,8 +222,9 @@ class Context(object):
         """ '~!=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=False) != 0
+            return (
+                dimension_value.version_cmp(it_val, minor_mode=True, ordered=False) != 0
+            )
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -227,8 +232,9 @@ class Context(object):
         """ '~<=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True) <= 0
+            return (
+                dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) <= 0
+            )
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -236,8 +242,9 @@ class Context(object):
         """ '~<' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True) < 0
+            return (
+                dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) < 0
+            )
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -269,8 +276,9 @@ class Context(object):
         """ '~>=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True) >= 0
+            return (
+                dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) >= 0
+            )
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -286,8 +294,9 @@ class Context(object):
         """ '~>' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True) > 0
+            return (
+                dimension_value.version_cmp(it_val, minor_mode=True, ordered=True) > 0
+            )
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -316,8 +325,7 @@ class Context(object):
             # All comparissons ended as CannotDecide
             raise CannotDecide("No values could be compared.")
         except KeyError:
-            raise CannotDecide(
-                "Dimension {0} is not defined.".format(dimension_name))
+            raise CannotDecide("Dimension {0} is not defined.".format(dimension_name))
 
     operator_map = {
         "is defined": _op_defined,
@@ -351,10 +359,10 @@ class Context(object):
     )
 
     # To split by 'and' operator
-    re_and_split = re.compile(r'\band\b')
+    re_and_split = re.compile(r"\band\b")
 
     # To split by 'or' operator
-    re_or_split = re.compile(r'\bor\b')
+    re_or_split = re.compile(r"\bor\b")
 
     def __init__(self, *args, **kwargs):
         """
@@ -414,8 +422,7 @@ class Context(object):
             for part in and_group:
                 dimension, operator, raw_values = Context.split_expression(part)
                 if raw_values is not None:
-                    values = [
-                        Context.parse_value(value) for value in raw_values]
+                    values = [Context.parse_value(value) for value in raw_values]
                 else:
                     values = None
                 parsed_and_group.append((dimension, operator, values))
@@ -447,8 +454,7 @@ class Context(object):
             for part in Context.re_and_split.split(or_group):
                 part_stripped = part.strip()
                 if not part_stripped:
-                    raise InvalidRule(
-                        "Empty AND expression in {}.".format(rule))
+                    raise InvalidRule("Empty AND expression in {}.".format(rule))
                 and_group.append(part_stripped)
             rule_parts.append(and_group)
         return rule_parts
@@ -471,8 +477,7 @@ class Context(object):
         match = Context.re_expression_triple.match(expression)
         if match:
             dimension, operator, raw_values = match.groups()
-            return (dimension, operator, [
-                val.strip() for val in raw_values.split(",")])
+            return (dimension, operator, [val.strip() for val in raw_values.split(",")])
         # Double expressions
         match = Context.re_expression_double.match(expression)
         if match:

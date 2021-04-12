@@ -24,7 +24,7 @@ from pprint import pformat as pretty
 
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
-IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
+IGNORED_DIRECTORIES = ["/dev", "/proc", "/sys"]
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  YAML
@@ -34,7 +34,7 @@ IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
 # https://msg.pyyaml.org/load
 try:
     from yaml import FullLoader as YamlLoader
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     from yaml import SafeLoader as YamlLoader
 
 # Load all strings from YAML files as unicode
@@ -53,22 +53,27 @@ def unique_key_constructor(loader, node, deep=False):
         value = loader.construct_object(value_node, deep=deep)
         if key in mapping:
             raise yaml.constructor.ConstructorError(
-                "Duplicate key '{}' detected.".format(key))
+                "Duplicate key '{}' detected.".format(key)
+            )
         mapping[key] = value
     return loader.construct_mapping(node, deep)
 
 
 YamlLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG, construct_yaml_str)
+    yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG, construct_yaml_str
+)
 YamlLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_key_constructor)
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_key_constructor
+)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Metadata
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 class Tree(object):
     """ Metadata Tree """
+
     def __init__(self, data, name=None, parent=None):
         """
         Initialize metadata tree from directory path or data dictionary
@@ -80,7 +85,8 @@ class Tree(object):
         # Bail out if no data and no parent given
         if not data and not parent:
             raise utils.GeneralError(
-                "No data or parent provided to initialize the tree.")
+                "No data or parent provided to initialize the tree."
+            )
 
         # Initialize family relations, object data and source files
         self.parent = parent
@@ -136,7 +142,8 @@ class Tree(object):
         # Check root directory for current commit
         try:
             output, _ = utils.run(
-                ['git', 'rev-parse', '--verify', 'HEAD'], cwd=self.root)
+                ["git", "rev-parse", "--verify", "HEAD"], cwd=self.root
+            )
             self._commit = output.strip()
         except subprocess.CalledProcessError:
             self._commit = False
@@ -144,7 +151,7 @@ class Tree(object):
 
     def __unicode__(self):
         """ Use tree name as identifier """
-        return self.name # pragma: no cover
+        return self.name  # pragma: no cover
 
     def _initialize(self, path):
         """ Find metadata tree root, detect format version """
@@ -155,7 +162,9 @@ class Tree(object):
                 if root == "/":
                     raise utils.RootError(
                         "Unable to find tree root for '{0}'.".format(
-                            os.path.abspath(path)))
+                            os.path.abspath(path)
+                        )
+                    )
                 root = os.path.abspath(os.path.join(root, os.pardir))
         except StopIteration:
             raise utils.FileError("Invalid directory path: {0}".format(root))
@@ -168,7 +177,8 @@ class Tree(object):
                 log.info("Format version detected: {0}".format(self.version))
         except IOError as error:
             raise utils.FormatError(
-                "Unable to detect format version: {0}".format(error))
+                "Unable to detect format version: {0}".format(error)
+            )
         except ValueError:
             raise utils.FormatError("Invalid version format")
 
@@ -187,8 +197,8 @@ class Tree(object):
             data[key] = data[key] + value
         except TypeError as error:
             raise utils.MergeError(
-                "MergeError: Key '{0}' in {1} ({2}).".format(
-                    key, self.name, str(error)))
+                "MergeError: Key '{0}' in {1} ({2}).".format(key, self.name, str(error))
+            )
 
     def _merge_minus(self, data, key, value):
         """ Handle reducing attributes using the '-' suffix """
@@ -196,14 +206,14 @@ class Tree(object):
         if key not in data:
             data[key] = value
             raise utils.MergeError(
-                "MergeError: Key '{0}' in {1} (not inherited).".format(
-                    key, self.name))
+                "MergeError: Key '{0}' in {1} (not inherited).".format(key, self.name)
+            )
         # Subtract numbers
         if type(data[key]) == type(value) in [int, float]:
             data[key] = data[key] - value
         # Replace matching regular expression with empty string
         elif type(data[key]) == type(value) == type(""):
-            data[key] = re.sub(value, '', data[key])
+            data[key] = re.sub(value, "", data[key])
         # Remove given values from the parent list
         elif type(data[key]) == type(value) == list:
             data[key] = [item for item in data[key] if item not in value]
@@ -213,17 +223,17 @@ class Tree(object):
                 data[key].pop(item, None)
         else:
             raise utils.MergeError(
-                "MergeError: Key '{0}' in {1} (wrong type).".format(
-                    key, self.name))
+                "MergeError: Key '{0}' in {1} (wrong type).".format(key, self.name)
+            )
 
     def _merge_special(self, data, source):
         """ Merge source dict into data, handle special suffixes """
         for key, value in sorted(source.items()):
             # Handle special attribute merging
-            if key.endswith('+'):
-                self._merge_plus(data, key.rstrip('+'), value)
-            elif key.endswith('-'):
-                self._merge_minus(data, key.rstrip('-'), value)
+            if key.endswith("+"):
+                self._merge_plus(data, key.rstrip("+"), value)
+            elif key.endswith("-"):
+                self._merge_minus(data, key.rstrip("-"), value)
             # Otherwise just update the value
             else:
                 data[key] = value
@@ -233,15 +243,17 @@ class Tree(object):
         """ Create metadata tree root under given path """
         root = os.path.abspath(os.path.join(path, ".fmf"))
         if os.path.exists(root):
-            raise utils.FileError("{0} '{1}' already exists.".format(
-                "Directory" if os.path.isdir(root) else "File", root))
+            raise utils.FileError(
+                "{0} '{1}' already exists.".format(
+                    "Directory" if os.path.isdir(root) else "File", root
+                )
+            )
         try:
             os.makedirs(root)
             with open(os.path.join(root, "version"), "w") as version:
                 version.write("{0}\n".format(utils.VERSION))
         except OSError as error:
-            raise utils.FileError("Failed to create '{}': {}.".format(
-                root, error))
+            raise utils.FileError("Failed to create '{}': {}.".format(root, error))
         return root
 
     def merge(self, parent=None):
@@ -279,8 +291,8 @@ class Tree(object):
             if key is None:
                 raise utils.FormatError("Invalid key 'None'.")
             # Handle child attributes
-            if key.startswith('/'):
-                name = key.lstrip('/')
+            if key.startswith("/"):
+                name = key.lstrip("/")
                 # Handle deeper nesting (e.g. keys like /one/two/three) by
                 # extracting only the first level of the hierarchy as name
                 match = re.search("([^/]+)(/.*)", name)
@@ -295,7 +307,7 @@ class Tree(object):
         log.debug("Data for '{0}' updated.".format(self))
         log.data(pretty(self.data))
 
-    def adjust(self, context, key='adjust', undecided='skip'):
+    def adjust(self, context, key="adjust", undecided="skip"):
         """
         Adjust tree data based on provided context and rules
 
@@ -314,7 +326,8 @@ class Tree(object):
         # Check context sanity
         if not isinstance(context, fmf.context.Context):
             raise utils.GeneralError(
-                "Invalid adjust context: '{}'.".format(type(context).__name__))
+                "Invalid adjust context: '{}'.".format(type(context).__name__)
+            )
 
         # Adjust rules should be a dictionary or a list of dictionaries
         try:
@@ -327,7 +340,8 @@ class Tree(object):
                 raise utils.FormatError(
                     "Invalid adjust rule format in '{}'. "
                     "Should be a dictionary or a list of dictionaries, "
-                    "got '{}'.".format(self.name, type(rules).__name__))
+                    "got '{}'.".format(self.name, type(rules).__name__)
+                )
         except KeyError:
             rules = []
 
@@ -340,19 +354,20 @@ class Tree(object):
 
             # There must be a condition defined
             try:
-                condition = rule.pop('when')
+                condition = rule.pop("when")
             except KeyError:
                 raise utils.FormatError("No condition defined in adjust rule.")
 
             # The optional 'continue' key should be a bool
-            continue_ = rule.pop('continue', True)
+            continue_ = rule.pop("continue", True)
             if not isinstance(continue_, bool):
                 raise utils.FormatError(
                     "The 'continue' value should be bool, "
-                    "got '{}'.".format(continue_))
+                    "got '{}'.".format(continue_)
+                )
 
             # The 'because' key is reserved for optional comments (ignored)
-            rule.pop('because', None)
+            rule.pop("because", None)
 
             # Apply remaining rule attributes if context matches
             try:
@@ -364,19 +379,19 @@ class Tree(object):
                         break
             # Handle undecided rules as requested
             except fmf.context.CannotDecide:
-                if undecided == 'skip':
+                if undecided == "skip":
                     continue
-                elif undecided == 'raise':
+                elif undecided == "raise":
                     raise
                 else:
                     raise utils.GeneralError(
                         "Invalid value for the 'undecided' parameter. Should "
-                        "be 'skip' or 'raise', got '{}'.".format(undecided))
+                        "be 'skip' or 'raise', got '{}'.".format(undecided)
+                    )
 
         # Adjust all child nodes as well
         for child in self.children.values():
             child.adjust(context, key, undecided)
-
 
     def get(self, name=None, default=None):
         """
@@ -431,13 +446,12 @@ class Tree(object):
         """
         if path is None:
             return
-        if path != '/':
+        if path != "/":
             path = path.rstrip("/")
-        if path in IGNORED_DIRECTORIES: # pragma: no cover
+        if path in IGNORED_DIRECTORIES:  # pragma: no cover
             log.debug("Ignoring '{0}' (special directory).".format(path))
             return
-        log.info("Walking through directory {0}".format(
-            os.path.abspath(path)))
+        log.info("Walking through directory {0}".format(os.path.abspath(path)))
         try:
             dirpath, dirnames, filenames = next(os.walk(path))
         except StopIteration:
@@ -445,7 +459,8 @@ class Tree(object):
             return
         # Investigate main.fmf as the first file (for correct inheritance)
         filenames = sorted(
-            [filename for filename in filenames if filename.endswith(SUFFIX)])
+            [filename for filename in filenames if filename.endswith(SUFFIX)]
+        )
         try:
             filenames.insert(0, filenames.pop(filenames.index(MAIN)))
         except ValueError:
@@ -457,11 +472,14 @@ class Tree(object):
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
             log.info("Checking file {0}".format(fullpath))
             try:
-                with open(fullpath, encoding='utf-8') as datafile:
+                with open(fullpath, encoding="utf-8") as datafile:
                     data = yaml.load(datafile, Loader=YamlLoader)
             except yaml.error.YAMLError as error:
-                    raise(utils.FileError("Failed to parse '{0}'.\n{1}".format(
-                            fullpath, error)))
+                raise (
+                    utils.FileError(
+                        "Failed to parse '{0}'.\n{1}".format(fullpath, error)
+                    )
+                )
             log.data(pretty(data))
             # Handle main.fmf as data for self
             if filename == MAIN:
@@ -484,7 +502,7 @@ class Tree(object):
         for name in list(self.children.keys()):
             child = self.children[name]
             if not child.data and not child.children:
-                del(self.children[name])
+                del self.children[name]
                 log.debug("Empty tree '{0}' removed.".format(child.name))
 
     def climb(self, whole=False):
@@ -502,8 +520,7 @@ class Tree(object):
                 return node
         return None
 
-    def prune(self, whole=False, keys=None, names=None, filters=None,
-              conditions=None):
+    def prune(self, whole=False, keys=None, names=None, filters=None, conditions=None):
         """ Filter tree nodes based on given criteria """
         keys = keys or []
         names = names or []
@@ -515,16 +532,20 @@ class Tree(object):
             if not all([key in node.data for key in keys]):
                 continue
             # Select nodes with name matching regular expression
-            if names and not any(
-                    [re.search(name, node.name) for name in names]):
+            if names and not any([re.search(name, node.name) for name in names]):
                 continue
             # Apply filters and conditions if given
             try:
-                if not all([utils.filter(filter, node.data, regexp=True)
-                        for filter in filters]):
+                if not all(
+                    [utils.filter(filter, node.data, regexp=True) for filter in filters]
+                ):
                     continue
-                if not all([utils.evaluate(condition, node.data, node)
-                        for condition in conditions]):
+                if not all(
+                    [
+                        utils.evaluate(condition, node.data, node)
+                        for condition in conditions
+                    ]
+                ):
                     continue
             # Handle missing attribute as if filter failed
             except utils.FilterError:
@@ -552,16 +573,17 @@ class Tree(object):
             return formatting.format(*evaluated)
 
         # Show the name
-        output = utils.color(self.name, 'red')
+        output = utils.color(self.name, "red")
         if brief:
             return output + "\n"
         # List available attributes
         for key, value in sorted(self.data.items()):
-            output += "\n{0}: ".format(utils.color(key, 'green'))
+            output += "\n{0}: ".format(utils.color(key, "green"))
             if isinstance(value, type("")):
                 output += value.rstrip("\n")
             elif isinstance(value, list) and all(
-                    [isinstance(item, type("")) for item in value]):
+                [isinstance(item, type("")) for item in value]
+            ):
                 output += utils.listed(value)
             else:
                 output += pretty(value)
@@ -586,22 +608,23 @@ class Tree(object):
         """
 
         # Fetch remote git repository
-        if 'url' in reference:
+        if "url" in reference:
             tree = utils.fetch_tree(
-                    reference.get('url'),
-                    reference.get('ref'),
-                    reference.get('path', '.').lstrip('/'))
+                reference.get("url"),
+                reference.get("ref"),
+                reference.get("path", ".").lstrip("/"),
+            )
         # Use local files
         else:
-            root = reference.get('path', '.')
-            if not root.startswith('/') and root != '.':
-                raise utils.ReferenceError(
-                    'Relative path "%s" specified.' % root)
+            root = reference.get("path", ".")
+            if not root.startswith("/") and root != ".":
+                raise utils.ReferenceError('Relative path "%s" specified.' % root)
             tree = Tree(root)
-        found_node = tree.find(reference.get('name', '/'))
+        found_node = tree.find(reference.get("name", "/"))
         if found_node is None:
             raise utils.ReferenceError(
-                "No tree node found for '{0}' reference".format(reference))
+                "No tree node found for '{0}' reference".format(reference)
+            )
         return found_node
 
     def copy(self):
@@ -647,7 +670,8 @@ class Tree(object):
             # No raw data, perhaps a Tree initialized from a dict?
             if not node.parent:
                 raise utils.GeneralError(
-                    "No raw data found, does the Tree grow on a filesystem?")
+                    "No raw data found, does the Tree grow on a filesystem?"
+                )
             # Extend virtual hierarchy with the current node name, go up
             hierarchy.insert(0, "/" + node.name.rsplit("/")[-1])
             node = node.parent
@@ -694,5 +718,5 @@ class Tree(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """ Experimental: Store modified metadata to disk """
         _, full_data, source = self._locate_raw_data()
-        with open(source, "w", encoding='utf-8') as file:
+        with open(source, "w", encoding="utf-8") as file:
             file.write(dict_to_yaml(full_data))

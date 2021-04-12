@@ -9,6 +9,7 @@ import fmf.cli
 PATH = os.path.dirname(os.path.realpath(__file__))
 WGET = PATH + "/../../examples/wget"
 
+
 class TestSmoke(object):
     """ Smoke Test """
 

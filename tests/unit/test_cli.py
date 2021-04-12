@@ -56,7 +56,7 @@ class TestCommandLine(object):
     def test_sys_argv(self):
         """ Parsing sys.argv """
         backup = sys.argv
-        sys.argv = ['fmf', 'show', '--path', WGET, '--name', 'recursion/deep']
+        sys.argv = ["fmf", "show", "--path", WGET, "--name", "recursion/deep"]
         output = fmf.cli.main()
         assert "1000" in output
         sys.argv = backup
@@ -69,13 +69,12 @@ class TestCommandLine(object):
     def test_filtering(self):
         """ Filtering """
         output = fmf.cli.main(
-            "fmf show --filter tags:Tier1 --filter tags:TierSecurity", WGET)
+            "fmf show --filter tags:Tier1 --filter tags:TierSecurity", WGET
+        )
         assert "/download/test" in output
-        output = fmf.cli.main(
-            "fmf show --filter tags:Tier1 --filter tags:Wrong", WGET)
+        output = fmf.cli.main("fmf show --filter tags:Tier1 --filter tags:Wrong", WGET)
         assert "wget" not in output
-        output = fmf.cli.main(
-            " fmf show --filter 'tags: Tier[A-Z].*'", WGET)
+        output = fmf.cli.main(" fmf show --filter 'tags: Tier[A-Z].*'", WGET)
         assert "/download/test" in output
         assert "/recursion" not in output
 
@@ -93,15 +92,14 @@ class TestCommandLine(object):
 
     def test_format_key(self):
         """ Custom format (find by key, check the name) """
-        output = fmf.cli.main(
-            "fmf show --key depth --format {0} --value name", WGET)
+        output = fmf.cli.main("fmf show --key depth --format {0} --value name", WGET)
         assert "/recursion/deep" in output
 
     def test_format_functions(self):
         """ Custom format (using python functions) """
         output = fmf.cli.main(
-            "fmf show --key depth --format {0} --value os.path.basename(name)",
-            WGET)
+            "fmf show --key depth --format {0} --value os.path.basename(name)", WGET
+        )
         assert "deep" in output
         assert "/recursion" not in output
 
@@ -118,11 +116,11 @@ class TestCommandLine(object):
         with open(version_path) as version:
             assert "1" in version.read()
         # Permission denied
-        secret_path = os.path.join(path, 'denied')
+        secret_path = os.path.join(path, "denied")
         os.makedirs(secret_path)
         os.chmod(secret_path, 0o666)
         with pytest.raises(utils.FileError):
-            fmf.cli.main('fmf init --path {}'.format(secret_path), path)
+            fmf.cli.main("fmf init --path {}".format(secret_path), path)
         os.chmod(secret_path, 0o777)
         # Invalid version
         with open(version_path, "w") as version:
@@ -144,17 +142,17 @@ class TestCommandLine(object):
         assert len(output.splitlines()) == 2
         # Access a dictionary key
         output = fmf.cli.main(
-            "fmf ls --condition \"execute['how'] == 'dependency'\"", path)
+            "fmf ls --condition \"execute['how'] == 'dependency'\"", path
+        )
         assert output.strip() == "/top/rhel7"
         # Wrong key means unsatisfied condition
-        output = fmf.cli.main(
-            "fmf ls --condition \"execute['wrong key'] == 0\"", path)
-        assert output == ''
+        output = fmf.cli.main("fmf ls --condition \"execute['wrong key'] == 0\"", path)
+        assert output == ""
 
     def test_clean(self, tmpdir, monkeypatch):
         """ Cache cleanup """
         # Do not manipulate with real, user's cache
-        monkeypatch.setattr('fmf.utils._CACHE_DIRECTORY', str(tmpdir))
+        monkeypatch.setattr("fmf.utils._CACHE_DIRECTORY", str(tmpdir))
         testing_file = tmpdir.join("something")
         testing_file.write("content")
         fmf.cli.main("fmf clean")

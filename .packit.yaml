@@ -1,32 +1,32 @@
 specfile_path: fmf.spec
 synced_files:
-    - fmf.spec
+  - fmf.spec
 
 upstream_package_name: fmf
 downstream_package_name: fmf
 
 actions:
   create-archive:
-  - make tarball
+    - make tarball
   get-current-version:
-  - make version
+    - make version
 
 jobs:
   - job: tests
     trigger: pull_request
     metadata:
       targets:
-      - fedora-all
-      - epel-8
-      - epel-7
+        - fedora-all
+        - epel-8
+        - epel-7
 
   - job: copr_build
     trigger: commit
     metadata:
       branch: master
       targets:
-      - fedora-all
-      - epel-8
+        - fedora-all
+        - epel-8
       list_on_homepage: True
       preserve_project: True
       owner: psss

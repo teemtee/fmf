@@ -16,8 +16,9 @@ from filelock import Timeout, FileLock
 from pprint import pformat as pretty
 import yaml
 import warnings
+
 # Use six only on python2
-if sys.version[0] == '2': # pragma: no cover
+if sys.version[0] == "2":  # pragma: no cover
     from six import StringIO
 else:
     from io import StringIO
@@ -57,44 +58,55 @@ FETCH_LOCK_TIMEOUT = 5 * 60
 NODE_LOCK_TIMEOUT = 60 + FETCH_LOCK_TIMEOUT
 
 # Suffix of lock file for reading
-LOCK_SUFFIX_READ = '.read.lock'
+LOCK_SUFFIX_READ = ".read.lock"
 # Suffix of lock file for fetching
-LOCK_SUFFIX_FETCH = '.fetch.lock'
+LOCK_SUFFIX_FETCH = ".fetch.lock"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Exceptions
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 class GeneralError(Exception):
     """ General error """
+
 
 class FormatError(GeneralError):
     """ Metadata format error """
 
+
 class FileError(GeneralError):
     """ File reading error """
+
 
 class RootError(FileError):
     """ Metadata tree root missing """
 
+
 class FilterError(GeneralError):
     """ Missing data when filtering """
+
 
 class MergeError(GeneralError):
     """ Unable to merge data between parent and child """
 
+
 class ReferenceError(GeneralError):
     """ Referenced tree node cannot be found """
 
+
 class FetchError(GeneralError):
     """ Fatal error in helper command while fetching """
+
     # Keep previously used format of the message
     def __str__(self):
-        return self.args[0] if self.args else ''
+        return self.args[0] if self.args else ""
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Utils
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def pluralize(singular=None):
     """ Naively pluralize words """
@@ -105,6 +117,7 @@ def pluralize(singular=None):
     else:
         plural = singular + "s"
     return plural
+
 
 def listed(items, singular=None, plural=None, max=None, quote="", join="and"):
     """
@@ -154,7 +167,7 @@ def listed(items, singular=None, plural=None, max=None, quote="", join="and"):
     if len(items) < 2:
         return "".join(items)
     else:
-        return ", ".join(items[0:-2] + [' {} '.format(join).join(items[-2:])])
+        return ", ".join(items[0:-2] + [" {} ".format(join).join(items[-2:])])
 
 
 def split(values, separator=re.compile("[ ,]+")):
@@ -181,9 +194,11 @@ def info(message, newline=True):
     """ Log provided info message to the standard error output """
     sys.stderr.write(message + ("\n" if newline else ""))
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Filtering
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def evaluate(expression, data, _node=None):
     """
@@ -286,23 +301,28 @@ def filter(filter, data, sensitive=True, regexp=False):
             # Append the literal value(s) to corresponding dimension list
             literals.setdefault(dimension, []).extend(values)
         # For each dimension all literals must match given data
-        return all([check_dimension(dimension, values)
-            for dimension, values in literals.items()])
+        return all(
+            [
+                check_dimension(dimension, values)
+                for dimension, values in literals.items()
+            ]
+        )
 
     # Default to True if no filter given, bail out if weird data given
-    if filter is None or filter == "": return True
+    if filter is None or filter == "":
+        return True
     if not isinstance(data, dict):
         raise FilterError("Invalid data type '{0}'".format(type(data)))
 
     # Make sure that data dictionary contains lists of strings
     data = copy.deepcopy(data)
-    try: # pragma: no cover
+    try:  # pragma: no cover
         for key in data:
             if isinstance(data[key], list):
                 data[key] = [unicode(item) for item in data[key]]
             else:
                 data[key] = [unicode(data[key])]
-    except NameError: # pragma: no cover
+    except NameError:  # pragma: no cover
         for key in data:
             if isinstance(data[key], list):
                 data[key] = [str(item) for item in data[key]]
@@ -317,12 +337,13 @@ def filter(filter, data, sensitive=True, regexp=False):
         data = lowered
 
     # At least one clause must be true
-    return any([check_clause(clause)
-            for clause in re.split(r"\s*\|\s*", filter)])
+    return any([check_clause(clause) for clause in re.split(r"\s*\|\s*", filter)])
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Logging
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 class Logging(object):
     """ Logging Configuration """
@@ -354,7 +375,7 @@ class Logging(object):
     # Already initialized loggers by their name
     _loggers = dict()
 
-    def __init__(self, name='fmf'):
+    def __init__(self, name="fmf"):
         # Use existing logger if already initialized
         try:
             self.logger = Logging._loggers[name]
@@ -366,6 +387,7 @@ class Logging(object):
 
     class ColoredFormatter(logging.Formatter):
         """ Custom color formatter for logging """
+
         def format(self, record):
             # Handle custom log level names
             if record.levelno == LOG_ALL:
@@ -386,10 +408,10 @@ class Logging(object):
                 level = color(" " + levelname + " ", "lightwhite", colour)
             else:
                 level = "[{0}]".format(levelname)
-            return u"{0} {1}".format(level, record.getMessage())
+            return "{0} {1}".format(level, record.getMessage())
 
     @staticmethod
-    def _create_logger(name='fmf', level=None):
+    def _create_logger(name="fmf", level=None):
         """ Create fmf logger """
         # Create logger, handler and formatter
         logger = logging.getLogger(name)
@@ -403,9 +425,9 @@ class Logging(object):
         logger.DATA = LOG_DATA
         logger.CACHE = LOG_CACHE
         logger.ALL = LOG_ALL
-        logger.cache = lambda message: logger.log(LOG_CACHE, message) # NOQA
-        logger.data = lambda message: logger.log(LOG_DATA, message) # NOQA
-        logger.all = lambda message: logger.log(LOG_ALL, message) # NOQA
+        logger.cache = lambda message: logger.log(LOG_CACHE, message)  # NOQA
+        logger.data = lambda message: logger.log(LOG_DATA, message)  # NOQA
+        logger.all = lambda message: logger.log(LOG_ALL, message)  # NOQA
         return logger
 
     def set(self, level=None):
@@ -442,6 +464,7 @@ class Logging(object):
 #  Coloring
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 def color(text, color=None, background=None, light=False, enabled="auto"):
     """
     Return text in desired color if coloring enabled
@@ -449,8 +472,16 @@ def color(text, color=None, background=None, light=False, enabled="auto"):
     Available colors: black red green yellow blue magenta cyan white.
     Alternatively color can be prefixed with "light", e.g. lightgreen.
     """
-    colors = {"black": 30, "red": 31, "green": 32, "yellow": 33,
-              "blue": 34, "magenta": 35, "cyan": 36, "white": 37}
+    colors = {
+        "black": 30,
+        "red": 31,
+        "green": 32,
+        "yellow": 33,
+        "blue": 34,
+        "magenta": 35,
+        "cyan": 36,
+        "white": 37,
+    }
     # Nothing do do if coloring disabled
     if enabled == "auto":
         enabled = Coloring().enabled()
@@ -522,8 +553,9 @@ class Coloring(object):
         self._mode = mode
         log.debug(
             "Coloring {0} ({1})".format(
-                "enabled" if self.enabled() else "disabled",
-                self.MODES[self._mode]))
+                "enabled" if self.enabled() else "disabled", self.MODES[self._mode]
+            )
+        )
 
     def get(self):
         """ Get the current color mode """
@@ -541,6 +573,7 @@ class Coloring(object):
 #  Cache directory
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 def get_cache_directory(create=True):
     """
     Return cache directory, created by this call if necessary
@@ -553,13 +586,9 @@ def get_cache_directory(create=True):
 
     Raise GeneralError if it is not possible to create it.
     """
-    cache = (
-        os.environ.get('FMF_CACHE_DIRECTORY', _CACHE_DIRECTORY)
-        or os.path.join(
-                os.path.expanduser(
-                    os.environ.get('XDG_CACHE_HOME', '~/.cache')),
-                'fmf')
-        )
+    cache = os.environ.get("FMF_CACHE_DIRECTORY", _CACHE_DIRECTORY) or os.path.join(
+        os.path.expanduser(os.environ.get("XDG_CACHE_HOME", "~/.cache")), "fmf"
+    )
     if not os.path.isdir(cache) and create:
         try:
             os.makedirs(cache)
@@ -568,21 +597,25 @@ def get_cache_directory(create=True):
             # We don't care if cache wasn't created by this process.
             # errno-17 is file exists
             if error.errno == 17 and os.path.isdir(cache):
-                pass # pragma: no cover
+                pass  # pragma: no cover
             else:
                 raise GeneralError(
-                    "Failed to create cache directory '{0}'.".format(cache))
+                    "Failed to create cache directory '{0}'.".format(cache)
+                )
     return cache
+
 
 def set_cache_directory(cache_directory):
     """ Set preferred cache directory """
     global _CACHE_DIRECTORY
     _CACHE_DIRECTORY = cache_directory
 
+
 def set_cache_expiration(seconds):
     """ Seconds until cache expires """
     global CACHE_EXPIRATION
     CACHE_EXPIRATION = int(seconds)
+
 
 def clean_cache_directory():
     """ Delete used cache directory if it exists """
@@ -590,38 +623,40 @@ def clean_cache_directory():
     if os.path.isdir(cache):
         shutil.rmtree(cache)
 
+
 def invalidate_cache():
     """ Force fetch next time cache is used regardless its age """
     # Missing FETCH_HEAD means `git fetch` will happen
     cache = get_cache_directory(create=False)
     # Cache not exists, nothing to do
     if not os.path.isdir(cache):
-        return # pragma: no cover
+        return  # pragma: no cover
     issues = []
     for root, dirs, files in os.walk(cache, topdown=True):
-        if '.git' not in dirs:
+        if ".git" not in dirs:
             continue
         # Content of root is path to git repo
-        fetch_head = os.path.join(root, '.git', 'FETCH_HEAD')
+        fetch_head = os.path.join(root, ".git", "FETCH_HEAD")
         try:
             if os.path.isfile(fetch_head):
                 lock_path = root + LOCK_SUFFIX_FETCH
                 log.debug("Remove '{0}'.".format(fetch_head))
                 with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
                     os.remove(fetch_head)
-        except (IOError, Timeout) as error: # pragma: no cover
-            issues.append(
-                "Couldn't remove file '{0}': {1}".format(fetch_head, error))
+        except (IOError, Timeout) as error:  # pragma: no cover
+            issues.append("Couldn't remove file '{0}': {1}".format(fetch_head, error))
         # Already found a .git so no need to continue inside the root
         del dirs[:]
-    if issues: # pragma: no cover
+    if issues:  # pragma: no cover
         raise GeneralError("\n".join(issues))
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Tree from the Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def fetch_tree(url, ref=None, path='.'):
+
+def fetch_tree(url, ref=None, path="."):
     """
     Get initialized Tree from a remote git repository
 
@@ -639,12 +674,11 @@ def fetch_tree(url, ref=None, path='.'):
     # Create lock path to fetch/read git from URL to the cache
     cache_dir = get_cache_directory()
     # Use LOCK_SUFFIX_READ suffix (different from the inner fetch lock)
-    lock_path = os.path.join(
-        cache_dir, url.replace('/', '_')) + LOCK_SUFFIX_READ
+    lock_path = os.path.join(cache_dir, url.replace("/", "_")) + LOCK_SUFFIX_READ
     try:
         with FileLock(lock_path, timeout=NODE_LOCK_TIMEOUT) as lock:
             # Write PID to lockfile so we know which process got it
-            with open(lock.lock_file, 'w') as lock_file:
+            with open(lock.lock_file, "w") as lock_file:
                 lock_file.write(str(os.getpid()))
             repository = fetch_repo(url, ref)
             root = os.path.join(repository, path)
@@ -652,12 +686,15 @@ def fetch_tree(url, ref=None, path='.'):
     except Timeout:
         raise GeneralError(
             "Failed to acquire lock for {0} within {1} seconds".format(
-            lock_path, NODE_LOCK_TIMEOUT))
+                lock_path, NODE_LOCK_TIMEOUT
+            )
+        )
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Deprecated 'fetch' method (deprecated from 0.15)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def fetch(url, ref=None, destination=None, env=None):
     """ Deprecated: Use :func:`fetch_repo` instead """
@@ -666,13 +703,16 @@ def fetch(url, ref=None, destination=None, env=None):
     warnings.warn(
         "Use 'utils.fetch_repo()' instead, "
         "this method will be removed in the future.",
-        FutureWarning, stacklevel=2)
+        FutureWarning,
+        stacklevel=2,
+    )
     return fetch_repo(url, ref, destination, env)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def fetch_repo(url, ref=None, destination=None, env=None):
     """
@@ -690,14 +730,14 @@ def fetch_repo(url, ref=None, destination=None, env=None):
     if destination is None:
         # Prepare the destination path
         cache = get_cache_directory()
-        directory = url.replace('/', '_')
+        directory = url.replace("/", "_")
         destination = os.path.join(cache, directory)
     else:
-        cache = os.path.dirname(destination.rstrip('/'))
+        cache = os.path.dirname(destination.rstrip("/"))
 
     # Use the default branch from origin of no ref provided
     if ref is None:
-        ref = '__DEFAULT__'
+        ref = "__DEFAULT__"
 
     # Lock for possibly shared cache directory. Add the extension
     # LOCK_SUFFIX_FETCH manually in the constructor. Everything under
@@ -707,35 +747,39 @@ def fetch_repo(url, ref=None, destination=None, env=None):
         lock_path = destination + LOCK_SUFFIX_FETCH
         with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
             # Write PID to lockfile so we know which process got it
-            with open(lock.lock_file, 'w') as lock_file:
+            with open(lock.lock_file, "w") as lock_file:
                 lock_file.write(str(os.getpid()))
             # Clone the repository
-            if not os.path.isdir(os.path.join(destination, '.git')):
-                run(['git', 'clone', url, destination], cwd=cache, env=env)
+            if not os.path.isdir(os.path.join(destination, ".git")):
+                run(["git", "clone", url, destination], cwd=cache, env=env)
                 # Store the default branch from the origin as a DEFAULT ref
-                head = os.path.join(
-                    destination, '.git/refs/remotes/origin/HEAD')
-                default = os.path.join(
-                    destination, '.git/refs/heads/__DEFAULT__')
+                head = os.path.join(destination, ".git/refs/remotes/origin/HEAD")
+                default = os.path.join(destination, ".git/refs/heads/__DEFAULT__")
                 shutil.copyfile(head, default)
             # Fetch changes if we are too old
-            fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
+            fetch_head_file = os.path.join(destination, ".git", "FETCH_HEAD")
             try:
                 age = time.time() - os.path.getmtime(fetch_head_file)
             except OSError:
                 age = CACHE_EXPIRATION
             if age >= CACHE_EXPIRATION:
-                run(['git', 'fetch'], cwd=destination)
+                run(["git", "fetch"], cwd=destination)
             # Checkout branch
-            run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
+            run(["git", "checkout", "-f", ref], cwd=destination, env=env)
             # Reset to origin to get possible changes but no exit code check
             # ref could be tag or commit where it is expected to fail
-            run(['git', 'reset', '--hard', "origin/{0}".format(ref)],
-                cwd=destination, check_exit_code=False, env=env)
+            run(
+                ["git", "reset", "--hard", "origin/{0}".format(ref)],
+                cwd=destination,
+                check_exit_code=False,
+                env=env,
+            )
     except Timeout:
         raise GeneralError(
             "Failed to acquire lock for '{0}' within {1} seconds.".format(
-            destination, FETCH_LOCK_TIMEOUT))
+                destination, FETCH_LOCK_TIMEOUT
+            )
+        )
     except (OSError, subprocess.CalledProcessError) as error:
         raise FetchError("{0}".format(error), error)
 
@@ -746,6 +790,7 @@ def fetch_repo(url, ref=None, destination=None, env=None):
 #  Run command
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 def run(command, cwd=None, check_exit_code=True, env=None):
     """
     Run command and return a (stdout, stderr) tuple
@@ -755,31 +800,36 @@ def run(command, cwd=None, check_exit_code=True, env=None):
     :check_exit_code raise CalledProcessError if exit code is non-zero
     :env dictionary of the environment variables for the command
     """
-    log.debug("Running command: '{0}'.".format(' '.join(command)))
+    log.debug("Running command: '{0}'.".format(" ".join(command)))
 
     process = subprocess.Popen(
-        command, cwd=cwd, env=env,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     stdout, stderr = process.communicate()
     # Python 3 returns byte stream
-    if hasattr(stdout, 'decode'):
-        stdout = stdout.decode('utf-8')
-        stderr = stderr.decode('utf-8')
+    if hasattr(stdout, "decode"):
+        stdout = stdout.decode("utf-8")
+        stderr = stderr.decode("utf-8")
     log.debug("stdout: {0}".format(stdout.strip()))
     log.debug("stderr: {0}".format(stderr.strip()))
-    log.debug("exit_code: {0}{1}".format(
-        process.returncode, ('' if check_exit_code else ' (ignored)')))
+    log.debug(
+        "exit_code: {0}{1}".format(
+            process.returncode, ("" if check_exit_code else " (ignored)")
+        )
+    )
     if check_exit_code and process.returncode != 0:
         raise subprocess.CalledProcessError(
-            process.returncode, ' '.join(command), output=stdout + stderr)
+            process.returncode, " ".join(command), output=stdout + stderr
+        )
     return stdout, stderr
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Default Logger
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Create the default output logger
-log = Logging('fmf').logger
+log = Logging("fmf").logger
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -791,20 +841,22 @@ log = Logging('fmf').logger
 # Python 2 version
 try:  # pragma: no cover
     yaml.SafeDumper.orig_represent_unicode = yaml.SafeDumper.represent_unicode
+
     def repr_unicode(dumper, data):
-        if '\n' in data:
-            return dumper.represent_scalar(
-                u'tag:yaml.org,2002:str', data, style='|')
+        if "\n" in data:
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
         return dumper.orig_represent_unicode(data)
+
     yaml.add_representer(unicode, repr_unicode, Dumper=yaml.SafeDumper)
 # Python 3 version
 except AttributeError:
     yaml.SafeDumper.orig_represent_str = yaml.SafeDumper.represent_str
+
     def repr_str(dumper, data):
-        if '\n' in data:
-            return dumper.represent_scalar(
-                u'tag:yaml.org,2002:str', data, style='|')
+        if "\n" in data:
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
         return dumper.orig_represent_str(data)
+
     yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
 
 
@@ -813,21 +865,34 @@ def dict_to_yaml(data, width=None, sort=False):
     output = StringIO()
     try:
         yaml.safe_dump(
-            data, output, sort_keys=sort,
-            encoding='utf-8', allow_unicode=True,
-            width=width, indent=4, default_flow_style=False)
+            data,
+            output,
+            sort_keys=sort,
+            encoding="utf-8",
+            allow_unicode=True,
+            width=width,
+            indent=4,
+            default_flow_style=False,
+        )
     except TypeError:  # pragma: no cover
         # FIXME: Temporary workaround for rhel-8 to disable key sorting
         # https://stackoverflow.com/questions/31605131/
         # https://github.com/psss/tmt/issues/207
         representer = lambda self, data: self.represent_mapping(
-            'tag:yaml.org,2002:map', data.items())
+            "tag:yaml.org,2002:map", data.items()
+        )
         yaml.add_representer(dict, representer, Dumper=yaml.SafeDumper)
         yaml.safe_dump(
-            data, output, encoding='utf-8', allow_unicode=True,
-            width=width, indent=4, default_flow_style=False)
+            data,
+            output,
+            encoding="utf-8",
+            allow_unicode=True,
+            width=width,
+            indent=4,
+            default_flow_style=False,
+        )
     # For Python 2 we need to decode the string
     try:
-        return output.getvalue().decode('utf-8')
+        return output.getvalue().decode("utf-8")
     except AttributeError:
         return output.getvalue()
