@@ -27,6 +27,7 @@ jobs:
       targets:
       - fedora-all
       - epel-8
+      - epel-7
       list_on_homepage: True
       preserve_project: True
       owner: psss
