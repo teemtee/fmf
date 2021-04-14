@@ -483,7 +483,12 @@ class Context(object):
         """
         Does the rule match the current Context?
 
-        We have three outcomes: Yes, No and can't say
+        We have three outcomes: Yes, No and CannotDecide
+
+        CannotDecide and True == True and CannotDecide == CannotDecide
+        CannotDecide and False == False and CannotDecide == False
+        CannotDecide or True == True or CannotDecide == True
+        CannotDecide or False == False or CannotDecide == CannotDecide
 
         :param rule: Single rule to decide
         :type rule: str
@@ -492,30 +497,51 @@ class Context(object):
             Context, e.g. dimension is missing
         :raises InvalidRule:  Syntax error in the rule
         """
-        decided_whole = False  # At least one outcome overall
+        final_outcome = None # None is CannotDecide
+        valid = False # Is final outcome valid?
         for and_group in self.parse_rule(rule):
-            decided_group = False
-            outcome = None  # At least one outcome within AND relation
+            and_outcome = None # None is CannotDecide
+            and_valid = False
             for expression in and_group:
-                # Skip over CannotDecide expressions
                 try:
-                    if outcome is None:
-                        outcome = self.evaluate(expression)
-                    else:
-                        outcome = outcome and self.evaluate(expression)
-                    decided_group = True
-                    decided_whole = True
-                    if not outcome:
-                        break  # No need to check the rest
+                    result = self.evaluate(expression)
                 except CannotDecide:
-                    pass
-            # If we could decide at least one expression and outcome is
-            # True -> return it
-            if decided_group and outcome:
+                    result = None
+
+                if and_valid:
+                    if and_outcome is False or result is False:
+                        # False makes CannotDecide False
+                        and_outcome = False
+                    elif result is True and and_outcome is True:
+                        and_outcome = True
+                    else:
+                        # CannotDecide
+                        and_outcome = None
+                else:
+                    and_valid = True
+                    and_outcome = result
+                if and_outcome is False:
+                    # No need to check the rest of AND group
+                    break
+            # Just making sure, parse_rule should have raised it already
+            assert and_valid, "Malformed expression: Missing AND part in {0}".format(rule)
+            # AND group finished as True, no need to process the rest of OR groups
+            if and_outcome is True:
                 return True
-            # Otherwise process next OR sections
-        if decided_whole:
-            return False  # True would have returned already
+            # Resolve current OR couple
+            if valid:
+                # True was already returned, it interim outcome can be False or CannotDecide
+                if and_outcome is None or final_outcome is None:
+                    final_outcome = None # CannotDecide
+                else:
+                    final_outcome = False
+            else:
+                final_outcome = and_outcome
+                valid = True
+        # Just making sure, parse_rule should have raised it already
+        assert valid, "Malformed expression: Missing OR part in {0}".format(rule)
+        if final_outcome is False:
+            return False
         else:
             raise CannotDecide()  # It's up to callee how to treat this
 

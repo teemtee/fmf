@@ -51,14 +51,26 @@ supported operators consult the following grammar outline::
     values ::= value (',' value)*
     value ::= [[:alnum:]]+
 
-Lazy evaluation
-    Operator ``and`` takes precedence over ``or`` and rule
-    evaluation is lazy. It stops immediately when we know the
-    final result.
+Lazy Evaluation
+---------------
 
-Expression skipping
-    When a dimension or outcome of the operation is not defined,
-    the expression is skipped over.
+Operator ``and`` takes precedence over ``or`` and rule evaluation
+is lazy. It stops immediately when we know the final result.
+
+Boolean Operations
+------------------
+
+When a dimension or outcome of the operation is not defined,
+the expression is treated as ``CannotDecide``.
+
+Boolean operations with ``CannotDecide``::
+
+    CannotDecide  and  True         ==  CannotDecide
+    CannotDecide  and  False        ==  False
+    CannotDecide  or   True         ==  True
+    CannotDecide  or   False        ==  CannotDecide
+    CannotDecide  and  CannotDecide ==  CannotDecide
+    CannotDecide  or   CannotDecide ==  CannotDecide
 
 
 Dimensions
@@ -123,7 +135,7 @@ right side match then the two values are equal::
 
 However, comparing order of two values is defined only if they
 match by name. If names don't match then values cannot be
-compared and the expression is skipped::
+compared and the expression has ``CannotDecide`` outcome::
 
     git-2.3.4 >= git-2     # True
     git-2.3.4 >= git-3     # False
@@ -157,24 +169,24 @@ following example shows how the special less than operator ``~<``
 would be evaluated for given `centos` versions. Note that the
 right side defines if the minor comparison is evaluated or not.
 
-==========  ========== ========== ==========
-~<          centos-7.9 centos-8.2 centos-8
-centos-7.8   True         skip    True
-centos-7.9   False        skip    True
-centos-7     skip         skip    True
-centos-8.1   skip         True    False
-centos-8.2   skip         False   False
-centos-8     skip         skip    False
-==========  ========== ========== ==========
+==========  ============ ============ ==========
+~<          centos-7.9   centos-8.2   centos-8
+centos-7.8  True         CannotDecide True
+centos-7.9  False        CannotDecide True
+centos-7    CannotDecide CannotDecide True
+centos-8.1  CannotDecide True         False
+centos-8.2  CannotDecide False        False
+centos-8    CannotDecide CannotDecide False
+==========  ============ ============ ==========
 
 Here is a couple of examples to get a better idea of how the
 comparison works for some special cases::
 
-    fedora < fedora-33 ---> skip (left side has no version parts)
+    fedora < fedora-33 ---> cannot (left side has no version parts)
     fedora-33 == fedora ---> True (right side wants only name)
-    fedora-33 < fedora-rawhide ---> True (rawhide is newer then any number)
+    fedora-33 < fedora-rawhide ---> True (rawhide is newer than any number)
 
     centos-8.4.0 == centos ---> True
     centos-8.4.0 < centos-9 ---> True
     centos-8.4.0 ~< centos-9 ---> True (no minor comparison requested)
-    centos-8.4.0 ~< centos-9.2 ---> skip (minor comparison requested)
+    centos-8.4.0 ~< centos-9.2 ---> cannot (minor comparison requested)
