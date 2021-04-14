@@ -51,23 +51,26 @@ supported operators consult the following grammar outline::
     values ::= value (',' value)*
     value ::= [[:alnum:]]+
 
-Lazy evaluation
-    Operator ``and`` takes precedence over ``or`` and rule
-    evaluation is lazy. It stops immediately when we know the
-    final result.
+Lazy Evaluation
+---------------
 
-Boolean operations with CannotDecide
-    When a dimension or outcome of the operation is not defined,
-    the expression is treated as ``CannotDecide``.
+Operator ``and`` takes precedence over ``or`` and rule evaluation
+is lazy. It stops immediately when we know the final result.
 
-    Boolean operations with ``CannotDecide``::
+Boolean Operations
+------------------
 
-        CannotDecide  and  True         ==  CannotDecide
-        CannotDecide  and  False        ==  False
-        CannotDecide  or   True         ==  True
-        CannotDecide  or   False        ==  CannotDecide
-        CannotDecide  and  CannotDecide ==  CannotDecide
-        CannotDecide  or   CannotDecide ==  CannotDecide
+When a dimension or outcome of the operation is not defined,
+the expression is treated as ``CannotDecide``.
+
+Boolean operations with ``CannotDecide``::
+
+    CannotDecide  and  True         ==  CannotDecide
+    CannotDecide  and  False        ==  False
+    CannotDecide  or   True         ==  True
+    CannotDecide  or   False        ==  CannotDecide
+    CannotDecide  and  CannotDecide ==  CannotDecide
+    CannotDecide  or   CannotDecide ==  CannotDecide
 
 
 Dimensions
