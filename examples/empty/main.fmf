@@ -1,5 +1,5 @@
 # Directories without metadata are silently ignored.
 key: value
 
-# Virtual structure without content is ignored as well.
+# Virtual structure without content is not ignored.
 /zero:

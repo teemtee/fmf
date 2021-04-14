@@ -1,0 +1,5 @@
+summary: Some basic test
+/python3:
+   environment:
+      - PYTHON: python3
+/default:

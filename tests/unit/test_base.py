@@ -85,7 +85,7 @@ class TestTree(object):
         """ Empty structures should be ignored """
         child = Tree(EXAMPLES + "empty")
         assert child.find("/nothing") is None
-        assert child.find("/zero") is None
+        assert child.find("/zero") is not None
 
     def test_none_key(self):
         """ Handle None keys """

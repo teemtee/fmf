@@ -92,6 +92,9 @@ class Tree(object):
         self.original_data = dict()
         self._commit = None
         self._raw_data = dict()
+        # Track whether the data dictionary has been updated
+        # (needed to prevent removing nodes with an empty dict).
+        self._updated = False
 
         # Special handling for top parent
         if self.parent is None:
@@ -103,9 +106,11 @@ class Tree(object):
         else:
             self.root = self.parent.root
             self.name = os.path.join(self.parent.name, name)
-        # Initialize data
-        if isinstance(data, dict):
+
+        # Update data from a dictionary (handle empty nodes)
+        if isinstance(data, dict) or data is None:
             self.update(data)
+        # Grow the tree from a directory path
         else:
             self.grow(data)
 
@@ -178,7 +183,7 @@ class Tree(object):
         if key not in data:
             data[key] = value
             return
-        # Use dict.update() for merging dictionaries
+        # Use the special merge for merging dictionaries
         if type(data[key]) == type(value) == dict:
             self._merge_special(data[key], value)
             return
@@ -271,6 +276,9 @@ class Tree(object):
 
     def update(self, data):
         """ Update metadata, handle virtual hierarchy """
+        # Make a note that the data dictionary has been updated
+        # None is handled in the same way as an empty dictionary
+        self._updated = True
         # Nothing to do if no data
         if data is None:
             return
@@ -410,8 +418,10 @@ class Tree(object):
     def child(self, name, data, source=None):
         """ Create or update child with given data """
         try:
-            if isinstance(data, dict):
+            # Update data from a dictionary (handle empty nodes)
+            if isinstance(data, dict) or data is None:
                 self.children[name].update(data)
+            # Grow the tree from a directory path
             else:
                 self.children[name].grow(data)
         except KeyError:
@@ -429,8 +439,6 @@ class Tree(object):
         from the same path multiple times with attribute adding using the "+"
         sign leads to adding the value more than once!
         """
-        if path is None:
-            return
         if path != '/':
             path = path.rstrip("/")
         if path in IGNORED_DIRECTORIES: # pragma: no cover
@@ -480,10 +488,11 @@ class Tree(object):
                 log.debug("Ignoring metadata tree '{0}'.".format(dirname))
                 continue
             self.child(dirname, os.path.join(path, dirname))
-        # Remove empty children (ignore directories without metadata)
+        # Ignore directories with no metadata (remove all child nodes which
+        # do not have children and their data haven't been updated)
         for name in list(self.children.keys()):
             child = self.children[name]
-            if not child.data and not child.children:
+            if not child.children and not child._updated:
                 del(self.children[name])
                 log.debug("Empty tree '{0}' removed.".format(child.name))
 
@@ -535,9 +544,6 @@ class Tree(object):
     def show(self, brief=False, formatting=None, values=None):
         """ Show metadata """
         values = values or []
-        # Show nothing if there's nothing
-        if not self.data:
-            return None
 
         # Custom formatting
         if formatting is not None:
@@ -553,7 +559,7 @@ class Tree(object):
 
         # Show the name
         output = utils.color(self.name, 'red')
-        if brief:
+        if brief or not self.data:
             return output + "\n"
         # List available attributes
         for key, value in sorted(self.data.items()):
