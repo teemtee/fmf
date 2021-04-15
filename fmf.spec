@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.15.2
+Version: 0.16.0
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -163,6 +163,15 @@ export LANG=en_US.utf-8
 
 
 %changelog
+* Thu Apr 15 2021 Petr Šplíchal <psplicha@redhat.com> - 0.16.0-1
+- Add support for empty files and virtual nodes
+- Change outcome of CannotDecide operations
+- Enable copr builds from master for epel-7 as well
+- Define dict method to get child or data item
+- Keep original adjust rules when adjusting nodes
+- Use a deep copy when storing raw node data
+- Fix warnings in pytest
+
 * Fri Mar 26 2021 Petr Šplíchal <psplicha@redhat.com> - 0.15.2-1
 - Do not use mutable objects as default arguments
 - A bunch of adjustments for the epel-7 build
