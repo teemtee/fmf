@@ -1,0 +1,5 @@
+author: Jan Scotka <jscotka@redhat.com>
+
+/pure_fmf:
+  test: ./runtest.sh
+  summary: Pure FMF test case

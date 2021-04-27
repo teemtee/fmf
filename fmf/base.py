@@ -17,15 +17,10 @@ import yaml.resolver
 
 import fmf.context
 import fmf.utils as utils
-from fmf.utils import dict_to_yaml, log
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Constants
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-SUFFIX = ".fmf"
-MAIN = "main" + SUFFIX
-IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
+from fmf.constants import (CONFIG_FILE_NAME, CONFIG_PLUGIN,
+                           IGNORED_DIRECTORIES, MAIN, SUFFIX)
+from fmf.plugin_loader import get_plugin_for_file, get_suffixes
+from fmf.utils import FileSorting, dict_to_yaml, log
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  YAML
@@ -96,10 +91,11 @@ class Tree(object):
         self.original_data = dict()
         self._commit = None
         self._raw_data = dict()
+        self._plugin = None
+        self._config = dict()
         # Track whether the data dictionary has been updated
         # (needed to prevent removing nodes with an empty dict).
         self._updated = False
-
         # Special handling for top parent
         if self.parent is None:
             self.name = "/"
@@ -109,6 +105,7 @@ class Tree(object):
         # Handle child node creation
         else:
             self.root = self.parent.root
+            self._config = self.parent._config
             self.name = os.path.join(self.parent.name, name)
 
         # Update data from a dictionary (handle empty nodes)
@@ -180,6 +177,11 @@ class Tree(object):
                 "Unable to detect format version: {0}".format(error))
         except ValueError:
             raise utils.FormatError("Invalid version format")
+        # try to read fmf config
+        config_file = os.path.join(self.root, ".fmf", CONFIG_FILE_NAME)
+        if os.path.exists(config_file):
+            with open(config_file) as fd:
+                self._config = yaml.safe_load(fd)
 
     def _merge_plus(self, data, key, value):
         """ Handle extending attributes using the '+' suffix """
@@ -418,7 +420,7 @@ class Tree(object):
             return default
         return data
 
-    def child(self, name, data, source=None):
+    def child(self, name, data, source=None, plugin=None):
         """ Create or update child with given data """
         try:
             # Update data from a dictionary (handle empty nodes)
@@ -433,6 +435,7 @@ class Tree(object):
         if source is not None:
             self.children[name].sources.append(source)
             self.children[name]._raw_data = copy.deepcopy(data)
+            self.children[name]._plugin = plugin
 
     def grow(self, path):
         """
@@ -454,25 +457,35 @@ class Tree(object):
         except StopIteration:
             log.debug("Skipping '{0}' (not accessible).".format(path))
             return
-        # Investigate main.fmf as the first file (for correct inheritance)
-        filenames = sorted(
-            [filename for filename in filenames if filename.endswith(SUFFIX)])
-        try:
-            filenames.insert(0, filenames.pop(filenames.index(MAIN)))
-        except ValueError:
-            pass
+
+        filenames_sorted = sorted([FileSorting(filename) for filename in filenames if any(
+            filter(filename.endswith, get_suffixes(*self._config.get(CONFIG_PLUGIN, []))))])
         # Check every metadata file and load data (ignore hidden)
-        for filename in filenames:
+        for filename in [filename.value for filename in filenames_sorted]:
             if filename.startswith("."):
                 continue
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
             log.info("Checking file {0}".format(fullpath))
-            try:
-                with open(fullpath, encoding='utf-8') as datafile:
-                    data = yaml.load(datafile, Loader=YamlLoader)
-            except yaml.error.YAMLError as error:
-                raise(utils.FileError("Failed to parse '{0}'.\n{1}".format(
-                    fullpath, error)))
+            if fullpath.endswith(SUFFIX):
+                plugin = None
+                try:
+                    with open(fullpath, encoding='utf-8') as datafile:
+                        data = yaml.load(datafile, Loader=YamlLoader)
+                except yaml.error.YAMLError as error:
+                    raise (
+                        utils.FileError(
+                            "Failed to parse '{0}'.\n{1}".format(
+                                fullpath, error)))
+            else:
+                data = None
+                plugin = get_plugin_for_file(
+                    fullpath, *self._config.get(CONFIG_PLUGIN, []))
+                log.debug("Used plugin {}".format(plugin))
+                if plugin:
+                    data = plugin().read(fullpath)
+                # ignore results of output if there is None
+                if data is None:
+                    continue
             log.data(pretty(data))
             # Handle main.fmf as data for self
             if filename == MAIN:
@@ -481,7 +494,11 @@ class Tree(object):
                 self.update(data)
             # Handle other *.fmf files as children
             else:
-                self.child(os.path.splitext(filename)[0], data, fullpath)
+                self.child(
+                    os.path.splitext(filename)[0],
+                    data,
+                    fullpath,
+                    plugin=plugin)
         # Explore every child directory (ignore hidden dirs and subtrees)
         for dirname in sorted(dirnames):
             if dirname.startswith("."):
@@ -673,7 +690,7 @@ class Tree(object):
             node_data = node_data[key]
 
         # The full raw data were read from the last source
-        return node_data, full_data, node.sources[-1]
+        return node_data, full_data, node.sources[-1], hierarchy, node._plugin
 
     def __enter__(self):
         """
@@ -698,13 +715,31 @@ class Tree(object):
         export to yaml does not preserve this information. The feature
         is experimental and can be later modified, use at your own risk.
         """
-        return self._locate_raw_data()[0]
+        item = self._locate_raw_data()[0]
+        self._raw_data_before_modification = copy.deepcopy(item)
+        return item
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """ Experimental: Store modified metadata to disk """
-        _, full_data, source = self._locate_raw_data()
-        with open(source, "w", encoding='utf-8') as file:
-            file.write(dict_to_yaml(full_data))
+        node_data, full_data, source, hierarchy, plugin = self._locate_raw_data()
+        # find differences for plugins, to be able to  work effectively
+        append = dict()
+        modified = dict()
+        for k, v in node_data.items():
+            if k not in self._raw_data_before_modification:
+                append[k] = v
+            elif self._raw_data_before_modification[k] != v:
+                modified[k] = v
+        deleted = list()
+        for k in self._raw_data_before_modification:
+            if k not in node_data:
+                deleted.append(k)
+
+        if plugin is None:
+            with open(source, "w", encoding='utf-8') as file:
+                file.write(dict_to_yaml(full_data))
+        else:
+            plugin().write(source, hierarchy, node_data, append, modified, deleted)
 
     def __getitem__(self, key):
         """
