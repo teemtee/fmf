@@ -1,9 +1,10 @@
 # coding: utf-8
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
-import unittest
 import os
+import unittest
+
 from fmf.base import Tree
 
 # Prepare path to examples
@@ -21,7 +22,7 @@ class TestGetItems(unittest.TestCase):
     def test_item_child(self):
         item = self.wget['/recursion']['/deep']
         self.assertEqual(item.get("depth"), 1000)
-        self.assertEqual(item.name,'/recursion/deep')
+        self.assertEqual(item.name, '/recursion/deep')
 
     def test_item_data(self):
         item = self.wget['/recursion']['/deep']

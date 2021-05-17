@@ -2,21 +2,22 @@
 
 """ Base Metadata Classes """
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
+import copy
 import os
 import re
-import copy
-import yaml
-import yaml.resolver
-import yaml.constructor
 import subprocess
+from io import open
+from pprint import pformat as pretty
+
+import yaml
+import yaml.constructor
+import yaml.resolver
 
 import fmf.context
 import fmf.utils as utils
-from io import open
-from fmf.utils import log, dict_to_yaml
-from pprint import pformat as pretty
+from fmf.utils import dict_to_yaml, log
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -34,8 +35,9 @@ IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
 # https://msg.pyyaml.org/load
 try:
     from yaml import FullLoader as YamlLoader
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     from yaml import SafeLoader as YamlLoader
+
 
 # Load all strings from YAML files as unicode
 # https://stackoverflow.com/questions/2890146/
@@ -63,12 +65,14 @@ YamlLoader.add_constructor(
 YamlLoader.add_constructor(
     yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_key_constructor)
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Metadata
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class Tree(object):
     """ Metadata Tree """
+
     def __init__(self, data, name=None, parent=None):
         """
         Initialize metadata tree from directory path or data dictionary
@@ -130,7 +134,7 @@ class Tree(object):
         under a git repository. For metadata initialized from a dict or
         local directory with no git repo 'False' is returned instead.
         """
-        if self._commit != None:
+        if self._commit is not None:
             return self._commit
 
         # No root, no commit (tree parsed from a dictionary)
@@ -149,7 +153,7 @@ class Tree(object):
 
     def __unicode__(self):
         """ Use tree name as identifier """
-        return self.name # pragma: no cover
+        return self.name  # pragma: no cover
 
     def _initialize(self, path):
         """ Find metadata tree root, detect format version """
@@ -213,7 +217,7 @@ class Tree(object):
         elif type(data[key]) == type(value) == list:
             data[key] = [item for item in data[key] if item not in value]
         # Remove given key from the parent dictionary
-        elif type(data[key]) == dict and type(value) == list:
+        elif isinstance(data[key], dict) and isinstance(value, list):
             for item in value:
                 data[key].pop(item, None)
         else:
@@ -385,7 +389,6 @@ class Tree(object):
         for child in self.children.values():
             child.adjust(context, key, undecided)
 
-
     def get(self, name=None, default=None):
         """
         Get attribute value or return default
@@ -441,7 +444,7 @@ class Tree(object):
         """
         if path != '/':
             path = path.rstrip("/")
-        if path in IGNORED_DIRECTORIES: # pragma: no cover
+        if path in IGNORED_DIRECTORIES:  # pragma: no cover
             log.debug("Ignoring '{0}' (special directory).".format(path))
             return
         log.info("Walking through directory {0}".format(
@@ -468,8 +471,8 @@ class Tree(object):
                 with open(fullpath, encoding='utf-8') as datafile:
                     data = yaml.load(datafile, Loader=YamlLoader)
             except yaml.error.YAMLError as error:
-                    raise(utils.FileError("Failed to parse '{0}'.\n{1}".format(
-                            fullpath, error)))
+                raise(utils.FileError("Failed to parse '{0}'.\n{1}".format(
+                    fullpath, error)))
             log.data(pretty(data))
             # Handle main.fmf as data for self
             if filename == MAIN:
@@ -530,10 +533,10 @@ class Tree(object):
             # Apply filters and conditions if given
             try:
                 if not all([utils.filter(filter, node.data, regexp=True)
-                        for filter in filters]):
+                            for filter in filters]):
                     continue
                 if not all([utils.evaluate(condition, node.data, node)
-                        for condition in conditions]):
+                            for condition in conditions]):
                     continue
             # Handle missing attribute as if filter failed
             except utils.FilterError:
@@ -594,9 +597,9 @@ class Tree(object):
         # Fetch remote git repository
         if 'url' in reference:
             tree = utils.fetch_tree(
-                    reference.get('url'),
-                    reference.get('ref'),
-                    reference.get('path', '.').lstrip('/'))
+                reference.get('url'),
+                reference.get('ref'),
+                reference.get('path', '.').lstrip('/'))
         # Use local files
         else:
             root = reference.get('path', '.')

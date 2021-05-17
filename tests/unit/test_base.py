@@ -1,16 +1,18 @@
 # coding: utf-8
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import os
-import pytest
-import time
-import threading
 import tempfile
-import fmf.utils as utils
-import fmf.cli
-from fmf.base import Tree
+import threading
+import time
 from shutil import rmtree
+
+import pytest
+
+import fmf.cli
+import fmf.utils as utils
+from fmf.base import Tree
 
 try:
     import queue
@@ -113,7 +115,7 @@ class TestTree(object):
         assert(child.data['tags'] == ['Tier1', 'Tier2', 'Tier3'])
         assert(child.data['time'] == 15)
         assert(child.data['vars'] == dict(x=1, y=2, z=3))
-        assert(child.data['disabled'] == True)
+        assert(child.data['disabled'] is True)
         assert('time+' not in child.data)
         with pytest.raises(utils.MergeError):
             child.data["time+"] = "string"
@@ -162,7 +164,7 @@ class TestTree(object):
 
     def test_find_node(self):
         """ Find node by name """
-        assert(self.wget.find("non-existent") == None)
+        assert(self.wget.find("non-existent") is None)
         protocols = self.wget.find('/protocols')
         assert(isinstance(protocols, Tree))
 
@@ -311,7 +313,7 @@ class TestRemote(object):
         # Hash
         node = Tree.node(dict(url=FMF_REPO, ref='fa05dd9'))
         assert 'fa05dd9' in node.commit
-        assert 'fa05dd9' in node.commit # return already detected value
+        assert 'fa05dd9' in node.commit  # return already detected value
         # Data
         node = Tree(dict(x=1))
         assert node.commit is False
@@ -344,7 +346,7 @@ class TestRemote(object):
         for t in threads:
             value = q.get()
             if isinstance(value, Exception):
-                print(value) # so it is visible in the output
+                print(value)  # so it is visible in the output
                 all_good = False
         assert all_good
 

@@ -2,28 +2,29 @@
 
 """ Logging, config, constants & utilities """
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
+import copy
+import logging
 import os
 import re
-import sys
-import copy
-import time
 import shutil
-import logging
 import subprocess
-from filelock import Timeout, FileLock
-from pprint import pformat as pretty
-import yaml
+import sys
+import time
 import warnings
+from pprint import pformat as pretty
+
+import yaml
+from filelock import FileLock, Timeout
+
 # Use six only on python2
-if sys.version[0] == '2': # pragma: no cover
+if sys.version[0] == '2':  # pragma: no cover
     from six import StringIO
 else:
     from io import StringIO
 
 import fmf.base
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -61,6 +62,7 @@ LOCK_SUFFIX_READ = '.read.lock'
 # Suffix of lock file for fetching
 LOCK_SUFFIX_FETCH = '.fetch.lock'
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Exceptions
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,29 +70,38 @@ LOCK_SUFFIX_FETCH = '.fetch.lock'
 class GeneralError(Exception):
     """ General error """
 
+
 class FormatError(GeneralError):
     """ Metadata format error """
+
 
 class FileError(GeneralError):
     """ File reading error """
 
+
 class RootError(FileError):
     """ Metadata tree root missing """
+
 
 class FilterError(GeneralError):
     """ Missing data when filtering """
 
+
 class MergeError(GeneralError):
     """ Unable to merge data between parent and child """
+
 
 class ReferenceError(GeneralError):
     """ Referenced tree node cannot be found """
 
+
 class FetchError(GeneralError):
     """ Fatal error in helper command while fetching """
     # Keep previously used format of the message
+
     def __str__(self):
         return self.args[0] if self.args else ''
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Utils
@@ -105,6 +116,7 @@ def pluralize(singular=None):
     else:
         plural = singular + "s"
     return plural
+
 
 def listed(items, singular=None, plural=None, max=None, quote="", join="and"):
     """
@@ -180,6 +192,7 @@ def split(values, separator=re.compile("[ ,]+")):
 def info(message, newline=True):
     """ Log provided info message to the standard error output """
     sys.stderr.write(message + ("\n" if newline else ""))
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Filtering
@@ -287,22 +300,23 @@ def filter(filter, data, sensitive=True, regexp=False):
             literals.setdefault(dimension, []).extend(values)
         # For each dimension all literals must match given data
         return all([check_dimension(dimension, values)
-            for dimension, values in literals.items()])
+                    for dimension, values in literals.items()])
 
     # Default to True if no filter given, bail out if weird data given
-    if filter is None or filter == "": return True
+    if filter is None or filter == "":
+        return True
     if not isinstance(data, dict):
         raise FilterError("Invalid data type '{0}'".format(type(data)))
 
     # Make sure that data dictionary contains lists of strings
     data = copy.deepcopy(data)
-    try: # pragma: no cover
+    try:  # pragma: no cover
         for key in data:
             if isinstance(data[key], list):
                 data[key] = [unicode(item) for item in data[key]]
             else:
                 data[key] = [unicode(data[key])]
-    except NameError: # pragma: no cover
+    except NameError:  # pragma: no cover
         for key in data:
             if isinstance(data[key], list):
                 data[key] = [str(item) for item in data[key]]
@@ -318,11 +332,12 @@ def filter(filter, data, sensitive=True, regexp=False):
 
     # At least one clause must be true
     return any([check_clause(clause)
-            for clause in re.split(r"\s*\|\s*", filter)])
+                for clause in re.split(r"\s*\|\s*", filter)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Logging
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 class Logging(object):
     """ Logging Configuration """
@@ -335,7 +350,7 @@ class Logging(object):
         LOG_DEBUG: "green",
         LOG_CACHE: "cyan",
         LOG_DATA: "magenta",
-    }
+        }
     # Environment variable mapping
     MAPPING = {
         0: LOG_WARN,
@@ -344,7 +359,7 @@ class Logging(object):
         3: LOG_CACHE,
         4: LOG_DATA,
         5: LOG_ALL,
-    }
+        }
     # All levels
     LEVELS = "CRITICAL DEBUG ERROR FATAL INFO NOTSET WARN WARNING".split()
 
@@ -366,6 +381,7 @@ class Logging(object):
 
     class ColoredFormatter(logging.Formatter):
         """ Custom color formatter for logging """
+
         def format(self, record):
             # Handle custom log level names
             if record.levelno == LOG_ALL:
@@ -403,9 +419,9 @@ class Logging(object):
         logger.DATA = LOG_DATA
         logger.CACHE = LOG_CACHE
         logger.ALL = LOG_ALL
-        logger.cache = lambda message: logger.log(LOG_CACHE, message) # NOQA
-        logger.data = lambda message: logger.log(LOG_DATA, message) # NOQA
-        logger.all = lambda message: logger.log(LOG_ALL, message) # NOQA
+        logger.cache = lambda message: logger.log(LOG_CACHE, message)  # NOQA
+        logger.data = lambda message: logger.log(LOG_DATA, message)  # NOQA
+        logger.all = lambda message: logger.log(LOG_ALL, message)  # NOQA
         return logger
 
     def set(self, level=None):
@@ -556,9 +572,9 @@ def get_cache_directory(create=True):
     cache = (
         os.environ.get('FMF_CACHE_DIRECTORY', _CACHE_DIRECTORY)
         or os.path.join(
-                os.path.expanduser(
-                    os.environ.get('XDG_CACHE_HOME', '~/.cache')),
-                'fmf')
+            os.path.expanduser(
+                os.environ.get('XDG_CACHE_HOME', '~/.cache')),
+            'fmf')
         )
     if not os.path.isdir(cache) and create:
         try:
@@ -568,21 +584,24 @@ def get_cache_directory(create=True):
             # We don't care if cache wasn't created by this process.
             # errno-17 is file exists
             if error.errno == 17 and os.path.isdir(cache):
-                pass # pragma: no cover
+                pass  # pragma: no cover
             else:
                 raise GeneralError(
                     "Failed to create cache directory '{0}'.".format(cache))
     return cache
+
 
 def set_cache_directory(cache_directory):
     """ Set preferred cache directory """
     global _CACHE_DIRECTORY
     _CACHE_DIRECTORY = cache_directory
 
+
 def set_cache_expiration(seconds):
     """ Seconds until cache expires """
     global CACHE_EXPIRATION
     CACHE_EXPIRATION = int(seconds)
+
 
 def clean_cache_directory():
     """ Delete used cache directory if it exists """
@@ -590,13 +609,14 @@ def clean_cache_directory():
     if os.path.isdir(cache):
         shutil.rmtree(cache)
 
+
 def invalidate_cache():
     """ Force fetch next time cache is used regardless its age """
     # Missing FETCH_HEAD means `git fetch` will happen
     cache = get_cache_directory(create=False)
     # Cache not exists, nothing to do
     if not os.path.isdir(cache):
-        return # pragma: no cover
+        return  # pragma: no cover
     issues = []
     for root, dirs, files in os.walk(cache, topdown=True):
         if '.git' not in dirs:
@@ -609,17 +629,18 @@ def invalidate_cache():
                 log.debug("Remove '{0}'.".format(fetch_head))
                 with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
                     os.remove(fetch_head)
-        except (IOError, Timeout) as error: # pragma: no cover
+        except (IOError, Timeout) as error:  # pragma: no cover
             issues.append(
                 "Couldn't remove file '{0}': {1}".format(fetch_head, error))
         # Already found a .git so no need to continue inside the root
         del dirs[:]
-    if issues: # pragma: no cover
+    if issues:  # pragma: no cover
         raise GeneralError("\n".join(issues))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Tree from the Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 def fetch_tree(url, ref=None, path='.'):
     """
@@ -652,7 +673,7 @@ def fetch_tree(url, ref=None, path='.'):
     except Timeout:
         raise GeneralError(
             "Failed to acquire lock for {0} within {1} seconds".format(
-            lock_path, NODE_LOCK_TIMEOUT))
+                lock_path, NODE_LOCK_TIMEOUT))
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -735,7 +756,7 @@ def fetch_repo(url, ref=None, destination=None, env=None):
     except Timeout:
         raise GeneralError(
             "Failed to acquire lock for '{0}' within {1} seconds.".format(
-            destination, FETCH_LOCK_TIMEOUT))
+                destination, FETCH_LOCK_TIMEOUT))
     except (OSError, subprocess.CalledProcessError) as error:
         raise FetchError("{0}".format(error), error)
 
@@ -774,6 +795,7 @@ def run(command, cwd=None, check_exit_code=True, env=None):
             process.returncode, ' '.join(command), output=stdout + stderr)
     return stdout, stderr
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Default Logger
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -791,15 +813,18 @@ log = Logging('fmf').logger
 # Python 2 version
 try:  # pragma: no cover
     yaml.SafeDumper.orig_represent_unicode = yaml.SafeDumper.represent_unicode
+
     def repr_unicode(dumper, data):
         if '\n' in data:
             return dumper.represent_scalar(
                 u'tag:yaml.org,2002:str', data, style='|')
         return dumper.orig_represent_unicode(data)
     yaml.add_representer(unicode, repr_unicode, Dumper=yaml.SafeDumper)
+
 # Python 3 version
 except AttributeError:
     yaml.SafeDumper.orig_represent_str = yaml.SafeDumper.represent_str
+
     def repr_str(dumper, data):
         if '\n' in data:
             return dumper.represent_scalar(
@@ -820,7 +845,7 @@ def dict_to_yaml(data, width=None, sort=False):
         # FIXME: Temporary workaround for rhel-8 to disable key sorting
         # https://stackoverflow.com/questions/31605131/
         # https://github.com/psss/tmt/issues/207
-        representer = lambda self, data: self.represent_mapping(
+        def representer(self, data): return self.represent_mapping(
             'tag:yaml.org,2002:map', data.items())
         yaml.add_representer(dict, representer, Dumper=yaml.SafeDumper)
         yaml.safe_dump(

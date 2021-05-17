@@ -19,14 +19,18 @@ See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 
 import re
 
+
 class CannotDecide(Exception):
     pass
+
 
 class InvalidRule(Exception):
     pass
 
+
 class InvalidContext(Exception):
     pass
+
 
 class ContextValue(object):
     """ Value for dimension """
@@ -95,7 +99,7 @@ class ContextValue(object):
             if ordered:
                 raise CannotDecide(
                     "Name parts differ, cannot compare for order.")
-            return 1 # not equal
+            return 1  # not equal
         # From here name parts are equal
         if minor_mode and len(other._to_compare) > 1:
             # right side cares about 'major'
@@ -107,7 +111,7 @@ class ContextValue(object):
                             raise CannotDecide(
                                 "Cannot compare minors between "
                                 "mismatched majors.")
-                    else: # not equal
+                    else:  # not equal
                         return 1
             except IndexError:
                 raise CannotDecide(
@@ -126,13 +130,13 @@ class ContextValue(object):
         elif minor_mode:
             # The right side wants to compare more
             # but this is not allowed in minor_mode
-            raise CannotDecide("Not enough version parts.") #FIXME
+            raise CannotDecide("Not enough version parts.")  # FIXME
         elif not ordered:
-            return 1 # they are not equal
+            return 1  # they are not equal
         elif len(self._to_compare) == 1:
             raise CannotDecide("No version part defined for left side.")
         else:
-            return -1 # other is larger (more pars)
+            return -1  # other is larger (more pars)
 
     @staticmethod
     def compare(first, second):
@@ -148,8 +152,8 @@ class ContextValue(object):
             first_version = first
             second_version = second
         return (
-                (first_version > second_version) -
-                (first_version < second_version))
+            (first_version > second_version) -
+            (first_version < second_version))
 
     @staticmethod
     def _split_to_version(text):
@@ -181,6 +185,7 @@ class ContextValue(object):
 class Context(object):
     """ Represents https://fmf.readthedocs.io/en/latest/context.html """
     # Operators' definitions
+
     def _op_defined(self, dimension_name, values):
         """ 'is defined' operator """
         return dimension_name in self._dimensions
@@ -334,21 +339,21 @@ class Context(object):
         "~>=": _op_minor_greater_or_equal,
         ">": _op_greater,
         "~>": _op_minor_greater,
-    }
+        }
 
     # Triple expression: dimension operator values
     # [^=].* is necessary as .+ matches '= something'
     re_expression_triple = re.compile(
         r"(\w+)"
         + r"\s*("
-        + r"|".join(set(operator_map.keys()) - {"is defined", "is not defined"})
+        + r"|".join(
+            set(operator_map.keys()) - {"is defined", "is not defined"})
         + r")\s*"
-        + r"([^=].*)"
-    )
+        + r"([^=].*)")
     # Double expression: dimension operator
     re_expression_double = re.compile(
         r"(\w+)" + r"\s*(" + r"|".join(["is defined", "is not defined"]) + r")"
-    )
+        )
 
     # To split by 'and' operator
     re_and_split = re.compile(r'\band\b')
@@ -384,7 +389,7 @@ class Context(object):
                 values = [values]
             self._dimensions[dimension_name] = set(
                 [self.parse_value(val) for val in values]
-            )
+                )
 
     @staticmethod
     def parse_rule(rule):
@@ -412,7 +417,8 @@ class Context(object):
         for and_group in rule_parts:
             parsed_and_group = []
             for part in and_group:
-                dimension, operator, raw_values = Context.split_expression(part)
+                dimension, operator, raw_values = Context.split_expression(
+                    part)
                 if raw_values is not None:
                     values = [
                         Context.parse_value(value) for value in raw_values]
@@ -497,10 +503,10 @@ class Context(object):
             Context, e.g. dimension is missing
         :raises InvalidRule:  Syntax error in the rule
         """
-        final_outcome = None # None is CannotDecide
-        valid = False # Is final outcome valid?
+        final_outcome = None  # None is CannotDecide
+        valid = False  # Is final outcome valid?
         for and_group in self.parse_rule(rule):
-            and_outcome = None # None is CannotDecide
+            and_outcome = None  # None is CannotDecide
             and_valid = False
             for expression in and_group:
                 try:
@@ -524,22 +530,26 @@ class Context(object):
                     # No need to check the rest of AND group
                     break
             # Just making sure, parse_rule should have raised it already
-            assert and_valid, "Malformed expression: Missing AND part in {0}".format(rule)
-            # AND group finished as True, no need to process the rest of OR groups
+            assert and_valid, (
+                "Malformed expression: Missing AND part in {0}".format(rule))
+            # AND group finished as True, no need to process the rest of
+            # OR groups
             if and_outcome is True:
                 return True
             # Resolve current OR couple
             if valid:
-                # True was already returned, it interim outcome can be False or CannotDecide
+                # True was already returned, it interim outcome can be
+                # False or CannotDecide
                 if and_outcome is None or final_outcome is None:
-                    final_outcome = None # CannotDecide
+                    final_outcome = None  # CannotDecide
                 else:
                     final_outcome = False
             else:
                 final_outcome = and_outcome
                 valid = True
         # Just making sure, parse_rule should have raised it already
-        assert valid, "Malformed expression: Missing OR part in {0}".format(rule)
+        assert valid, (
+            "Malformed expression: Missing OR part in {0}".format(rule))
         if final_outcome is False:
             return False
         else:

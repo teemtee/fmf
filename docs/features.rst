@@ -60,7 +60,7 @@ Metadata is inherited from parent objects::
     tester: Petr Šplíchal <psplicha@redhat.com>
     tags: [Tier2, TierSecurity]
     test: runtest.sh
-    
+
     /download:
         description: Check basic download options
         time: 3 min
@@ -186,7 +186,7 @@ easily implemented using leaves inheriting from the same parent::
 
     description: Check basic download options
     test: runtest.sh
-    
+
     /fast:
         description: Check basic download options (quick smoke test)
         environment: MODE=fast

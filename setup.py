@@ -3,6 +3,7 @@
 
 import re
 from io import open
+
 from setuptools import setup
 
 # Parse version from the spec file
@@ -51,7 +52,7 @@ default_setup = dict(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Topic :: Utilities',
-    ],
+        ],
     keywords=['metadata', 'testing'],
     dependency_links=__deplinks__,
     description=__desc__,

@@ -27,8 +27,8 @@
 
 import sys
 
-import fmf.cli
 import fmf.base
+import fmf.cli
 import fmf.utils
 
 try:
