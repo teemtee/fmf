@@ -1,3 +1,4 @@
+.. _contribute:
 
 ==================
     Contribute
@@ -9,20 +10,71 @@ Introduction
 
 Feel free and welcome to contribute to this project. You can start
 with filing issues and ideas for improvement in GitHub tracker__.
-My favorite thoughts from The Zen of Python:
+Our favorite thoughts from The Zen of Python:
 
 * Beautiful is better than ugly.
 * Simple is better than complex.
 * Readability counts.
 
-A couple of recommendations from `PEP8`__ and myself:
+We respect the `PEP8`__ Style Guide for Python Code. Here's a
+couple of recommendations to keep on mind when writing code:
 
 * Comments should be complete sentences.
 * The first word should be capitalized (unless identifier).
 * When using hanging indent, the first line should be empty.
+* The closing brace/bracket/parenthesis on multiline constructs
+  is under the first non-whitespace character of the last line
 
 __ https://github.com/psss/fmf
 __ https://www.python.org/dev/peps/pep-0008/
+
+
+Commits
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is challenging to be both concise and descriptive, but that is
+what a well-written summary should do. Consider the commit message
+as something that will be pasted into release notes:
+
+* The first line should have up to 50 characters.
+* Complete sentence with the first word capitalized.
+* Should concisely describe the purpose of the patch.
+* Do not prefix the message with file or module names.
+* Other details should be separated by a blank line.
+
+Why should I care?
+
+* It helps others (and yourself) find relevant commits quickly.
+* The summary line will be re-used later (e.g. for rpm changelog).
+* Some tools do not handle wrapping, so it is then hard to read.
+* You will make the maintainers happy to read beautiful commits :)
+
+You can get some more context in the `stackoverflow`__ article.
+
+__ http://stackoverflow.com/questions/2290016/
+
+
+Develop
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to experiment, play with the latest bits and develop
+improvements it is best to use a virtual environment::
+
+    mkvirtualenv fmf
+    git clone https://github.com/psss/fmf
+    cd fmf
+    pip install -e .
+
+Install ``python3-virtualenvwrapper`` to easily create and enable
+virtual environments using ``mkvirtualenv`` and ``workon``. Note
+that if you have freshly installed the package you need to open a
+new shell session to enable the wrapper functions.
+
+Install the ``pre-commit`` hooks to run all available checks for
+your commits to the project::
+
+    pip install pre-commit
+    pre-commit install
 
 
 Makefile
@@ -46,9 +98,6 @@ make docs
 make packages
     Build rpm and srpm packages.
 
-make hooks
-    Link git commit hooks.
-
 make tags
     Create or update the Vim ``tags`` file for quick searching.
     You might want to use ``set tags=./tags;`` in your ``.vimrc``
@@ -58,65 +107,21 @@ make clean
     Cleanup all temporary files.
 
 
-Commits
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-It is challenging to be both concise and descriptive, but that is
-what a well-written summary should do. Consider the commit message
-as something that could/will be pasted into release notes:
-
-* The first line should have up to 50 characters.
-* Complete sentence with the first word capitalized.
-* Should concisely describe the purpose of the patch.
-* Other details should be separated by a blank line.
-
-Why should I care?
-
-* It helps others (and yourself) find relevant commits quickly.
-* The summary line can be re-used later (e.g. for rpm changelog).
-* Some tools do not handle wrapping, so it is then hard to read.
-* You will make the maintainer happy to read beautiful commits :)
-
-You can get some more context in the `stackoverflow`__ article.
-
-__ http://stackoverflow.com/questions/2290016/
-
-
-Hooks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You can find git commit hooks in the ``examples`` directory.
-Consider linking or copying them into your git config::
-
-    GIT=~/git/fmf # Update to your actual path
-    ln -snf $GIT/hooks/pre-commit $GIT/.git/hooks
-    ln -snf $GIT/hooks/commit-msg $GIT/.git/hooks
-
-Or simply run ``make hooks`` which will do the linking for you.
-Note that this will overwrite existing hooks.
-
-
 Tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To run tests using pytest::
+Run the default set of tests directly on your localhost::
 
-    coverage run --source=fmf -m py.test tests
-    coverage report
+    tmt run
 
-Install pytest and coverage using yum::
+To run tests using pytest with the test coverage overview::
 
-    yum install pytest python-coverage
+    make coverage
 
-or pip::
+Install pytest and coverage using dnf or pip::
 
-    # sudo required if not in a virtualenv
+    dnf install python3-pytest python3-coverage
     pip install pytest coveralls
-
-See Travis CI and Coveralls for the latest test/coverage results:
-
-* https://travis-ci.org/psss/fmf/builds
-* https://coveralls.io/github/psss/fmf
 
 
 Docs
@@ -128,7 +133,7 @@ For building documentation locally install necessary modules::
 
 Make sure docutils are installed in order to build man pages::
 
-    yum install python-docutils
+    dnf install python3-docutils
 
 Building documentation is then quite straightforward::
 

@@ -60,10 +60,7 @@ upload:
 	twine upload dist/*.whl
 
 
-# Git hooks, vim tags and cleanup
-hooks:
-	ln -snf ../../hooks/pre-commit .git/hooks
-	ln -snf ../../hooks/commit-msg .git/hooks
+# Vim tags and cleanup
 tags:
 	find fmf -name '*.py' | xargs ctags --python-kinds=-i
 clean:
