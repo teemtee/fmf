@@ -1,12 +1,14 @@
 # coding: utf-8
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import os
 import sys
-import pytest
-import fmf.cli
 import tempfile
+
+import pytest
+
+import fmf.cli
 import fmf.utils as utils
 
 # Prepare path to examples

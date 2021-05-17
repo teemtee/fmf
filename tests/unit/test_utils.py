@@ -1,13 +1,15 @@
 # coding: utf-8
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import os
-import pytest
 import shutil
 import threading
-import fmf.utils as utils
 import time
+
+import pytest
+
+import fmf.utils as utils
 from fmf.utils import filter, listed, run
 
 try:
@@ -18,6 +20,7 @@ except ImportError:
 
 GIT_REPO = 'https://github.com/psss/fmf.git'
 GIT_REPO_MAIN = 'https://github.com/beakerlib/example'
+
 
 class TestFilter(object):
     """ Function filter() """
@@ -34,58 +37,63 @@ class TestFilter(object):
         with pytest.raises(utils.FilterError):
             filter("x: 1", None)
 
+    def test_empty_filter(self):
+        """ Empty filter should return True """
+        assert filter(None, self.data) is True
+        assert filter("", self.data) is True
+
     def test_basic(self):
         """ Basic stuff and negation """
-        assert(filter("tag: Tier1", self.data) == True)
-        assert(filter("tag: -Tier2", self.data) == True)
-        assert(filter("category: Sanity", self.data) == True)
-        assert(filter("category: -Regression", self.data) == True)
-        assert(filter("tag: Tier2", self.data) == False)
-        assert(filter("tag: -Tier1", self.data) == False)
-        assert(filter("category: Regression", self.data) == False)
-        assert(filter("category: -Sanity", self.data) == False)
+        assert(filter("tag: Tier1", self.data) is True)
+        assert(filter("tag: -Tier2", self.data) is True)
+        assert(filter("category: Sanity", self.data) is True)
+        assert(filter("category: -Regression", self.data) is True)
+        assert(filter("tag: Tier2", self.data) is False)
+        assert(filter("tag: -Tier1", self.data) is False)
+        assert(filter("category: Regression", self.data) is False)
+        assert(filter("category: -Sanity", self.data) is False)
 
     def test_operators(self):
         """ Operators """
-        assert(filter("tag: Tier1 | tag: Tier2", self.data) == True)
-        assert(filter("tag: -Tier1 | tag: -Tier2", self.data) == True)
-        assert(filter("tag: Tier1 | tag: TIPpass", self.data) == True)
-        assert(filter("tag: Tier1 | category: Regression", self.data) == True)
-        assert(filter("tag: Tier1 & tag: TIPpass", self.data) == True)
-        assert(filter("tag: Tier1 & category: Sanity", self.data) == True)
-        assert(filter("tag: Tier2 | tag: Tier3", self.data) == False)
-        assert(filter("tag: Tier1 & tag: Tier2", self.data) == False)
-        assert(filter("tag: Tier2 & tag: Tier3", self.data) == False)
-        assert(filter("tag: Tier1 & category: Regression", self.data) == False)
-        assert(filter("tag: Tier2 | category: Regression", self.data) == False)
+        assert(filter("tag: Tier1 | tag: Tier2", self.data) is True)
+        assert(filter("tag: -Tier1 | tag: -Tier2", self.data) is True)
+        assert(filter("tag: Tier1 | tag: TIPpass", self.data) is True)
+        assert(filter("tag: Tier1 | category: Regression", self.data) is True)
+        assert(filter("tag: Tier1 & tag: TIPpass", self.data) is True)
+        assert(filter("tag: Tier1 & category: Sanity", self.data) is True)
+        assert(filter("tag: Tier2 | tag: Tier3", self.data) is False)
+        assert(filter("tag: Tier1 & tag: Tier2", self.data) is False)
+        assert(filter("tag: Tier2 & tag: Tier3", self.data) is False)
+        assert(filter("tag: Tier1 & category: Regression", self.data) is False)
+        assert(filter("tag: Tier2 | category: Regression", self.data) is False)
 
     def test_sugar(self):
         """ Syntactic sugar """
-        assert(filter("tag: Tier1, Tier2", self.data) == True)
-        assert(filter("tag: Tier1, TIPpass", self.data) == True)
-        assert(filter("tag: -Tier2", self.data) == True)
-        assert(filter("tag: -Tier1, -Tier2", self.data) == True)
-        assert(filter("tag: -Tier1, -Tier2", self.data) == True)
-        assert(filter("tag: Tier2, Tier3", self.data) == False)
+        assert(filter("tag: Tier1, Tier2", self.data) is True)
+        assert(filter("tag: Tier1, TIPpass", self.data) is True)
+        assert(filter("tag: -Tier2", self.data) is True)
+        assert(filter("tag: -Tier1, -Tier2", self.data) is True)
+        assert(filter("tag: -Tier1, -Tier2", self.data) is True)
+        assert(filter("tag: Tier2, Tier3", self.data) is False)
 
     def test_regexp(self):
         """ Regular expressions """
-        assert(filter("tag: Tier.*", self.data, regexp=True) == True)
-        assert(filter("tag: Tier[123]", self.data, regexp=True) == True)
-        assert(filter("tag: NoTier.*", self.data, regexp=True) == False)
-        assert(filter("tag: -Tier.*", self.data, regexp=True) == False)
+        assert(filter("tag: Tier.*", self.data, regexp=True) is True)
+        assert(filter("tag: Tier[123]", self.data, regexp=True) is True)
+        assert(filter("tag: NoTier.*", self.data, regexp=True) is False)
+        assert(filter("tag: -Tier.*", self.data, regexp=True) is False)
 
     def test_case(self):
         """ Case insensitive """
-        assert(filter("tag: tier1", self.data, sensitive=False) == True)
-        assert(filter("tag: tippass", self.data, sensitive=False) == True)
+        assert(filter("tag: tier1", self.data, sensitive=False) is True)
+        assert(filter("tag: tippass", self.data, sensitive=False) is True)
 
     def test_unicode(self):
         """ Unicode support """
-        assert(filter("tag: -ťip", self.data) == True)
-        assert(filter("tag: ťip", self.data) == False)
-        assert(filter("tag: ťip", {"tag": ["ťip"]}) == True)
-        assert(filter("tag: -ťop", {"tag": ["ťip"]}) == True)
+        assert(filter("tag: -ťip", self.data) is True)
+        assert(filter("tag: ťip", self.data) is False)
+        assert(filter("tag: ťip", {"tag": ["ťip"]}) is True)
+        assert(filter("tag: -ťop", {"tag": ["ťip"]}) is True)
 
 
 class TestPluralize(object):
@@ -160,8 +168,10 @@ class TestColoring(object):
         utils.Coloring().set()
         text = utils.color("text", "lightblue", enabled=True)
 
+
 class TestCache(object):
     """ Local cache manipulation """
+
     def test_clean_cache_directory(self, tmpdir):
         utils.set_cache_directory(str(tmpdir))
         file_inside = tmpdir.join('some_file')
@@ -244,7 +254,7 @@ class TestFetch(object):
 
         # Environment takes precedence
         target_env = str(tmpdir.join('from_env'))
-        utils.set_cache_directory(target) # no-op since it stays same
+        utils.set_cache_directory(target)  # no-op since it stays same
         monkeypatch.setenv("FMF_CACHE_DIRECTORY", target_env)
         cache = utils.get_cache_directory()
         assert target_env == cache
@@ -255,13 +265,13 @@ class TestFetch(object):
         dest = str(tmpdir.join('branch_new' + trailing))
         repo = utils.fetch_repo(GIT_REPO, destination=dest)
         assert repo == dest
-        assert os.path.isfile(os.path.join(repo,'fmf.spec'))
+        assert os.path.isfile(os.path.join(repo, 'fmf.spec'))
 
         # Is an empty directory
         dest = str(tmpdir.mkdir('another' + trailing))
         repo = utils.fetch_repo(GIT_REPO, destination=dest)
         assert repo == dest
-        assert os.path.isfile(os.path.join(repo,'fmf.spec'))
+        assert os.path.isfile(os.path.join(repo, 'fmf.spec'))
 
     def test_invalid_destination(self, tmpdir):
         # Is a file
@@ -277,7 +287,7 @@ class TestFetch(object):
             repo = utils.fetch_repo(GIT_REPO, destination=str(dest))
         # Git's error message
         assert ("already exists and is not an empty"
-            in error.value.args[1].output)
+                in error.value.args[1].output)
         # We report same error message as before
         assert str(error.value) == str(error.value.args[1])
 
@@ -286,7 +296,7 @@ class TestFetch(object):
         # Set handler for user input as echo to return immediately
         with pytest.raises(utils.GeneralError) as error:
             utils.fetch_repo('https://github.com/psss/fmf-nope-nope.git',
-                        env={"GIT_ASKPASS": "echo"})
+                             env={"GIT_ASKPASS": "echo"})
         # Assert 'git clone' string in exception's message
         assert "git clone" in error.value.args[0]
 
@@ -302,7 +312,7 @@ class TestFetch(object):
         assert out != old_ref
         # Fetch again, it should move the head back to origin/master
         repo = utils.fetch_repo(GIT_REPO, ref)
-        out, err = run(["git", "rev-parse", "HEAD"],repo)
+        out, err = run(["git", "rev-parse", "HEAD"], repo)
         assert out == old_ref
 
     def test_fetch_concurrent(self):
@@ -330,7 +340,7 @@ class TestFetch(object):
         for t in threads:
             value = q.get()
             if isinstance(value, Exception):
-                print(value) # so it is visible in the output
+                print(value)  # so it is visible in the output
                 all_good = False
         assert all_good
 
@@ -371,6 +381,7 @@ class TestFetch(object):
         monkeypatch.setattr('fmf.utils.NODE_LOCK_TIMEOUT', 2)
 
         real_fetch_repo = utils.fetch_repo
+
         def long_fetch_repo(*args, **kwargs):
             time.sleep(4)
             return real_fetch_repo(*args, **kwargs)

@@ -18,21 +18,21 @@ Check also help message of individual commands for the full list
 of available options.
 """
 
-from __future__ import unicode_literals, absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
+import argparse
 import os
 import os.path
-import sys
 import shlex
-import argparse
+import sys
 
 import fmf
 import fmf.utils as utils
 
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Parser
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 class Parser(object):
     """ Command line options parser """
@@ -43,15 +43,16 @@ class Parser(object):
         if path is not None:
             os.chdir(path)
         # Split command line if given as a string (used for testing)
-        if isinstance(arguments, type("")): # pragma: no cover
+        if isinstance(arguments, type("")):  # pragma: no cover
             try:
                 # This is necessary for Python 2.6
-                self.arguments = [arg.decode('utf8')
-                    for arg in shlex.split(arguments.encode('utf8'))]
+                self.arguments = [
+                    arg.decode('utf8') for arg in shlex.split(
+                        arguments.encode('utf8'))]
             except AttributeError:
                 self.arguments = shlex.split(arguments)
         # Otherwise use sys.argv (plus decode unicode for Python 2)
-        if arguments is None: # pragma: no cover
+        if arguments is None:  # pragma: no cover
             try:
                 self.arguments = [arg.decode("utf-8") for arg in sys.argv]
             except AttributeError:
@@ -181,9 +182,9 @@ class Parser(object):
             joined = "".join(output)
         else:
             joined = "\n".join(output)
-        try: # pragma: no cover
+        try:  # pragma: no cover
             print(joined, end="")
-        except UnicodeEncodeError: # pragma: no cover
+        except UnicodeEncodeError:  # pragma: no cover
             print(joined.encode('utf-8'), end="")
         if self.options.verbose:
             utils.info("Found {0}.".format(
@@ -196,9 +197,10 @@ class Parser(object):
             cache = utils.get_cache_directory(create=False)
             utils.clean_cache_directory()
             print("Cache directory '{0}' has been removed.".format(cache))
-        except Exception as error: # pragma: no cover
+        except Exception as error:  # pragma: no cover
             utils.log.error(
                 "Unable to remove cache, exception was: {0}".format(error))
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Main

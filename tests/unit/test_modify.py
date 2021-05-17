@@ -1,18 +1,19 @@
 # coding: utf-8
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
-import unittest
-import pytest
 import io
 import os
 import re
 import tempfile
+import unittest
+from shutil import copytree, rmtree
+
+import pytest
 
 from fmf.base import Tree
 from fmf.context import Context
 from fmf.utils import GeneralError
-from shutil import rmtree, copytree
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
@@ -73,7 +74,7 @@ class TestModify(unittest.TestCase):
         self.assertEqual(requirements.data["new"], "some")
         self.assertEqual(protocols.data["new"], "some")
         self.assertEqual(ftp.data["new"], "some")
-        self.assertNotIn("server",protocols.data)
+        self.assertNotIn("server", protocols.data)
         self.assertIn("server", ftp.data)
         self.assertNotIn("new_attr", requirements.data)
         self.assertIn("new_attr", protocols.data)

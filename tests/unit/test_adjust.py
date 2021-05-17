@@ -1,20 +1,22 @@
 # coding: utf-8
 
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import, unicode_literals
 
 import copy
+
 import pytest
 import yaml
 
 import fmf
-from fmf.context import Context, CannotDecide
-from fmf.utils import GeneralError, FormatError
+from fmf.context import CannotDecide, Context
+from fmf.utils import FormatError, GeneralError
 
 
 @pytest.fixture
 def fedora():
     """ Fedora 33 on x86_64 and ppc64 """
     return Context(distro='fedora-33', arch=['x86_64', 'ppc64'])
+
 
 @pytest.fixture
 def centos():
@@ -32,6 +34,7 @@ def mini():
             when: distro = centos
         """
     return fmf.Tree(yaml.safe_load(data))
+
 
 @pytest.fixture
 def full():
@@ -147,7 +150,7 @@ class TestAdjust(object):
     def test_inherit_fedora(self, full, fedora):
         full.adjust(fedora)
         inherit = full.find('/inherit')
-        assert inherit.get('enabled') == True
+        assert inherit.get('enabled') is True
         assert inherit.get('duration') == '1m'
         assert inherit.get('require') == ['one', 'two']
 
@@ -155,21 +158,21 @@ class TestAdjust(object):
         fedora = Context(distro='fedora-33', arch='x86_64')
         full.adjust(fedora)
         inherit = full.find('/inherit')
-        assert inherit.get('enabled') == True
+        assert inherit.get('enabled') is True
         assert inherit.get('duration') == '5m'
         assert inherit.get('require') == ['one', 'two']
 
     def test_inherit_centos(self, full, centos):
         full.adjust(centos)
         inherit = full.find('/inherit')
-        assert inherit.get('enabled') == False
+        assert inherit.get('enabled') is False
         assert inherit.get('duration') == '5m'
         assert inherit.get('require') == ['one']
 
     def test_define_fedora(self, full, fedora):
         full.adjust(fedora)
         define = full.find('/define')
-        assert define.get('enabled') == True
+        assert define.get('enabled') is True
         assert define.get('duration') == '5m'
         assert define.get('require') == ['one']
         assert define.get('recommend') == 'custom-package'
@@ -177,7 +180,7 @@ class TestAdjust(object):
     def test_define_centos(self, full, centos):
         full.adjust(centos)
         define = full.find('/define')
-        assert define.get('enabled') == True
+        assert define.get('enabled') is True
         assert define.get('duration') == '5m'
         assert define.get('require') == ['one']
         assert 'recommend' not in define.get()
@@ -185,7 +188,7 @@ class TestAdjust(object):
     def test_extend_fedora(self, full, fedora):
         full.adjust(fedora)
         extend = full.find('/extend')
-        assert extend.get('enabled') == True
+        assert extend.get('enabled') is True
         assert extend.get('duration') == '1m'
         assert extend.get('require') == ['one', 'two', 'three']
         assert 'recommend' not in extend.get()
@@ -193,7 +196,7 @@ class TestAdjust(object):
     def test_extend_centos(self, full, centos):
         full.adjust(centos)
         extend = full.find('/extend')
-        assert extend.get('enabled') == False
+        assert extend.get('enabled') is False
         assert extend.get('duration') == '5m'
         assert extend.get('require') == ['one']
         assert 'recommend' not in extend.get()
