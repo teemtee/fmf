@@ -117,8 +117,8 @@ def __post_processing(input_dict, config_dict, cls, test, filename):
 def read_config(config_file):
     if not os.path.exists(config_file):
         raise GeneralError(
-            f"configuration files does not exists {config_file}")
-    log.info(f"Read config file: {config_file}")
+            "configuration files does not exists {}".format(config_file))
+    log.info("Read config file: {}".format(config_file))
     with open(config_file) as fd:
         return yaml.safe_load(fd)
 
@@ -136,8 +136,8 @@ def test_data_dict(test_dict, config, filename, cls, test,
             summary = doc_str.split("\n")[0].strip()
         else:
             summary = (
-                (f"{os.path.basename(filename)} " if filename else "")
-                + (f"{cls.name} " if cls.name else "")
+                (os.path.basename(filename) + " " if filename else "")
+                + (cls.name + " " if cls.name else "")
                 + test.name
                 )
         setattr(test.method, current_name, summary)
@@ -178,7 +178,7 @@ def test_data_dict(test_dict, config, filename, cls, test,
 
 def define_undefined(input_dict, keys, config, relative_test_path, cls, test):
     for item in keys:
-        item_id = f"/{item}"
+        item_id = "/" + item
         default_key(input_dict, item_id, empty_obj={})
         input_dict = input_dict[item_id]
     test_data_dict(
@@ -238,7 +238,7 @@ class Pytest(Plugin):
         test = _Test(func)
         # normalise test name to pytest identifier
         test.name = re.search(
-            f".*({os.path.basename(func.function.__name__)}.*)", func.name
+            ".*({}.*)".format(os.path.basename(func.function.__name__)), func.name
             ).group(1)
         # TODO: removed str_normalise(...) will see what happen
         keys.append(test.name)

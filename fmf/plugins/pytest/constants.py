@@ -3,7 +3,7 @@ PYTEST_DEFAULT_CONF = {
     CONFIG_POSTPROCESSING_TEST: {
         "test": """
 cls_str = ("::" + str(cls.name)) if cls.name else ""
-escaped = shlex.quote(f"{filename}{cls_str}::{test.name}")
+escaped = shlex.quote(filename + cls_str + "::" + test.name)
 f"python3 -m pytest -m '' -v {escaped}" """
         }
 }
