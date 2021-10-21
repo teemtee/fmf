@@ -291,7 +291,7 @@ def filter(filter, data, sensitive=True, regexp=False):
         for literal in re.split(r"\s*&\s*", clause):
             # E.g. literal = 'tag: A, B'
             # Make sure the literal matches dimension:value format
-            matched = re.match(r"^(.*)\s*:\s*(.*)$", literal)
+            matched = re.match(r"^([^:]*)\s*:\s*(.*)$", literal)
             if not matched:
                 raise FilterError("Invalid filter '{0}'".format(literal))
             dimension, value = matched.groups()

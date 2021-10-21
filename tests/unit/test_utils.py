@@ -26,7 +26,10 @@ class TestFilter(object):
     """ Function filter() """
 
     def setup_method(self, method):
-        self.data = {"tag": ["Tier1", "TIPpass"], "category": "Sanity"}
+        self.data = {
+            "tag": ["Tier1", "TIPpass", "mod:S"],
+            "category": "Sanity",
+            }
 
     def test_invalid(self):
         """ Invalid filter format """
@@ -45,7 +48,9 @@ class TestFilter(object):
     def test_basic(self):
         """ Basic stuff and negation """
         assert(filter("tag: Tier1", self.data) is True)
+        assert(filter("tag: mod:S", self.data) is True)
         assert(filter("tag: -Tier2", self.data) is True)
+        assert(filter("tag: -mod:S2", self.data) is True)
         assert(filter("category: Sanity", self.data) is True)
         assert(filter("category: -Regression", self.data) is True)
         assert(filter("tag: Tier2", self.data) is False)
@@ -56,6 +61,8 @@ class TestFilter(object):
     def test_operators(self):
         """ Operators """
         assert(filter("tag: Tier1 | tag: Tier2", self.data) is True)
+        assert(filter("tag: Tier1 | tag: mod:S", self.data) is True)
+        assert(filter("tag: mod:X | tag: mod:S", self.data) is True)
         assert(filter("tag: -Tier1 | tag: -Tier2", self.data) is True)
         assert(filter("tag: Tier1 | tag: TIPpass", self.data) is True)
         assert(filter("tag: Tier1 | category: Regression", self.data) is True)
@@ -70,6 +77,7 @@ class TestFilter(object):
     def test_sugar(self):
         """ Syntactic sugar """
         assert(filter("tag: Tier1, Tier2", self.data) is True)
+        assert(filter("tag: Tier2, mod:S", self.data) is True)
         assert(filter("tag: Tier1, TIPpass", self.data) is True)
         assert(filter("tag: -Tier2", self.data) is True)
         assert(filter("tag: -Tier1, -Tier2", self.data) is True)
@@ -80,6 +88,7 @@ class TestFilter(object):
         """ Regular expressions """
         assert(filter("tag: Tier.*", self.data, regexp=True) is True)
         assert(filter("tag: Tier[123]", self.data, regexp=True) is True)
+        assert(filter("tag: mod:[XS]", self.data, regexp=True) is True)
         assert(filter("tag: NoTier.*", self.data, regexp=True) is False)
         assert(filter("tag: -Tier.*", self.data, regexp=True) is False)
 
