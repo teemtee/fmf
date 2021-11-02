@@ -1,7 +1,3 @@
-# coding: utf-8
-
-from __future__ import absolute_import, unicode_literals
-
 import pytest
 
 from fmf.context import (CannotDecide, Context, ContextValue, InvalidContext,
@@ -17,7 +13,7 @@ def env_centos():
         )
 
 
-class TestExample(object):
+class TestExample:
     """ Examples of possible conditions """
 
     def test_simple_conditions(self, env_centos):
@@ -237,7 +233,7 @@ class TestExample(object):
             Context("module = perl:6.28").matches("module ~>= perl:5.28")
 
 
-class TestContextValue(object):
+class TestContextValue:
     impossible_split = ["x86_64", "ppc64", "fips", "errata"]
     splittable = [
         ("centos-8.3.0", ("centos", "8", "3", "0")),
@@ -377,7 +373,7 @@ class TestContextValue(object):
         assert ContextValue.compare("8", "19") == -1
 
 
-class TestParser(object):
+class TestParser:
     # Missing expression
     rule_groups_invalid = ["foo<bar and ", "foo<bar and defined bar or "]
 
@@ -458,7 +454,7 @@ class TestParser(object):
                 ("dim", "!=", [ContextValue("valueC")])]]
 
 
-class TestContext(object):
+class TestContext:
     def test_creation(self):
         for created in [
                 Context(dim_a="value", dim_b=["val"], dim_c=["foo", "bar"]),
@@ -717,7 +713,7 @@ class TestContext(object):
             "{0} or {1} and {2}".format(_false, _cannot, _false))
 
 
-class TestOperators(object):
+class TestOperators:
     """ more thorough testing for operations """
 
     context = Context(

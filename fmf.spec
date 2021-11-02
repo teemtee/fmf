@@ -9,30 +9,8 @@ BuildArch: noarch
 URL: https://github.com/psss/fmf
 Source0: https://github.com/psss/fmf/releases/download/%{version}/fmf-%{version}.tar.gz
 
-# Depending on the distro, we set some defaults.
-# Note that the bcond macros are named for the CLI option they create.
-# "%%bcond_without" means "ENABLE by default and create a --without option"
-
-# Fedora or RHEL 8+
-%if 0%{?fedora} || 0%{?rhel} > 7
-%bcond_with python2
-%bcond_with oldreqs
-%bcond_with englocale
-# RHEL 7
-%else
-%bcond_without python2
-# The automatic runtime dependency generator doesn't exist yet
-%bcond_without oldreqs
-# The C.UTF-8 locale doesn't exist, Python defaults to C (ASCII)
-%bcond_without englocale
-%endif
-
-# Main tmt package requires the Python module
-%if %{with python2}
-Requires: python2-%{name} == %{version}-%{release}
-%else
+# Main fmf package requires the Python module
 Requires: python%{python3_pkgversion}-%{name} == %{version}-%{release}
-%endif
 
 %description
 The fmf Python module and command line tool implement a flexible
@@ -45,34 +23,6 @@ This package contains the command line tool.
 %?python_enable_dependency_generator
 
 
-# Python 2
-%if %{with python2}
-%package -n     python2-%{name}
-Summary:        %{summary}
-BuildRequires: python2-devel
-BuildRequires: python2-setuptools
-BuildRequires: pytest
-BuildRequires: PyYAML
-BuildRequires: python2-filelock
-BuildRequires: python2-six
-BuildRequires: git-core
-%{?python_provide:%python_provide python2-%{name}}
-Requires:       PyYAML
-Requires:       python2-filelock
-Requires:       python2-six
-Requires:       git-core
-
-%description -n python2-%{name}
-The fmf Python module and command line tool implement a flexible
-format for defining metadata in plain text files which can be
-stored close to the source code. Thanks to hierarchical structure
-with support for inheritance and elasticity it provides an
-efficient way to organize data into well-sized text documents.
-This package contains the Python 2 module.
-%else
-
-
-# Python 3
 %package -n     python%{python3_pkgversion}-%{name}
 Summary:        %{summary}
 BuildRequires: python%{python3_pkgversion}-devel
@@ -83,10 +33,6 @@ BuildRequires: python%{python3_pkgversion}-filelock
 BuildRequires: git-core
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
 Requires:       git-core
-%if %{with oldreqs}
-Requires:       python%{python3_pkgversion}-PyYAML
-Requires:       python%{python3_pkgversion}-filelock
-%endif
 
 %description -n python%{python3_pkgversion}-%{name}
 The fmf Python module and command line tool implement a flexible
@@ -95,7 +41,6 @@ stored close to the source code. Thanks to hierarchical structure
 with support for inheritance and elasticity it provides an
 efficient way to organize data into well-sized text documents.
 This package contains the Python 3 module.
-%endif
 
 
 %prep
@@ -103,42 +48,17 @@ This package contains the Python 3 module.
 
 
 %build
-%if %{with englocale}
-export LANG=en_US.utf-8
-%endif
-
-%if %{with python2}
-%py2_build
-%else
 %py3_build
-%endif
 
 
 %install
-%if %{with englocale}
-export LANG=en_US.utf-8
-%endif
-
-%if %{with python2}
-%py2_install
-%else
 %py3_install
-%endif
-
 mkdir -p %{buildroot}%{_mandir}/man1
 install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %check
-%if %{with englocale}
-export LANG=en_US.utf-8
-%endif
-
-%if %{with python2}
-%{__python2} -m pytest -vv -c tests/unit/pytest.ini -m 'not web'
-%else
 %{__python3} -m pytest -vv -c tests/unit/pytest.ini -m 'not web'
-%endif
 
 
 %{!?_licensedir:%global license %%doc}
@@ -149,17 +69,10 @@ export LANG=en_US.utf-8
 %doc README.rst examples
 %license LICENSE
 
-%if %{with python2}
-%files -n python2-%{name}
-%{python2_sitelib}/%{name}/
-%{python2_sitelib}/%{name}-*.egg-info
-%license LICENSE
-%else
 %files -n python%{python3_pkgversion}-%{name}
 %{python3_sitelib}/%{name}/
 %{python3_sitelib}/%{name}-*.egg-info
 %license LICENSE
-%endif
 
 
 %changelog

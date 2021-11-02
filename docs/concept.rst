@@ -70,7 +70,8 @@ files on the filesystem:
 * main.fmf
 
 Special file name ``main.fmf`` works similarly as ``index.html``.
-It can be used to define the top level data for the directory.
+It can be used to define the top level data for the directory. All
+metadata files are expected to be using the ``utf-8`` encoding.
 
 
 Attributes

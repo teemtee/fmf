@@ -1,8 +1,5 @@
-# coding: utf-8
-
-from __future__ import absolute_import, unicode_literals
-
 import os
+import queue
 import shutil
 import threading
 import time
@@ -12,17 +9,11 @@ import pytest
 import fmf.utils as utils
 from fmf.utils import filter, listed, run
 
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
-
 GIT_REPO = 'https://github.com/psss/fmf.git'
 GIT_REPO_MAIN = 'https://github.com/beakerlib/example'
 
 
-class TestFilter(object):
+class TestFilter:
     """ Function filter() """
 
     def setup_method(self, method):
@@ -105,7 +96,7 @@ class TestFilter(object):
         assert(filter("tag: -ťop", {"tag": ["ťip"]}) is True)
 
 
-class TestPluralize(object):
+class TestPluralize:
     """ Function pluralize() """
 
     def test_basic(self):
@@ -114,7 +105,7 @@ class TestPluralize(object):
         assert(utils.pluralize("boss") == "bosses")
 
 
-class TestListed(object):
+class TestListed:
     """ Function listed() """
 
     def test_basic(self):
@@ -134,7 +125,7 @@ class TestListed(object):
         assert(listed(0, "item") == "0 items")
 
 
-class TestSplit(object):
+class TestSplit:
     """ Function split() """
 
     def test_basic(self):
@@ -143,7 +134,7 @@ class TestSplit(object):
         assert(utils.split(['a, b', 'c']) == ['a', 'b', 'c'])
 
 
-class TestLogging(object):
+class TestLogging:
     """ Logging """
 
     def test_level(self):
@@ -161,7 +152,7 @@ class TestLogging(object):
         utils.log.all("all")
 
 
-class TestColoring(object):
+class TestColoring:
     """ Coloring """
 
     def test_invalid(self):
@@ -178,7 +169,7 @@ class TestColoring(object):
         text = utils.color("text", "lightblue", enabled=True)
 
 
-class TestCache(object):
+class TestCache:
     """ Local cache manipulation """
 
     def test_clean_cache_directory(self, tmpdir):
@@ -196,7 +187,7 @@ class TestCache(object):
 
 
 @pytest.mark.web
-class TestFetch(object):
+class TestFetch:
     """ Remote reference from fmf github """
 
     def test_fetch_default_branch(self):

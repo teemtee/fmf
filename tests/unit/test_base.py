@@ -1,8 +1,5 @@
-# coding: utf-8
-
-from __future__ import absolute_import, unicode_literals
-
 import os
+import queue
 import tempfile
 import threading
 import time
@@ -13,12 +10,6 @@ import pytest
 import fmf.cli
 import fmf.utils as utils
 from fmf.base import Tree
-
-try:
-    import queue
-except ImportError:
-    import Queue as queue
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -34,7 +25,7 @@ FMF_REPO = 'https://github.com/psss/fmf.git'
 #  Tree
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class TestTree(object):
+class TestTree:
     """ Tree class """
 
     def setup_method(self, method):
@@ -260,7 +251,7 @@ class TestTree(object):
         assert original.get('x') is None
 
 
-class TestRemote(object):
+class TestRemote:
     """ Get tree node data using remote reference """
 
     @pytest.mark.web

@@ -1,7 +1,3 @@
-# coding: utf-8
-
-from __future__ import absolute_import, unicode_literals
-
 import os
 
 import fmf.cli
@@ -11,7 +7,7 @@ PATH = os.path.dirname(os.path.realpath(__file__))
 WGET = PATH + "/../../examples/wget"
 
 
-class TestSmoke(object):
+class TestSmoke:
     """ Smoke Test """
 
     def test_smoke(self):

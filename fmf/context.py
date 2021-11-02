@@ -1,4 +1,3 @@
-# coding: utf-8
 """
 All you need to decide if Context matches
 
@@ -32,7 +31,7 @@ class InvalidContext(Exception):
     pass
 
 
-class ContextValue(object):
+class ContextValue:
     """ Value for dimension """
 
     def __init__(self, origin):
@@ -182,7 +181,7 @@ class ContextValue(object):
         return hash(self._to_compare)
 
 
-class Context(object):
+class Context:
     """ Represents https://fmf.readthedocs.io/en/latest/context.html """
     # Operators' definitions
 

@@ -1,8 +1,4 @@
-# coding: utf-8
-
 """ Logging, config, constants & utilities """
-
-from __future__ import absolute_import, unicode_literals
 
 import copy
 import logging
@@ -13,16 +9,11 @@ import subprocess
 import sys
 import time
 import warnings
+from io import StringIO
 from pprint import pformat as pretty
 
 import yaml
 from filelock import FileLock, Timeout
-
-# Use six only on python2
-if sys.version[0] == '2':  # pragma: no cover
-    from six import StringIO
-else:
-    from io import StringIO
 
 import fmf.base
 
@@ -310,18 +301,11 @@ def filter(filter, data, sensitive=True, regexp=False):
 
     # Make sure that data dictionary contains lists of strings
     data = copy.deepcopy(data)
-    try:  # pragma: no cover
-        for key in data:
-            if isinstance(data[key], list):
-                data[key] = [unicode(item) for item in data[key]]
-            else:
-                data[key] = [unicode(data[key])]
-    except NameError:  # pragma: no cover
-        for key in data:
-            if isinstance(data[key], list):
-                data[key] = [str(item) for item in data[key]]
-            else:
-                data[key] = [str(data[key])]
+    for key in data:
+        if isinstance(data[key], list):
+            data[key] = [str(item) for item in data[key]]
+        else:
+            data[key] = [str(data[key])]
     # Turn all data into lowercase if sensitivity is off
     if not sensitive:
         filter = filter.lower()
@@ -339,7 +323,7 @@ def filter(filter, data, sensitive=True, regexp=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-class Logging(object):
+class Logging:
     """ Logging Configuration """
 
     # Color mapping
@@ -485,7 +469,7 @@ def color(text, color=None, background=None, light=False, enabled="auto"):
     return "".join([start, text, finish])
 
 
-class Coloring(object):
+class Coloring:
     """ Coloring configuration """
 
     # Default color mode is auto-detected from the terminal presence
@@ -578,16 +562,10 @@ def get_cache_directory(create=True):
         )
     if not os.path.isdir(cache) and create:
         try:
-            os.makedirs(cache)
+            os.makedirs(cache, exist_ok=True)
         except OSError as error:
-            # Python 2 doesn't have exist_ok=True, emulating it here.
-            # We don't care if cache wasn't created by this process.
-            # errno-17 is file exists
-            if error.errno == 17 and os.path.isdir(cache):
-                pass  # pragma: no cover
-            else:
-                raise GeneralError(
-                    "Failed to create cache directory '{0}'.".format(cache))
+            raise GeneralError(
+                "Failed to create cache directory '{0}'.".format(cache))
     return cache
 
 
@@ -779,13 +757,9 @@ def run(command, cwd=None, check_exit_code=True, env=None):
     log.debug("Running command: '{0}'.".format(' '.join(command)))
 
     process = subprocess.Popen(
-        command, cwd=cwd, env=env,
+        command, cwd=cwd, env=env, universal_newlines=True,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
-    # Python 3 returns byte stream
-    if hasattr(stdout, 'decode'):
-        stdout = stdout.decode('utf-8')
-        stderr = stderr.decode('utf-8')
     log.debug("stdout: {0}".format(stdout.strip()))
     log.debug("stderr: {0}".format(stderr.strip()))
     log.debug("exit_code: {0}{1}".format(
@@ -810,27 +784,17 @@ log = Logging('fmf').logger
 
 # Special hack to store multiline text with the '|' style
 # See https://stackoverflow.com/questions/45004464/
-# Python 2 version
-try:  # pragma: no cover
-    yaml.SafeDumper.orig_represent_unicode = yaml.SafeDumper.represent_unicode
+yaml.SafeDumper.orig_represent_str = yaml.SafeDumper.represent_str
 
-    def repr_unicode(dumper, data):
-        if '\n' in data:
-            return dumper.represent_scalar(
-                u'tag:yaml.org,2002:str', data, style='|')
-        return dumper.orig_represent_unicode(data)
-    yaml.add_representer(unicode, repr_unicode, Dumper=yaml.SafeDumper)
 
-# Python 3 version
-except AttributeError:
-    yaml.SafeDumper.orig_represent_str = yaml.SafeDumper.represent_str
+def repr_str(dumper, data):
+    if '\n' in data:
+        return dumper.represent_scalar(
+            u'tag:yaml.org,2002:str', data, style='|')
+    return dumper.orig_represent_str(data)
 
-    def repr_str(dumper, data):
-        if '\n' in data:
-            return dumper.represent_scalar(
-                u'tag:yaml.org,2002:str', data, style='|')
-        return dumper.orig_represent_str(data)
-    yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
+
+yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
 
 
 def dict_to_yaml(data, width=None, sort=False):
@@ -851,8 +815,4 @@ def dict_to_yaml(data, width=None, sort=False):
         yaml.safe_dump(
             data, output, encoding='utf-8', allow_unicode=True,
             width=width, indent=4, default_flow_style=False)
-    # For Python 2 we need to decode the string
-    try:
-        return output.getvalue().decode('utf-8')
-    except AttributeError:
-        return output.getvalue()
+    return output.getvalue()

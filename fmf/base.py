@@ -1,8 +1,4 @@
-# coding: utf-8
-
 """ Base Metadata Classes """
-
-from __future__ import absolute_import, unicode_literals
 
 import copy
 import os
@@ -70,7 +66,7 @@ YamlLoader.add_constructor(
 #  Metadata
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class Tree(object):
+class Tree:
     """ Metadata Tree """
 
     def __init__(self, data, name=None, parent=None):
@@ -151,9 +147,9 @@ class Tree(object):
             self._commit = False
         return self._commit
 
-    def __unicode__(self):
+    def __str__(self):
         """ Use tree name as identifier """
-        return self.name  # pragma: no cover
+        return self.name
 
     def _initialize(self, path):
         """ Find metadata tree root, detect format version """

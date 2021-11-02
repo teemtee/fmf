@@ -1,7 +1,3 @@
-# coding: utf-8
-
-from __future__ import absolute_import, unicode_literals
-
 import copy
 
 import pytest
@@ -73,7 +69,7 @@ def full():
     return fmf.Tree(yaml.safe_load(data))
 
 
-class TestInvalid(object):
+class TestInvalid:
     """ Ensure that invalid input is correctly handled """
 
     def test_invalid_context(self, mini):
@@ -106,7 +102,7 @@ class TestInvalid(object):
             mini.adjust(fedora, undecided='weird')
 
 
-class TestSpecial(object):
+class TestSpecial:
     """ Check various special cases """
 
     def test_single_rule(self, mini, fedora):
@@ -118,7 +114,7 @@ class TestSpecial(object):
         assert mini.get() == dict(enabled=True)
 
 
-class TestAdjust(object):
+class TestAdjust:
     """ Verify adjusting works as expected """
 
     def test_original(self, mini):

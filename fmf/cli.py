@@ -1,5 +1,3 @@
-# coding: utf-8
-
 """
 This is command line interface for the Flexible Metadata Format.
 
@@ -18,8 +16,6 @@ Check also help message of individual commands for the full list
 of available options.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import argparse
 import os
 import os.path
@@ -34,7 +30,7 @@ import fmf.utils as utils
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-class Parser(object):
+class Parser:
     """ Command line options parser """
 
     def __init__(self, arguments=None, path=None):
@@ -43,20 +39,11 @@ class Parser(object):
         if path is not None:
             os.chdir(path)
         # Split command line if given as a string (used for testing)
-        if isinstance(arguments, type("")):  # pragma: no cover
-            try:
-                # This is necessary for Python 2.6
-                self.arguments = [
-                    arg.decode('utf8') for arg in shlex.split(
-                        arguments.encode('utf8'))]
-            except AttributeError:
-                self.arguments = shlex.split(arguments)
-        # Otherwise use sys.argv (plus decode unicode for Python 2)
-        if arguments is None:  # pragma: no cover
-            try:
-                self.arguments = [arg.decode("utf-8") for arg in sys.argv]
-            except AttributeError:
-                self.arguments = sys.argv
+        if isinstance(arguments, str):
+            self.arguments = shlex.split(arguments)
+        # Otherwise use sys.argv
+        if arguments is None:
+            self.arguments = sys.argv
         # Enable debugging output if requested
         if "--debug" in self.arguments:
             utils.log.setLevel(utils.LOG_DEBUG)
@@ -182,10 +169,7 @@ class Parser(object):
             joined = "".join(output)
         else:
             joined = "\n".join(output)
-        try:  # pragma: no cover
-            print(joined, end="")
-        except UnicodeEncodeError:  # pragma: no cover
-            print(joined.encode('utf-8'), end="")
+        print(joined, end="")
         if self.options.verbose:
             utils.info("Found {0}.".format(
                 utils.listed(len(output), "object")))
