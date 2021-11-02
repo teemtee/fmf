@@ -19,10 +19,20 @@ __pkgs__ = ['fmf']
 __provides__ = ['fmf']
 __desc__ = 'Flexible Metadata Format'
 __scripts__ = ['bin/fmf']
-__irequires__ = [
+
+# Prepare install requires and extra requires
+install_requires = [
     'PyYAML',
     'filelock'
-]
+    ]
+extras_require = {
+    'docs': ['sphinx>=3', 'sphinx_rtd_theme'],
+    'tests': ['pytest', 'python-coveralls', 'pre-commit'],
+    }
+extras_require['all'] = [
+    dependency
+    for extra in extras_require.values()
+    for dependency in extra]
 
 pip_src = 'https://pypi.python.org/packages/source'
 __deplinks__ = []
@@ -56,7 +66,8 @@ default_setup = dict(
     keywords=['metadata', 'testing'],
     dependency_links=__deplinks__,
     description=__desc__,
-    install_requires=__irequires__,
+    install_requires=install_requires,
+    extras_require=extras_require,
     name=__pkg__,
     package_dir=__pkgdir__,
     packages=__pkgs__,

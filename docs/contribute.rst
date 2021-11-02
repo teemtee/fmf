@@ -76,6 +76,11 @@ your commits to the project::
     pip install pre-commit
     pre-commit install
 
+Or simply install all extra dependencies to make sure you have
+everything needed for the development ready on your system::
+
+    pip install '.[all]'
+
 
 Makefile
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -121,7 +126,7 @@ To run tests using pytest with the test coverage overview::
 Install pytest and coverage using dnf or pip::
 
     dnf install python3-pytest python3-coverage
-    pip install pytest coveralls
+    pip install .[tests]
 
 
 Docs
@@ -129,7 +134,7 @@ Docs
 
 For building documentation locally install necessary modules::
 
-    pip install sphinx sphinx_rtd_theme mock
+    pip install .[docs]
 
 Make sure docutils are installed in order to build man pages::
 
