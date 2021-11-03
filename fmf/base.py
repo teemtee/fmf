@@ -7,9 +7,9 @@ import subprocess
 from io import open
 from pprint import pformat as pretty
 
-import yaml
-import yaml.constructor
-import yaml.resolver
+from ruamel.yaml import YAML
+from ruamel.yaml.constructor import DuplicateKeyError
+from ruamel.yaml.error import YAMLError
 
 import fmf.context
 import fmf.utils as utils
@@ -22,44 +22,6 @@ from fmf.utils import dict_to_yaml, log
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  YAML
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Handle both older and newer yaml loader
-# https://msg.pyyaml.org/load
-try:
-    from yaml import FullLoader as YamlLoader
-except ImportError:  # pragma: no cover
-    from yaml import SafeLoader as YamlLoader
-
-
-# Load all strings from YAML files as unicode
-# https://stackoverflow.com/questions/2890146/
-def construct_yaml_str(self, node):
-    return self.construct_scalar(node)
-
-
-# Raise an exception on duplicate keys
-# https://gist.github.com/pypt/94d747fe5180851196eb
-def unique_key_constructor(loader, node, deep=False):
-    """ YAML constructor that checks for duplicate keys """
-    mapping = {}
-    for key_node, value_node in node.value:
-        key = loader.construct_object(key_node, deep=deep)
-        value = loader.construct_object(value_node, deep=deep)
-        if key in mapping:
-            raise yaml.constructor.ConstructorError(
-                "Duplicate key '{}' detected.".format(key))
-        mapping[key] = value
-    return loader.construct_mapping(node, deep)
-
-
-YamlLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG, construct_yaml_str)
-YamlLoader.add_constructor(
-    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_key_constructor)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -465,10 +427,10 @@ class Tree:
             log.info("Checking file {0}".format(fullpath))
             try:
                 with open(fullpath, encoding='utf-8') as datafile:
-                    data = yaml.load(datafile, Loader=YamlLoader)
-            except yaml.error.YAMLError as error:
-                raise(utils.FileError("Failed to parse '{0}'.\n{1}".format(
-                    fullpath, error)))
+                    data = YAML(typ="safe").load(datafile)
+            except (YAMLError, DuplicateKeyError) as error:
+                raise(utils.FileError(
+                    f"Failed to parse '{fullpath}'.\n{error}"))
             log.data(pretty(data))
             # Handle main.fmf as data for self
             if filename == MAIN:

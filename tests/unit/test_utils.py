@@ -6,6 +6,7 @@ import time
 
 import pytest
 
+import fmf
 import fmf.utils as utils
 from fmf.utils import filter, listed, run
 
@@ -415,3 +416,13 @@ class TestFetch:
         assert os.path.isfile(fetch_head)
         utils.invalidate_cache()
         assert not os.path.isfile(fetch_head)
+
+
+class TestDictToYaml:
+    """ Verify dictionary to yaml format conversion """
+
+    def test_sort(self):
+        """ Verify key sorting """
+        data = dict(y=2, x=1)
+        assert fmf.utils.dict_to_yaml(data) == "y: 2\nx: 1\n"
+        assert fmf.utils.dict_to_yaml(data, sort=True) == "x: 1\ny: 2\n"

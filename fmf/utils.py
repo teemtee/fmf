@@ -12,8 +12,9 @@ import warnings
 from io import StringIO
 from pprint import pformat as pretty
 
-import yaml
 from filelock import FileLock, Timeout
+from ruamel.yaml import YAML, scalarstring
+from ruamel.yaml.comments import CommentedMap
 
 import fmf.base
 
@@ -782,37 +783,28 @@ log = Logging('fmf').logger
 #  Convert dict to yaml
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Special hack to store multiline text with the '|' style
-# See https://stackoverflow.com/questions/45004464/
-yaml.SafeDumper.orig_represent_str = yaml.SafeDumper.represent_str
-
-
-def repr_str(dumper, data):
-    if '\n' in data:
-        return dumper.represent_scalar(
-            u'tag:yaml.org,2002:str', data, style='|')
-    return dumper.orig_represent_str(data)
-
-
-yaml.add_representer(str, repr_str, Dumper=yaml.SafeDumper)
-
-
 def dict_to_yaml(data, width=None, sort=False):
     """ Convert dictionary into yaml """
     output = StringIO()
-    try:
-        yaml.safe_dump(
-            data, output, sort_keys=sort,
-            encoding='utf-8', allow_unicode=True,
-            width=width, indent=4, default_flow_style=False)
-    except TypeError:  # pragma: no cover
-        # FIXME: Temporary workaround for rhel-8 to disable key sorting
-        # https://stackoverflow.com/questions/31605131/
-        # https://github.com/psss/tmt/issues/207
-        def representer(self, data): return self.represent_mapping(
-            'tag:yaml.org,2002:map', data.items())
-        yaml.add_representer(dict, representer, Dumper=yaml.SafeDumper)
-        yaml.safe_dump(
-            data, output, encoding='utf-8', allow_unicode=True,
-            width=width, indent=4, default_flow_style=False)
+
+    # Set formatting options
+    yaml = YAML()
+    yaml.indent(mapping=4, sequence=4, offset=2)
+    yaml.default_flow_style = False
+    yaml.allow_unicode = True
+    yaml.encoding = 'utf-8'
+    yaml.width = width
+
+    # Make sure that multiline strings keep the formatting
+    data = copy.deepcopy(data)
+    scalarstring.walk_tree(data)
+
+    # Sort the data https://stackoverflow.com/a/40227545
+    if sort:
+        sorted_data = CommentedMap()
+        for key in sorted(data):
+            sorted_data[key] = data[key]
+        data = sorted_data
+
+    yaml.dump(data, output)
     return output.getvalue()

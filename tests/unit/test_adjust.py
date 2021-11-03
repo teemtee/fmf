@@ -1,7 +1,7 @@
 import copy
 
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 import fmf
 from fmf.context import CannotDecide, Context
@@ -29,7 +29,8 @@ def mini():
             enabled: false
             when: distro = centos
         """
-    return fmf.Tree(yaml.safe_load(data))
+    yaml = YAML(typ="safe")
+    return fmf.Tree(yaml.load(data))
 
 
 @pytest.fixture
@@ -66,7 +67,8 @@ def full():
               - require+: [three]
                 when: distro = fedora
         """
-    return fmf.Tree(yaml.safe_load(data))
+    yaml = YAML(typ="safe")
+    return fmf.Tree(yaml.load(data))
 
 
 class TestInvalid:

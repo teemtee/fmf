@@ -21,7 +21,7 @@ __scripts__ = ['bin/fmf']
 
 # Prepare install requires and extra requires
 install_requires = [
-    'PyYAML',
+    'ruamel.yaml',
     'filelock'
     ]
 extras_require = {

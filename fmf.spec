@@ -28,7 +28,7 @@ Summary:        %{summary}
 BuildRequires: python%{python3_pkgversion}-devel
 BuildRequires: python%{python3_pkgversion}-setuptools
 BuildRequires: python%{python3_pkgversion}-pytest
-BuildRequires: python%{python3_pkgversion}-PyYAML
+BuildRequires: python%{python3_pkgversion}-ruamel-yaml
 BuildRequires: python%{python3_pkgversion}-filelock
 BuildRequires: git-core
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
