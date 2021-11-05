@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 import warnings
-from pprint import pformat as pretty
+from functools import total_ordering
 
 import yaml
 from filelock import FileLock, Timeout
@@ -25,6 +25,7 @@ else:
     from io import StringIO
 
 import fmf.base
+from fmf.constants import MAIN
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -856,3 +857,44 @@ def dict_to_yaml(data, width=None, sort=False):
         return output.getvalue().decode('utf-8')
     except AttributeError:
         return output.getvalue()
+
+
+@total_ordering
+class FileSorting:
+    def __init__(self, value):
+        self._value = value
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def splitted(self):
+        splitted = self._value.rsplit(".", 1)
+        basename = splitted[0]
+        suffix = splitted[1] if len(splitted) > 1 else ''
+        return basename, suffix
+
+    @property
+    def basename(self):
+        return self.splitted[0]
+
+    @property
+    def suffix(self):
+        return self.splitted[1]
+
+    def __lt__(self, other):
+        # Investigate main.fmf as the first file (for correct inheritance)
+        if self.value == MAIN:
+            return True
+        # if there are same filenames and other endswith fmf, it has to be last
+        # one
+        elif self.basename == other.basename and other.suffix == "fmf":
+            return True
+        elif self.basename == other.basename and self.suffix == "fmf":
+            return False
+        else:
+            return self.value < other.value
+
+    def __eq__(self, other):
+        return self.value == other.value

@@ -4,7 +4,7 @@
 import re
 from io import open
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 # Parse version from the spec file
 with open('fmf.spec', encoding='utf-8') as specfile:
@@ -15,7 +15,6 @@ with open('fmf.spec', encoding='utf-8') as specfile:
 __version__ = version
 __pkg__ = 'fmf'
 __pkgdir__ = {}
-__pkgs__ = ['fmf']
 __provides__ = ['fmf']
 __desc__ = 'Flexible Metadata Format'
 __scripts__ = ['bin/fmf']
@@ -70,7 +69,7 @@ default_setup = dict(
     extras_require=extras_require,
     name=__pkg__,
     package_dir=__pkgdir__,
-    packages=__pkgs__,
+    packages=find_packages(),
     provides=__provides__,
     scripts=__scripts__,
     version=__version__,
