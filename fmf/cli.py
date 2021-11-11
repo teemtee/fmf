@@ -48,9 +48,16 @@ class Parser:
         if "--debug" in self.arguments:
             utils.log.setLevel(utils.LOG_DEBUG)
 
+        if "--version" in self.arguments:
+            self.output = f"{fmf.__version__}"
+            return
+
         # Handle subcommands (mapped to format_* methods)
         self.parser = argparse.ArgumentParser(
             usage="fmf command [options]\n" + __doc__)
+        self.parser.add_argument(
+            "--version", action="store_true",
+            help="print fmf version with commit hash and exit")
         self.parser.add_argument('command', help='Command to run')
         self.command = self.parser.parse_args(self.arguments[1:2]).command
         if not hasattr(self, "command_" + self.command):

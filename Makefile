@@ -1,6 +1,8 @@
 # Prepare variables
 TMP = $(CURDIR)/tmp
 VERSION = $(shell grep ^Version fmf.spec | sed 's/.* //')
+COMMIT = $(shell git rev-parse --short HEAD)
+REPLACE_VERSION = "s/running from the source/$(VERSION) ($(COMMIT))/"
 PACKAGE = fmf-$(VERSION)
 FILES = LICENSE README.rst \
 		Makefile fmf.spec setup.py \
@@ -40,6 +42,7 @@ source: clean tmp
 	mkdir -p $(TMP)/SOURCES
 	mkdir -p $(TMP)/$(PACKAGE)
 	cp -a $(FILES) $(TMP)/$(PACKAGE)
+	sed -i $(REPLACE_VERSION) $(TMP)/$(PACKAGE)/fmf/__init__.py
 tarball: source man
 	cd $(TMP) && tar cfz SOURCES/$(PACKAGE).tar.gz $(PACKAGE)
 	@echo ./tmp/SOURCES/$(PACKAGE).tar.gz
