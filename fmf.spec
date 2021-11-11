@@ -1,5 +1,5 @@
 Name: fmf
-Version: 0.16.0
+Version: 1.0.0
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -76,6 +76,15 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %changelog
+* Thu Nov 11 2021 Petr Šplíchal <psplicha@redhat.com> - 1.0.0-1
+- Migrate yaml parsing to ruamel.yaml
+- Drop support for Python 2
+- Add extra requires and enable readthedocs config (#143)
+- Filter accept value with a colon
+- Adjust style to fix issues revealed by pre-commit
+- Enable pre-commit, update contribution docs
+- Disable integration testing with tmt for centos-7
+
 * Thu Apr 15 2021 Petr Šplíchal <psplicha@redhat.com> - 0.16.0-1
 - Add support for empty files and virtual nodes
 - Change outcome of CannotDecide operations
