@@ -51,6 +51,34 @@ supported operators consult the following grammar outline::
     values ::= value (',' value)*
     value ::= [[:alnum:]]+
 
+Let's demonstrate the syntax on a couple of real-life examples::
+
+    # check distro, compare specific release
+    distro == fedora
+    distro >= fedora-33
+
+    # use boolean operators to build more complex expressions
+    distro == fedora and arch = x86_64
+    distro >= fedora-33 or distro >= rhel-8
+
+    # check whether a dimension is defined
+    collection is not defined
+
+The comma operator can be used to shorten the ``or`` expressions::
+
+    # the following two lines are equivalent
+    arch == x86_64 or arch == ppc64
+    arch == x86_64, ppc64
+
+    # works for less/greater than comparison as well
+    distro < fedora-33 or distro < rhel-8
+    distro < fedora-33, rhel-8
+
+    # the same is applied for the non-equal comparison too
+    arch != x86_64 or arch != ppc64
+    arch != x86_64, ppc64
+
+
 Lazy Evaluation
 ---------------
 
