@@ -232,6 +232,33 @@ class TestExample:
         with pytest.raises(CannotDecide):
             Context("module = perl:6.28").matches("module ~>= perl:5.28")
 
+    def test_comma(self):
+        """ Comma is sugar for OR """
+        con = Context(single="foo", multi=["first", "second"])
+        # First as longer line, then using comma
+        assert con.matches("single == foo or single == bar")
+        assert con.matches("single == foo, bar")
+
+        assert not con.matches("single == baz or single == bar")
+        assert not con.matches("single == baz, bar")
+
+        assert con.matches("single != foo or single != bar")
+        assert con.matches("single != foo, bar")
+
+        # And now with multiple values in the dimension
+        assert con.matches("multi == first, value")
+        assert con.matches("multi == second, value")
+        assert con.matches("multi != third, value")
+
+        # True because each first vs second value compare is false
+        assert con.matches("multi != first, second")
+        assert con.matches("multi != first or multi != second")
+
+        # More real-life example
+        distro = Context(distro="centos-stream-8")
+        assert distro.matches("distro < centos-stream-9, fedora-34")
+        assert not distro.matches("distro < fedora-34, centos-stream-8")
+
 
 class TestContextValue:
     impossible_split = ["x86_64", "ppc64", "fips", "errata"]
