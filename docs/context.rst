@@ -74,9 +74,13 @@ The comma operator can be used to shorten the ``or`` expressions::
     distro < fedora-33 or distro < rhel-8
     distro < fedora-33, rhel-8
 
-    # the same is applied for the non-equal comparison too
-    arch != x86_64 or arch != ppc64
-    arch != x86_64, ppc64
+.. warning::
+
+    Do not use the comma operator with the ``!=`` comparison.
+    It is currently implemented with the ``or`` logic which is a
+    bit weird, confusing to the users and it will be most probably
+    changed to ``and`` in the future so that it can be interpreted
+    as "none of the values in the list is equal".
 
 
 Lazy Evaluation
