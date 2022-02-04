@@ -58,6 +58,13 @@ class Tree:
         # (needed to prevent removing nodes with an empty dict).
         self._updated = False
 
+        # Store symlinks in while walking tree in grow() to detect
+        # symlink loops
+        if parent is None:
+            self._symlinkdirs = []
+        else:
+            self._symlinkdirs = parent._symlinkdirs
+
         # Special handling for top parent
         if self.parent is None:
             self.name = "/"
@@ -444,6 +451,19 @@ class Tree:
         for dirname in sorted(dirnames):
             if dirname.startswith("."):
                 continue
+            fulldir = os.path.join(dirpath, dirname)
+            if os.path.islink(fulldir):
+                # According to the documentation, calling os.path.realpath
+                # with strict = True will raise OSError if a symlink loop
+                # is encountered. But it does not do that with a loop with
+                # more than one node
+                fullpath = os.path.realpath(fulldir)
+                if fullpath in self._symlinkdirs:
+                    log.debug("Not entering symlink loop {}".format(fulldir))
+                    continue
+                else:
+                    self._symlinkdirs.append(fullpath)
+
             # Ignore metadata subtrees
             if os.path.isdir(os.path.join(path, dirname, SUFFIX)):
                 log.debug("Ignoring metadata tree '{0}'.".format(dirname))
