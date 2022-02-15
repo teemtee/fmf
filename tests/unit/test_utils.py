@@ -10,8 +10,8 @@ import fmf
 import fmf.utils as utils
 from fmf.utils import filter, listed, run
 
-GIT_REPO = 'https://github.com/psss/fmf.git'
-GIT_REPO_MAIN = 'https://github.com/beakerlib/example'
+GIT_REPO = 'https://github.com/teemtee/fmf'
+GIT_REPO_MASTER = 'https://github.com/teemtee/old'
 
 
 class TestFilter:
@@ -192,20 +192,20 @@ class TestFetch:
     """ Remote reference from fmf github """
 
     def test_fetch_default_branch(self):
-        # On GitHub 'master' is the default
+        # On GitHub 'main' is the default
         repo = utils.fetch_repo(GIT_REPO)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
-        assert 'master' in output
-        # The beakerlib library example uses main
-        repo = utils.fetch_repo(GIT_REPO_MAIN)
-        output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
         assert 'main' in output
+        # The beakerlib library still uses 'master'
+        repo = utils.fetch_repo(GIT_REPO_MASTER)
+        output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
+        assert 'master' in output
 
     def test_switch_branches(self):
         # Default branch
         repo = utils.fetch_repo(GIT_REPO)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
-        assert 'master' in output
+        assert 'main' in output
         # Custom commit
         repo = utils.fetch_repo(GIT_REPO, '0.12')
         output, _ = run(['git', 'rev-parse', 'HEAD'], repo)
@@ -213,7 +213,7 @@ class TestFetch:
         # Back to the default branch
         repo = utils.fetch_repo(GIT_REPO)
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
-        assert 'master' in output
+        assert 'main' in output
 
     def test_fetch_valid_id(self):
         repo = utils.fetch_repo(GIT_REPO, '0.10')
@@ -301,7 +301,7 @@ class TestFetch:
         # Assert 'git clone' string in exception's message
         assert "git clone" in error.value.args[0]
 
-    @pytest.mark.parametrize("ref", ["master", "0.10", "8566a39"])
+    @pytest.mark.parametrize("ref", ["main", "0.10", "8566a39"])
     def test_out_of_sync_ref(self, ref):
         """ Solve Your branch is behind ... """
         repo = utils.fetch_repo(GIT_REPO, ref)
@@ -311,7 +311,7 @@ class TestFetch:
         out, err = run(["git", "reset", "--hard", "HEAD^1"], repo)
         out, err = run(["git", "rev-parse", "HEAD"], repo)
         assert out != old_ref
-        # Fetch again, it should move the head back to origin/master
+        # Fetch again, it should move the head back to origin/main
         repo = utils.fetch_repo(GIT_REPO, ref)
         out, err = run(["git", "rev-parse", "HEAD"], repo)
         assert out == old_ref
