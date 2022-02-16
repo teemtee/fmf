@@ -674,6 +674,17 @@ def fetch(url, ref=None, destination=None, env=None):
 #  Fetch Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def default_branch(repository, remote="origin"):
+    """ Detect default branch from given local git repository """
+    head = os.path.join(repository, f".git/refs/remotes/{remote}/HEAD")
+    # Make sure the HEAD reference is available
+    if not os.path.exists(head):
+        run(["git", "remote", "set-head", remote, "--auto"], cwd=repository)
+    # The ref format is 'ref: refs/remotes/origin/main'
+    with open(head) as ref:
+        return ref.read().strip().split('/')[-1]
+
+
 def fetch_repo(url, ref=None, destination=None, env=None):
     """
     Fetch remote git repository and return local directory
@@ -695,10 +706,6 @@ def fetch_repo(url, ref=None, destination=None, env=None):
     else:
         cache = os.path.dirname(destination.rstrip('/'))
 
-    # Use the default branch from origin of no ref provided
-    if ref is None:
-        ref = '__DEFAULT__'
-
     # Lock for possibly shared cache directory. Add the extension
     # LOCK_SUFFIX_FETCH manually in the constructor. Everything under
     # the with statement to correctly remove lock upon exception.
@@ -712,12 +719,9 @@ def fetch_repo(url, ref=None, destination=None, env=None):
             # Clone the repository
             if not os.path.isdir(os.path.join(destination, '.git')):
                 run(['git', 'clone', url, destination], cwd=cache, env=env)
-                # Store the default branch from the origin as a DEFAULT ref
-                head = os.path.join(
-                    destination, '.git/refs/remotes/origin/HEAD')
-                default = os.path.join(
-                    destination, '.git/refs/heads/__DEFAULT__')
-                shutil.copyfile(head, default)
+            # Detect the default branch if 'ref' not provided
+            if ref is None:
+                ref = default_branch(destination)
             # Fetch changes if we are too old
             fetch_head_file = os.path.join(destination, '.git', 'FETCH_HEAD')
             try:
