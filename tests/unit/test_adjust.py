@@ -93,11 +93,6 @@ class TestInvalid:
             mini.data['adjust']['continue'] = 'weird'
             mini.adjust(fedora)
 
-    def test_missing_condition(self, mini, fedora):
-        with pytest.raises(FormatError, match='No condition defined'):
-            mini.data['adjust'] = dict(key='value')
-            mini.adjust(fedora)
-
     def test_undecided_invalid(self, mini, fedora):
         mini.data['adjust'] = dict(when='component = bash', enabled=False)
         with pytest.raises(GeneralError, match='Invalid value.*undecided'):
@@ -114,6 +109,11 @@ class TestSpecial:
         mini.data.pop('adjust')
         mini.adjust(fedora)
         assert mini.get() == dict(enabled=True)
+
+    def test_missing_when(self, mini, fedora):
+        del mini.data['adjust']['when']
+        mini.adjust(fedora)
+        assert mini.get('enabled') == False
 
 
 class TestAdjust:

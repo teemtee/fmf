@@ -237,8 +237,9 @@ Note that this functionality reserves the following attributes for
 its usage:
 
 when
-    The condition to be evaluated in order to decide if the
-    metadata should be merged. This is a **required** key.
+    An optional condition to be evaluated in order to decide if the
+    metadata should be merged. Without it adjust rule is merged
+    (as if it was true).
 
 continue
     By default, all provided rules are evaluated. When set to

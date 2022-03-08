@@ -110,6 +110,21 @@ class TestExample:
                 "distro ~>= centos-7.4.0 and distro ~>= centos-6.9.0"
                 )
 
+    def test_true_false(self):
+        """ true/false can be used in rule """
+        empty = Context()
+        assert empty.matches('true')
+        assert empty.matches(True)
+        assert not empty.matches('false')
+        assert not empty.matches(False)
+
+        fedora = Context(distro='fedora-rawhide')
+        # e.g. ad-hoc disabling of rule
+        assert not fedora.matches('false and distro == fedora')
+
+        # or enable rule (can be done also by removing when key)
+        assert fedora.matches('true or distro == centos-stream')
+
     def test_right_side_defines_precision(self):
         """ Right side defines how many version parts need to match """
         bar_830 = Context(dimension="bar-8.3.0")
@@ -441,6 +456,11 @@ class TestParser:
             ["is defined x"],
             ]
 
+        assert Context.split_rule_to_groups("a == b or true") == [
+            ["a == b"],
+            ["true"]
+            ]
+
     def test_split_expression(self):
         """ Split to dimension/operator/value tuple """
         for invalid in self.invalid_expressions:
@@ -460,6 +480,7 @@ class TestParser:
             "dim", "<", ["value", "second"])
         assert Context.split_expression("dim < value , second") == (
             "dim", "<", ["value", "second"])
+        assert Context.split_expression("true") == (None, True, None)
 
     def test_parse_rule(self):
         """ Rule parsing """

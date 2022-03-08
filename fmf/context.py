@@ -354,6 +354,8 @@ class Context:
         r"(\w+)" + r"\s*(" + r"|".join(["is defined", "is not defined"]) + r")"
         )
 
+    re_boolean = re.compile(r"(true|false)")
+
     # To split by 'and' operator
     re_and_split = re.compile(r'\band\b')
 
@@ -405,11 +407,16 @@ class Context:
         expr_6 and expr_7 is returned as [[expr_6, expr_7]]
 
         :param rule: rule to parse
-        :type rule: str
+        :type rule: str | bool
         :return: nested list of expressions from the rule
         :raises InvalidRule:  Syntax error in the rule
         """
         parsed_rule = []
+
+        # Bool can come from e.g. 'when: true' but we need expression tuple
+        if isinstance(rule, bool):
+            return [[(None, rule, None)]]
+
         # Change '=' to '=='
         rule = re.sub(r"(?<!=|!|~|<|>)=(?!=)", "==", rule)
         rule_parts = Context.split_rule_to_groups(rule)
@@ -470,8 +477,16 @@ class Context:
         :type expression: str
         :raises InvalidRule: When expression cannot be split, e.g. syntax error
         :return: tuple(dimension name, operator, list of values)
-        :rtype: tuple(str, str, list|None)
+        :rtype: tuple(str|None, str|bool, list|None)
         """
+        # true/false
+        match = Context.re_boolean.match(expression)
+        if match:
+            # convert to bool and return expression tuple
+            if match.group(1)[0].lower() == 't':
+                return (None, True, None)
+            else:
+                return (None, False, None)
         # Triple expressions
         match = Context.re_expression_triple.match(expression)
         if match:
@@ -496,7 +511,7 @@ class Context:
         CannotDecide or False == False or CannotDecide == CannotDecide
 
         :param rule: Single rule to decide
-        :type rule: str
+        :type rule: str | bool
         :rtype: bool
         :raises CannotDecide: Impossible to decide the rule wrt current
             Context, e.g. dimension is missing
@@ -556,4 +571,6 @@ class Context:
 
     def evaluate(self, expression):
         dimension_name, operator, values = expression
+        if isinstance(operator, bool):
+            return operator
         return self.operator_map[operator](self, dimension_name, values)
