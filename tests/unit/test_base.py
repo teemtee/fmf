@@ -104,7 +104,7 @@ class TestTree:
         child = self.merge.find('/parent/extended')
         assert('General' in child.data['description'])
         assert('Specific' in child.data['description'])
-        assert(child.data['tags'] == ['Tier1', 'Tier2', 'Tier3'])
+        assert(child.data['tags'] == ['Tier0', 'Tier1', 'Tier2', 'Tier3'])
         assert(child.data['time'] == 15)
         assert(child.data['vars'] == dict(x=1, y=2, z=3))
         assert(child.data['disabled'] is True)

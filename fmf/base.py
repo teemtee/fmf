@@ -147,7 +147,7 @@ class Tree:
         except ValueError:
             raise utils.FormatError("Invalid version format")
 
-    def _merge_plus(self, data, key, value):
+    def _merge_plus(self, data, key, value, prepend=False):
         """ Handle extending attributes using the '+' suffix """
         # Nothing to do if key not in parent
         if key not in data:
@@ -159,7 +159,10 @@ class Tree:
             return
         # Attempt to apply the plus operator
         try:
-            data[key] = data[key] + value
+            if prepend:
+                data[key] = value + data[key]
+            else:
+                data[key] = data[key] + value
         except TypeError as error:
             raise utils.MergeError(
                 "MergeError: Key '{0}' in {1} ({2}).".format(
@@ -197,6 +200,8 @@ class Tree:
             # Handle special attribute merging
             if key.endswith('+'):
                 self._merge_plus(data, key.rstrip('+'), value)
+            elif key.endswith('+<'):
+                self._merge_plus(data, key.rstrip('+<'), value, prepend=True)
             elif key.endswith('-'):
                 self._merge_minus(data, key.rstrip('-'), value)
             # Otherwise just update the value

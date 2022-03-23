@@ -89,6 +89,18 @@ Exception ``MergeError`` is raised if types are different. When
 the ``+`` suffix is applied on dictionaries ``update()`` method is
 used to merge content of given dictionary instead of replacing it.
 
+The special suffix ``+<`` can be used to prepend values instead of
+appending them. This might be handy when adjusting lists::
+
+    steps:
+      - one
+      - two
+      - three
+
+    /complete:
+        steps+<:
+          - zero
+
 In a similar way, appending a ``-`` sign will reduce or remove
 parent value from parent's attribute (which has to be defined)::
 
