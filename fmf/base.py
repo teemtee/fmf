@@ -226,8 +226,14 @@ class Tree:
         if parent is None:
             return
         self.sources = parent.sources + self.sources
-        # Merge child data with parent data
-        data = copy.deepcopy(parent.data)
+        data = {}
+        # Merge child data with parent da
+        for key, value in parent.data.items():
+            # avoid to copy data if marked as stop inheritance
+            if not key.endswith('!'):
+                print(f"no inherit {value}")
+                data[key] = copy.deepcopy(value)
+
         self._merge_special(data, self.data)
         self.data = data
 
