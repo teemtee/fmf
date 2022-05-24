@@ -22,7 +22,8 @@ __scripts__ = ['bin/fmf']
 # Prepare install requires and extra requires
 install_requires = [
     'ruamel.yaml',
-    'filelock'
+    'filelock',
+    'jsonschema',
     ]
 extras_require = {
     'docs': ['sphinx>=3', 'sphinx_rtd_theme'],
