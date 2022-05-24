@@ -7,6 +7,7 @@ import subprocess
 from io import open
 from pprint import pformat as pretty
 
+import jsonschema
 from ruamel.yaml import YAML
 from ruamel.yaml.constructor import DuplicateKeyError
 from ruamel.yaml.error import YAMLError
@@ -605,6 +606,44 @@ class Tree:
         duplicate = copy.deepcopy(self)
         self.parent = duplicate.parent = original_parent
         return duplicate
+
+    def validate(self, schema):
+        """
+        Validate node data with given JSON Schema.
+
+        Return a named tuple utils.JsonSchemaValidationResult
+        with the following two items:
+
+          result ... boolean representing the validation result
+          errors ... A list of validation errors
+
+        Raises utils.JsonSchemaError if the supplied schema was invalid.
+        """
+        try:
+            resolver = jsonschema.RefResolver.from_schema(schema)
+        except AttributeError as error:
+            raise utils.JsonSchemaError(
+                f'Provided schema cannot be loaded: {error}')
+
+        validator = jsonschema.Draft4Validator(schema, resolver=resolver)
+
+        try:
+            validator.validate(self.data)
+            return utils.JsonSchemaValidationResult(True, [])
+
+        # Data file validated by schema contains errors
+        except jsonschema.exceptions.ValidationError:
+            return utils.JsonSchemaValidationResult(
+                False, list(validator.iter_errors(self.data)))
+
+        # Schema file is invalid
+        except (
+                jsonschema.exceptions.SchemaError,
+                jsonschema.exceptions.RefResolutionError,
+                jsonschema.exceptions.UnknownType
+                ) as error:
+            raise utils.JsonSchemaError(
+                f'Errors found in provided schema: {error}')
 
     def _locate_raw_data(self):
         """

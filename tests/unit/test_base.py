@@ -6,6 +6,7 @@ import time
 from shutil import rmtree
 
 import pytest
+from ruamel.yaml import YAML
 
 import fmf.cli
 import fmf.utils as utils
@@ -249,6 +250,31 @@ class TestTree:
         assert duplicate.parent.name == '/parent'
         assert duplicate.get('x') == 1
         assert original.get('x') is None
+
+    def test_validation(self):
+        """ Test JSON Schema validation """
+        test_schema_path = os.path.join(PATH, 'assets', 'schema_test.yaml')
+        plan_schema_path = os.path.join(PATH, 'assets', 'schema_plan.yaml')
+
+        with open(test_schema_path, encoding='utf-8') as schemafile:
+            test_schema = YAML(typ="safe").load(schemafile)
+
+        with open(plan_schema_path, encoding='utf-8') as schemafile:
+            plan_schema = YAML(typ="safe").load(schemafile)
+
+        test = self.wget.find('/recursion/deep')
+
+        # valid schema
+        expected = utils.JsonSchemaValidationResult(True, [])
+        assert test.validate(test_schema) == expected
+
+        # invalid schema
+        assert test.validate(plan_schema).result == False
+
+    def test_validation_invalid_schema(self):
+        """ Test invalid JSON Schema handling """
+        with pytest.raises(fmf.utils.JsonSchemaError):
+            self.wget.find('/recursion/deep').validate('invalid')
 
 
 class TestRemote:

@@ -11,6 +11,7 @@ import time
 import warnings
 from io import StringIO
 from pprint import pformat as pretty
+from typing import Any, List, NamedTuple
 
 from filelock import FileLock, Timeout
 from ruamel.yaml import YAML, scalarstring
@@ -93,6 +94,10 @@ class FetchError(GeneralError):
 
     def __str__(self):
         return self.args[0] if self.args else ''
+
+
+class JsonSchemaError(GeneralError):
+    """ Invalid JSON Schema """
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -812,3 +817,14 @@ def dict_to_yaml(data, width=None, sort=False):
 
     yaml.dump(data, output)
     return output.getvalue()
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Validation
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class JsonSchemaValidationResult(NamedTuple):
+    """ Represents JSON Schema validation result """
+
+    result: bool
+    errors: List[Any]
