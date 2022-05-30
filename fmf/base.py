@@ -607,9 +607,11 @@ class Tree:
         self.parent = duplicate.parent = original_parent
         return duplicate
 
-    def validate(self, schema):
+    def validate(self, schema, schema_store=None):
         """
-        Validate node data with given JSON Schema.
+        Validate node data with given JSON Schema and schema references.
+
+        schema_store is a dict of schema references and their content.
 
         Return a named tuple utils.JsonSchemaValidationResult
         with the following two items:
@@ -619,8 +621,10 @@ class Tree:
 
         Raises utils.JsonSchemaError if the supplied schema was invalid.
         """
+        schema_store = schema_store or {}
         try:
-            resolver = jsonschema.RefResolver.from_schema(schema)
+            resolver = jsonschema.RefResolver.from_schema(
+                schema, store=schema_store)
         except AttributeError as error:
             raise utils.JsonSchemaError(
                 f'Provided schema cannot be loaded: {error}')

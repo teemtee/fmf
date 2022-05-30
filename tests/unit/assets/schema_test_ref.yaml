@@ -1,0 +1,13 @@
+---
+# A dummy JSON schema used by unit tests
+
+$id: schema_test_ref.yaml
+
+type: object
+
+properties:
+  description:
+    "$ref": "schema_base.yaml#/definitions/description"
+
+required:
+  - description

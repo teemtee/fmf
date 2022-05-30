@@ -1,0 +1,10 @@
+---
+# A dummy JSON schema used by unit tests
+
+$id: schema_base.yaml
+
+type: object
+
+definitions:
+  description:
+    type: string

@@ -271,6 +271,30 @@ class TestTree:
         # invalid schema
         assert test.validate(plan_schema).result == False
 
+    def test_validation_with_store(self):
+        """ Test JSON Schema validation with schema store """
+
+        base_schema_path = os.path.join(PATH, 'assets', 'schema_base.yaml')
+        test_schema_ref_path = os.path.join(
+            PATH, 'assets', 'schema_test_ref.yaml')
+
+        with open(test_schema_ref_path, encoding='utf-8') as schemafile:
+            test_schema_ref = YAML(typ="safe").load(schemafile)
+
+        with open(base_schema_path, encoding='utf-8') as schemafile:
+            base_schema = YAML(typ="safe").load(schemafile)
+
+        test = self.wget.find('/recursion/deep')
+
+        schema_store = {}
+        schema_store[base_schema['$id']] = base_schema
+
+        # valid schema
+        expected = utils.JsonSchemaValidationResult(True, [])
+        assert test.validate(
+            test_schema_ref,
+            schema_store=schema_store) == expected
+
     def test_validation_invalid_schema(self):
         """ Test invalid JSON Schema handling """
         with pytest.raises(fmf.utils.JsonSchemaError):
