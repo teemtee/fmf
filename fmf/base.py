@@ -435,7 +435,9 @@ class Tree:
             log.info("Checking file {0}".format(fullpath))
             try:
                 with open(fullpath, encoding='utf-8') as datafile:
-                    data = YAML(typ="safe").load(datafile)
+                    # Workadound ruamel s390x read issue - fmf/issues/164
+                    content = datafile.read()
+                    data = YAML(typ="safe").load(content)
             except (YAMLError, DuplicateKeyError) as error:
                 raise(utils.FileError(
                     f"Failed to parse '{fullpath}'.\n{error}"))
