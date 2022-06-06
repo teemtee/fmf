@@ -399,6 +399,9 @@ class TestContextValue:
 
         assert ContextValue.compare("8", "19") == -1
 
+    def test_string_conversion(self):
+        assert Context.parse_value(1) == ContextValue("1")
+
 
 class TestParser:
     # Missing expression

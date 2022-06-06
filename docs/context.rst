@@ -112,8 +112,9 @@ Each Dimension is a view on the Context in which metadata can be
 adjusted. For example it can be arch, distro, component, product
 or pipeline in which we run tests and so on.
 
-Each value is treated as if it was a component with version. Name
-of the dimension doesn't matter, all are treated equally.
+Values are always converted to a string representation. Each
+value is treated as if it was a component with version. Name of
+the dimension doesn't matter, all are treated equally.
 
 The characters ``:`` or ``.`` or ``-`` are used as version
 separators and are handled in the same way. The following examples

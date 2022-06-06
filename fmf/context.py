@@ -431,7 +431,7 @@ class Context:
     @staticmethod
     def parse_value(value):
         """ Single place to convert to ContextValue """
-        return ContextValue(value)
+        return ContextValue(str(value))
 
     @staticmethod
     def split_rule_to_groups(rule):
