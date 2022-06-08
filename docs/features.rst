@@ -6,15 +6,17 @@
 Let's demonstrate the features on a simple wget example with the
 following directory structure::
 
-    wget
-    ├── download
-    ├── protocols
-    │   ├── ftp
-    │   ├── http
-    │   └── https
-    ├── recursion
-    └── smoke
+    wget/
+    ├── download/
+    ├── protocols/
+    │   ├── ftp/
+    │   ├── http/
+    │   └── https/
+    ├── recursion/
+    ├── smoke/
+    └── main.fmf
 
+    7 directories, 1 file
 
 Simple
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
