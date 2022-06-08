@@ -28,7 +28,7 @@ metadata for a single test look like this::
     description: Check basic download options
     tester: Petr Šplíchal <psplicha@redhat.com>
     tags: [Tier2, TierSecurity]
-    test: runtest.sh
+    test: ./runtest.sh
     time: 3 min
 
 
