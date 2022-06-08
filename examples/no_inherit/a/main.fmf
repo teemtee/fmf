@@ -1,0 +1,6 @@
+/inherited:
+  special!: 2
+/stop_inherit:
+  c!: stop
+  /no_c:
+    test: x

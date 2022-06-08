@@ -59,6 +59,9 @@ class Tree:
         # (needed to prevent removing nodes with an empty dict).
         self._updated = False
 
+        # stop inheritance item
+        self.stop_inheritance_list = list()
+
         # Store symlinks in while walking tree in grow() to detect
         # symlink loops
         if parent is None:
@@ -224,6 +227,16 @@ class Tree:
                 root, error))
         return root
 
+    def _stop_inherit_item(self, item: str):
+        if item in self.stop_inheritance_list:
+            print(f"{item} already")
+            return item[:-1]
+        elif item.endswith('!'):
+            print(f"{item} ADD")
+            self.stop_inheritance_list.append(item)
+            return item[:-1]
+        return None
+
     def merge(self, parent=None):
         """ Merge parent data """
         # Check parent, append source files
@@ -232,10 +245,16 @@ class Tree:
         if parent is None:
             return
         self.sources = parent.sources + self.sources
-        # Merge child data with parent data
-        data = copy.deepcopy(parent.data)
+        data = {}
+        # Merge child data with parent da
+        for key, value in parent.data.items():
+            # avoid to copy data if marked as stop inheritance
+            if key + "!" not in parent.stop_inheritance_list:
+                data[key] = copy.deepcopy(value)
         self._merge_special(data, self.data)
-        self.data = data
+        for key, value in data.items():
+            item = self._stop_inherit_item(key) or key
+            self.data[item] = data[key]
 
     def inherit(self):
         """ Apply inheritance """
@@ -274,7 +293,8 @@ class Tree:
                 self.child(name, value)
             # Update regular attributes
             else:
-                self.data[key] = value
+                item = self._stop_inherit_item(key) or key
+                self.data[item] = data[key]
         log.debug("Data for '{0}' updated.".format(self))
         log.data(pretty(self.data))
 

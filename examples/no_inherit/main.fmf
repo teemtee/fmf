@@ -1,0 +1,7 @@
+special!: 1
+x: X
+c: cc
+/a:
+  b: b
+  x!: abc
+  /inherited:
