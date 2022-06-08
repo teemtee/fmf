@@ -1,0 +1,8 @@
+summary: This plan should inherit nothing
+
+provision:
+    how: local
+discover:
+    how: fmf
+execute:
+    how: tmt

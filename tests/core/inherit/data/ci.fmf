@@ -1,0 +1,5 @@
+# Do not inherit common test metadata into CI configuration
+/:
+    inherit: false
+
+resultsdb-testcase: separate

@@ -59,6 +59,9 @@ class Tree:
         # (needed to prevent removing nodes with an empty dict).
         self._updated = False
 
+        # Special directives
+        self._directives = dict()
+
         # Store symlinks in while walking tree in grow() to detect
         # symlink loops
         if parent is None:
@@ -208,6 +211,33 @@ class Tree:
             else:
                 data[key] = value
 
+    def _process_directives(self, directives):
+        """ Check and process special fmf directives """
+
+        def check(value, type_, name=None):
+            """ Check for correct type """
+            if not isinstance(value, type_):
+                name = f" '{name}'" if name else ""
+                raise fmf.utils.FormatError(
+                    f"Invalid fmf directive{name} in '{self.name}': "
+                    f"Should be a '{type_.__name__}', "
+                    f"got a '{type(value).__name__}' instead.")
+
+        # Directives should be a directory
+        check(directives, dict)
+
+        # Check for proper values
+        for key, value in directives.items():
+            if key == "inherit":
+                check(value, bool, name="inherit")
+                continue
+            # No other directive supported
+            raise fmf.utils.FormatError(
+                f"Unknown fmf directive '{key}' in '{self.name}'.")
+
+        # Everything ok, store the directives
+        self._directives.update(directives)
+
     @staticmethod
     def init(path):
         """ Create metadata tree root under given path """
@@ -230,6 +260,9 @@ class Tree:
         if parent is None:
             parent = self.parent
         if parent is None:
+            return
+        # Do not inherit when disabled
+        if self._directives.get("inherit") == False:
             return
         self.sources = parent.sources + self.sources
         # Merge child data with parent data
@@ -257,6 +290,15 @@ class Tree:
         # Nothing to do if no data
         if data is None:
             return
+
+        # Handle fmf directives first
+        try:
+            directives = data.pop("/")
+            self._process_directives(directives)
+        except KeyError:
+            pass
+
+        # Process the metadata
         for key, value in sorted(data.items()):
             # Ensure there are no 'None' keys
             if key is None:

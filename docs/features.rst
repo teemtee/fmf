@@ -72,6 +72,13 @@ This nicely prevents unnecessary duplication. Redefining an
 attribute in a child object will by default overwrite value
 inherited from the parent.
 
+If inheriting data from parent is not desired in particular node
+of the tree it is possible to disable it using the following
+directive::
+
+    /:
+        inherit: false
+
 
 Merging
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

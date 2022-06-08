@@ -1,0 +1,7 @@
+summary: Verify functionality of the `inherit` directive
+description:
+    Make sure that the inheritance from parent can be turned off
+    using the `inherit` directive both when defined in the same
+    file or separately. Test on a real-life scenario when plans
+    and the CI config are defined in the test namespace.
+require: [tmt]
