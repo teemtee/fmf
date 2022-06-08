@@ -1,5 +1,5 @@
 Name: fmf
-Version: 1.0.0
+Version: 1.1.0
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -77,6 +77,18 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %changelog
+* Wed Jun 08 2022 Lukáš Zachar <lzachar@redhat.com> - 1.1.0-1
+- Implement a directive for disabling inheritance
+- Add support for prepending items during merging
+- Explicitly convert context value to string
+- Workaround s390x ruamel read issue
+- Support reference schemas in validation function
+- Add JSON Schema validation method
+- Fixes blocking with symbolic link loops
+- Use a better way to detect the default git branch
+- Add unit tests for comma operator in context rules
+- Add examples demonstrating the context syntax
+
 * Thu Nov 11 2021 Petr Šplíchal <psplicha@redhat.com> - 1.0.0-1
 - Migrate yaml parsing to ruamel.yaml
 - Drop support for Python 2

@@ -199,8 +199,8 @@ Authors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Petr Šplíchal, Miro Hrončok, Jakub Krysl, Jan Ščotka, Alois
-Mahdal, Cleber Rosa, Miroslav Vadkerti, Lukáš Zachar and František
-Nečas.
+Mahdal, Cleber Rosa, Miroslav Vadkerti, Lukáš Zachar, František
+Nečas, Evgeny Fedin and Pablo Martin.
 
 
 Copyright
