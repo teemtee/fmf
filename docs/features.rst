@@ -14,9 +14,10 @@ following directory structure::
     │   └── https/
     ├── recursion/
     ├── smoke/
-    └── main.fmf
+    ├── main.fmf
+    └── runtest.sh
 
-    7 directories, 1 file
+    7 directories, 2 files
 
 Simple
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
