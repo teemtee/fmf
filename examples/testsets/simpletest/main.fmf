@@ -1,0 +1,4 @@
+test: runtest.sh
+author: jscotka
+path: ..
+tags: [simple]

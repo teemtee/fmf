@@ -1,0 +1,15 @@
+
+/testsets:
+  provision:
+    memory: 4G
+  execute:
+    how: restraint
+  /testset1:
+    conditions: ["'inittask' in _node.name or 'simple' in tags"]
+    relevancy:
+      arch: "!s390x"
+
+  /testset2:
+    conditions: ["'simple' in tags and 'extend' in tags"]
+    provision:
+      memory: 4G
