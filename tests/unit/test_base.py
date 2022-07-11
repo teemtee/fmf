@@ -19,6 +19,7 @@ from fmf.base import Tree
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
 EXAMPLES = PATH + "/../../examples/"
+SELECT_SOURCE = os.path.join(PATH, "data/select_source")
 FMF_REPO = 'https://github.com/psss/fmf.git'
 
 
@@ -74,6 +75,26 @@ class TestTree:
         """ Subtrees should be ignored """
         child = Tree(EXAMPLES + "child")
         assert child.find("/nobody") is None
+
+    def test_prune_sources(self):
+        """ Pruning by sources """
+        original_directory = os.getcwd()
+        # Change directory to make relative paths work
+        os.chdir(SELECT_SOURCE)
+        tree = Tree('.')
+        # /foo/special is inherit: false
+        found = tree.prune(sources=['main.fmf'])
+        assert {node.name for node in found} == set(['/virtual', '/foo/inner'])
+        # All three objects are found
+        found = tree.prune(sources=['main.fmf', 'foo/special.fmf'])
+        assert {node.name for node in found} == set(
+            ['/virtual', '/foo/special', '/foo/inner'])
+        # Filter by filter (key, condition..) still works
+        found = tree.prune(
+            filters=['attribute:something'],
+            sources=['main.fmf', 'foo/special.fmf'])
+        assert [tree.find('/foo/inner')] == list(found)
+        os.chdir(original_directory)
 
     def test_empty(self):
         """ Empty structures should be ignored """

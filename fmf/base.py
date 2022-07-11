@@ -543,12 +543,16 @@ class Tree:
         return None
 
     def prune(self, whole=False, keys=None, names=None, filters=None,
-              conditions=None):
+              conditions=None, sources=None):
         """ Filter tree nodes based on given criteria """
         keys = keys or []
         names = names or []
         filters = filters or []
         conditions = conditions or []
+
+        # Expand paths to absolute
+        if sources:
+            sources = {os.path.abspath(src) for src in sources}
 
         for node in self.climb(whole):
             # Select only nodes with key content
@@ -557,6 +561,9 @@ class Tree:
             # Select nodes with name matching regular expression
             if names and not any(
                     [re.search(name, node.name) for name in names]):
+                continue
+            # Select nodes defined by any of the source files
+            if sources and not sources.intersection(node.sources):
                 continue
             # Apply filters and conditions if given
             try:

@@ -65,6 +65,11 @@ class TestCommandLine:
         output = fmf.cli.main("fmf show --filter x:y", WGET)
         assert "wget" not in output
 
+    def test_filtering_by_source(self):
+        """ By source """
+        output = fmf.cli.main("fmf show --source protocols/ftp/main.fmf", WGET)
+        assert "/protocols/ftp" in output
+
     def test_filtering(self):
         """ Filtering """
         output = fmf.cli.main(
