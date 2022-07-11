@@ -79,6 +79,9 @@ class Parser:
             "--name", dest="names", action="append", default=[],
             help="List objects with name matching regular expression")
         group.add_argument(
+            "--source", dest="sources", action="append", default=[],
+            help="List objects defined in specified source files")
+        group.add_argument(
             "--filter", dest="filters", action="append", default=[],
             help="Apply advanced filter (see 'pydoc fmf.filter')")
         group.add_argument(
@@ -156,8 +159,12 @@ class Parser:
                 utils.info("Checking {0} for metadata.".format(path))
             tree = fmf.Tree(path)
             for node in tree.prune(
-                    self.options.whole, self.options.keys, self.options.names,
-                    self.options.filters, self.options.conditions):
+                    self.options.whole,
+                    self.options.keys,
+                    self.options.names,
+                    self.options.filters,
+                    self.options.conditions,
+                    self.options.sources):
                 if brief:
                     show = node.show(brief=True)
                 else:

@@ -1,0 +1,5 @@
+# Do not inherit from parents
+/:
+  inherit: false
+
+attribute: another
