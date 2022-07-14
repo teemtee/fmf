@@ -47,9 +47,10 @@ class Parser:
         # Enable debugging output if requested
         if "--debug" in self.arguments:
             utils.log.setLevel(utils.LOG_DEBUG)
-
+        # Show current version and exit
         if "--version" in self.arguments:
             self.output = f"{fmf.__version__}"
+            print(self.output)
             return
 
         # Handle subcommands (mapped to format_* methods)
