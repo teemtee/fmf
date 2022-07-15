@@ -720,9 +720,13 @@ def fetch_repo(url, ref=None, destination=None, env=None):
             # Write PID to lockfile so we know which process got it
             with open(lock.lock_file, 'w') as lock_file:
                 lock_file.write(str(os.getpid()))
-            # Clone the repository
+            # Clone the repository, use depth=1 when ref is not used
+            if ref is None:
+                depth = ['--depth=1']
+            else:
+                depth = []
             if not os.path.isdir(os.path.join(destination, '.git')):
-                run(['git', 'clone', url, destination], cwd=cache, env=env)
+                run(['git', 'clone'] + depth + [url, destination], cwd=cache, env=env)
             # Detect the default branch if 'ref' not provided
             if ref is None:
                 ref = default_branch(destination)
@@ -735,7 +739,21 @@ def fetch_repo(url, ref=None, destination=None, env=None):
             if age >= CACHE_EXPIRATION:
                 run(['git', 'fetch'], cwd=destination)
             # Checkout branch
-            run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
+            try:
+                run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
+            except subprocess.CalledProcessError as error:
+                # Another way to check for shallow clone is to call
+                # `git rev-parse --is-shallow-repository` but it prints true/false
+                if os.path.isfile(os.path.join(destination, '.git', 'shallow')):
+                    # Make fetch get all remote refs (branches...)
+                    run(["git", "config", "remote.origin.fetch",
+                        "+refs/heads/*:refs/remotes/origin/*"], cwd=destination)
+                    # Fetch the whole history
+                    run(['git', 'fetch', '--unshallow'], cwd=destination)
+                    run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
+                else:
+                    # History is already fetched so ref is wrong (no need to retry)
+                    raise error
             # Reset to origin to get possible changes but no exit code check
             # ref could be tag or commit where it is expected to fail
             run(['git', 'reset', '--hard', "origin/{0}".format(ref)],

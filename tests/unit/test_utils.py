@@ -215,6 +215,15 @@ class TestFetch:
         output, _ = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], repo)
         assert 'main' in output
 
+    def test_shallow_clone(self, tmpdir):
+        fetched_to = utils.fetch_repo(GIT_REPO, destination=str(tmpdir))
+        out, _ = run(["git", "rev-parse", "--is-shallow-repository"], fetched_to)
+        assert 'true' in out
+
+        fetched_to = utils.fetch_repo(GIT_REPO, destination=str(tmpdir), ref='fedora')
+        out, _ = run(["git", "rev-parse", "--is-shallow-repository"], fetched_to)
+        assert 'false' in out
+
     def test_fetch_valid_id(self):
         repo = utils.fetch_repo(GIT_REPO, '0.10')
         assert utils.os.path.isfile(utils.os.path.join(repo, 'fmf.spec'))
