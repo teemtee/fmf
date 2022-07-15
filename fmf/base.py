@@ -363,11 +363,11 @@ class Tree:
             if not isinstance(rule, dict):
                 raise utils.FormatError("Adjust rule should be a dictionary.")
 
-            # There must be a condition defined
+            # Missing 'when' means always enabled rule
             try:
                 condition = rule.pop('when')
             except KeyError:
-                raise utils.FormatError("No condition defined in adjust rule.")
+                condition = True
 
             # The optional 'continue' key should be a bool
             continue_ = rule.pop('continue', True)

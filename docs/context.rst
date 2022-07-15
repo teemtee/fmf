@@ -44,6 +44,7 @@ supported operators consult the following grammar outline::
     bool ::= and | or
     expression ::= dimension binary_operator values
     expression ::= dimension unary_operator
+    expression ::= 'true' | 'false'
     dimension ::= [[:alnum:]]+
     binary_operator ::= '==' | '!=' | '<' | '<=' | '>' | '>=' |
         '~=' | '~!=' | '~<' | '~<=' | '~>' | '~>='
@@ -63,6 +64,12 @@ Let's demonstrate the syntax on a couple of real-life examples::
 
     # check whether a dimension is defined
     collection is not defined
+
+    # disable adjust rule (e.g. during debugging / experimenting)
+    false and <original rule>
+
+    # always enabled adjust rule (same as if the `when` key is omitted)
+    true
 
 The comma operator can be used to shorten the ``or`` expressions::
 
