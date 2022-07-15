@@ -238,8 +238,8 @@ its usage:
 
 when
     An optional condition to be evaluated in order to decide if the
-    metadata should be merged. Without it adjust rule is merged
-    (as if it was true).
+    metadata should be merged. If not specified the adjust rule is
+    applied as if it was set to ``true``.
 
 continue
     By default, all provided rules are evaluated. When set to

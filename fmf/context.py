@@ -354,6 +354,7 @@ class Context:
         r"(\w+)" + r"\s*(" + r"|".join(["is defined", "is not defined"]) + r")"
         )
 
+    # Simple boolean value
     re_boolean = re.compile(r"(true|false)")
 
     # To split by 'and' operator

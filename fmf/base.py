@@ -366,9 +366,8 @@ class Tree:
             # Missing 'when' means always enabled rule
             try:
                 condition = rule.pop('when')
-                always = False
             except KeyError:
-                always = True
+                condition = True
 
             # The optional 'continue' key should be a bool
             continue_ = rule.pop('continue', True)
@@ -382,7 +381,7 @@ class Tree:
 
             # Apply remaining rule attributes if context matches
             try:
-                if always or context.matches(condition):
+                if context.matches(condition):
                     self._merge_special(self.data, rule)
 
                     # First matching rule wins, skip the rest unless continue
