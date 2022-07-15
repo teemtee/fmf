@@ -11,11 +11,26 @@ repos:
           - --aggressive
           - --aggressive
           - --hang-closing
+          - --max-line-length=99
 
   - repo: https://github.com/PyCQA/isort
     rev: "5.8.0"
     hooks:
       - id: isort
+
+  - repo: https://github.com/pycqa/flake8
+    rev: "4.0.1"
+    hooks:
+      - id: flake8
+        args:
+          - --max-line-length=99
+        files: >
+          (?x)^(
+            bin/.*|
+            examples/.*|
+            fmf/.*|
+            tests/.*
+          )$
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: "v3.4.0"

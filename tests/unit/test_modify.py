@@ -31,7 +31,6 @@ class TestModify(unittest.TestCase):
     def test_inheritance(self):
         """ Inheritance and data types """
         item = self.wget.find('/recursion/deep')
-        item_parent = self.wget.find('/recursion')
         # Modify data and store to disk
         with item as data:
             data.update(dict(depth=2000, new="two\nlines"))

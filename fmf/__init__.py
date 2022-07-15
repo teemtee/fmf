@@ -3,7 +3,12 @@
 # Version is replaced before building the package
 __version__ = 'running from the source'
 
-from fmf.base import Tree
-from fmf.utils import filter
+__all__ = [
+    "Context",
+    "Tree",
+    "filter",
+    ]
 
-__all__ = "Tree filter".split()
+from fmf.base import Tree
+from fmf.context import Context
+from fmf.utils import filter

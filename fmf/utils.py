@@ -10,7 +10,6 @@ import sys
 import time
 import warnings
 from io import StringIO
-from pprint import pformat as pretty
 from typing import Any, List, NamedTuple
 
 from filelock import FileLock, Timeout
@@ -569,7 +568,7 @@ def get_cache_directory(create=True):
     if not os.path.isdir(cache) and create:
         try:
             os.makedirs(cache, exist_ok=True)
-        except OSError as error:
+        except OSError:
             raise GeneralError(
                 "Failed to create cache directory '{0}'.".format(cache))
     return cache
@@ -611,7 +610,7 @@ def invalidate_cache():
             if os.path.isfile(fetch_head):
                 lock_path = root + LOCK_SUFFIX_FETCH
                 log.debug("Remove '{0}'.".format(fetch_head))
-                with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
+                with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT):
                     os.remove(fetch_head)
         except (IOError, Timeout) as error:  # pragma: no cover
             issues.append(

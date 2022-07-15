@@ -61,7 +61,6 @@ class TestExample:
 
     def test_minor_comparison_mode(self):
         """ How it minor comparison should work """
-        fedora = Context(distro="fedora-33")
         centos = Context(distro="centos-7.3.0")
         centos6 = Context(distro="centos-6.9.0")
 
@@ -128,9 +127,7 @@ class TestExample:
     def test_right_side_defines_precision(self):
         """ Right side defines how many version parts need to match """
         bar_830 = Context(dimension="bar-8.3.0")
-        bar_800 = Context(dimension="bar-8.0.0")
         bar_ = Context(dimension="bar")  # so essentially bar-0.0.0
-        bar_8 = Context(dimension="bar-8")  # so essentially bar-8.0.0
 
         # these are equal
         for value in "bar bar-8 bar-8.3 bar-8.3.0".split():
@@ -176,7 +173,6 @@ class TestExample:
     def test_right_side_defines_precision_tilda(self):
         """ Right side defines how many version parts need to match (~ operations) """
         bar_830 = Context(dimension="bar-8.3.0")
-        bar_800 = Context(dimension="bar-8.0.0")
         bar_ = Context(dimension="bar")  # missing major
         bar_8 = Context(dimension="bar-8")  # so essentially bar-8.0.0
 
@@ -229,7 +225,6 @@ class TestExample:
     def test_module_streams(self):
         """ How you can use Context for modules """
         perl = Context("module = perl:5.28")
-        mix = Context("module = perl:5.28,php:7.3")
 
         assert perl.matches("module >= perl:5")
         assert not perl.matches("module > perl:5")

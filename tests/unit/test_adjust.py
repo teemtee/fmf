@@ -113,7 +113,7 @@ class TestSpecial:
     def test_missing_when(self, mini, fedora):
         del mini.data['adjust']['when']
         mini.adjust(fedora)
-        assert mini.get('enabled') == False
+        assert mini.get('enabled') is False
 
 
 class TestAdjust:
