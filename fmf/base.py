@@ -262,7 +262,7 @@ class Tree:
         if parent is None:
             return
         # Do not inherit when disabled
-        if self._directives.get("inherit") == False:
+        if self._directives.get("inherit") is False:
             return
         self.sources = parent.sources + self.sources
         # Merge child data with parent data
@@ -579,10 +579,10 @@ class Tree:
         # Custom formatting
         if formatting is not None:
             formatting = re.sub("\\\\n", "\n", formatting)
-            name = self.name
-            data = self.data
-            root = self.root
-            sources = self.sources
+            name = self.name        # noqa: F841
+            data = self.data        # noqa: F841
+            root = self.root        # noqa: F841
+            sources = self.sources  # noqa: F841
             evaluated = []
             for value in values:
                 evaluated.append(eval(value))

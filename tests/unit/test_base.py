@@ -84,7 +84,7 @@ class TestTree:
     def test_none_key(self):
         """ Handle None keys """
         with pytest.raises(utils.FormatError):
-            tree = Tree({None: "weird key"})
+            Tree({None: "weird key"})
 
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
@@ -172,7 +172,7 @@ class TestTree:
         with open(os.path.join(path, "main.fmf"), "w") as main:
             main.write("missing\ncolon:")
         with pytest.raises(utils.FileError):
-            tree = fmf.Tree(path)
+            fmf.Tree(path)
         rmtree(path)
 
     def test_yaml_duplicate_keys(self):
@@ -269,7 +269,7 @@ class TestTree:
         assert test.validate(test_schema) == expected
 
         # invalid schema
-        assert test.validate(plan_schema).result == False
+        assert not test.validate(plan_schema).result
 
     def test_validation_with_store(self):
         """ Test JSON Schema validation with schema store """
@@ -366,7 +366,7 @@ class TestRemote:
     def test_tree_concurrent(self):
         def get_node(ref):
             try:
-                node = Tree.node(dict(url=FMF_REPO, ref=ref))
+                Tree.node(dict(url=FMF_REPO, ref=ref))
                 q.put(True)
             except Exception as error:
                 q.put(error)

@@ -167,7 +167,7 @@ class TestColoring:
 
     def test_color(self):
         utils.Coloring().set()
-        text = utils.color("text", "lightblue", enabled=True)
+        utils.color("text", "lightblue", enabled=True)
 
 
 class TestCache:
@@ -279,13 +279,13 @@ class TestFetch:
         dest = tmpdir.join('file')
         dest.write('content')
         with pytest.raises(utils.GeneralError):
-            repo = utils.fetch_repo(GIT_REPO, destination=str(dest))
+            utils.fetch_repo(GIT_REPO, destination=str(dest))
 
         # Is a directory, but not empty
         dest = tmpdir.mkdir('yet_another')
         dest.join('some_file').write('content')
         with pytest.raises(utils.GeneralError) as error:
-            repo = utils.fetch_repo(GIT_REPO, destination=str(dest))
+            utils.fetch_repo(GIT_REPO, destination=str(dest))
         # Git's error message
         assert ("already exists and is not an empty"
                 in error.value.args[1].output)
@@ -319,7 +319,7 @@ class TestFetch:
     def test_fetch_concurrent(self):
         def do_fetch_repo():
             try:
-                repo = utils.fetch_repo(GIT_REPO, '0.10')
+                utils.fetch_repo(GIT_REPO, '0.10')
                 q.put(True)
             except Exception as error:
                 q.put(error)
