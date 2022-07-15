@@ -20,6 +20,7 @@ class TestCommandLine:
         fmf.cli.main("fmf show", WGET)
         fmf.cli.main("fmf show --debug", WGET)
         fmf.cli.main("fmf show --verbose", WGET)
+        fmf.cli.main("fmf --version")
 
     def test_missing_root(self):
         """ Missing root """
