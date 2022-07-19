@@ -1,5 +1,5 @@
 Name: fmf
-Version: 1.1.0
+Version: 1.2.0
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -77,6 +77,13 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %changelog
+* Tue Jul 19 2022 Lukáš Zachar <lzachar@redhat.com> - 1.2.0-1
+- Shallow git clone if no reference is used
+- Select by the source of object
+- Enable the flake8 check, fix detected issues
+- Make when in adjust optional, add true|false expr.
+- Version as fmf flag and module attribute
+
 * Wed Jun 08 2022 Lukáš Zachar <lzachar@redhat.com> - 1.1.0-1
 - Implement a directive for disabling inheritance
 - Add support for prepending items during merging
