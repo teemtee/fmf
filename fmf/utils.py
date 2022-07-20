@@ -726,7 +726,15 @@ def fetch_repo(url, ref=None, destination=None, env=None):
             else:
                 depth = []
             if not os.path.isdir(os.path.join(destination, '.git')):
-                run(['git', 'clone'] + depth + [url, destination], cwd=cache, env=env)
+                try:
+                    run(['git', 'clone'] + depth + [url, destination], cwd=cache, env=env)
+                except subprocess.CalledProcessError as error:
+                    # Can't check error message because it is localized
+                    if not depth:
+                        # Do not retry if shallow clone was not used
+                        raise
+                    log.debug("Clone failed with '{0}', trying without '--depth=1'.".format(error))
+                    run(['git', 'clone', url, destination], cwd=cache, env=env)
             # Detect the default branch if 'ref' not provided
             if ref is None:
                 ref = default_branch(destination)
