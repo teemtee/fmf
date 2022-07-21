@@ -1,5 +1,5 @@
 Name: fmf
-Version: 1.2.0
+Version: 1.2.1
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -77,6 +77,9 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %changelog
+* Thu Jul 21 2022 Lukáš Zachar <lzachar@redhat.com> - 1.2.1-1
+- Retry if shallow clone fails
+
 * Tue Jul 19 2022 Lukáš Zachar <lzachar@redhat.com> - 1.2.0-1
 - Shallow git clone if no reference is used
 - Select by the source of object
