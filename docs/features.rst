@@ -116,7 +116,7 @@ parent value from parent's attribute (which has to be defined)::
     desc-: details.*
     vars-: [z]
 
-Numbers are subtracked, list items are removed from the parent
+Numbers are subtracted, list items are removed from the parent
 attribute, matching regular expressions are replaced by an empty
 string. For dictionaries it's possible to provide list of keys
 which should be removed.
