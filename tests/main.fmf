@@ -1,2 +1,4 @@
 test: ./test.sh
 framework: beakerlib
+require:
+  - fmf

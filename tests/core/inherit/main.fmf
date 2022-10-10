@@ -4,4 +4,5 @@ description:
     using the `inherit` directive both when defined in the same
     file or separately. Test on a real-life scenario when plans
     and the CI config are defined in the test namespace.
-require: [tmt]
+require+:
+  - tmt

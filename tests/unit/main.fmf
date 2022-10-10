@@ -3,6 +3,6 @@ description:
     Run all available python unit tests using pytest.
 test: python3 -m pytest -v
 framework: shell
-require:
+require+:
   - python3-pytest
 tier: 0
