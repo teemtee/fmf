@@ -12,6 +12,7 @@ import warnings
 from io import StringIO
 from typing import Any, List, NamedTuple
 
+import jsonschema
 from filelock import FileLock, Timeout
 from ruamel.yaml import YAML, scalarstring
 from ruamel.yaml.comments import CommentedMap
@@ -853,3 +854,43 @@ class JsonSchemaValidationResult(NamedTuple):
 
     result: bool
     errors: List[Any]
+
+
+def validate_data(data, schema, schema_store=None):
+    """
+    Validate data with given JSON Schema and schema references.
+
+    schema_store is a dict of schema references and their content.
+
+    Return a named tuple utils.JsonSchemaValidationResult
+    with the following two items:
+
+        result ... boolean representing the validation result
+        errors ... A list of validation errors
+
+    Raises utils.JsonSchemaError if the supplied schema was invalid.
+    """
+    schema_store = schema_store or {}
+    try:
+        resolver = jsonschema.RefResolver.from_schema(
+            schema, store=schema_store)
+    except AttributeError as error:
+        raise JsonSchemaError(f'Provided schema cannot be loaded: {error}')
+
+    validator = jsonschema.Draft4Validator(schema, resolver=resolver)
+
+    try:
+        validator.validate(data)
+        return JsonSchemaValidationResult(True, [])
+
+    # Data file validated by schema contains errors
+    except jsonschema.exceptions.ValidationError:
+        return JsonSchemaValidationResult(False, list(validator.iter_errors(data)))
+
+    # Schema file is invalid
+    except (
+            jsonschema.exceptions.SchemaError,
+            jsonschema.exceptions.RefResolutionError,
+            jsonschema.exceptions.UnknownType
+            ) as error:
+        raise JsonSchemaError(f'Errors found in provided schema: {error}')

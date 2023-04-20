@@ -8,7 +8,6 @@ from io import open
 from pprint import pformat as pretty
 from typing import Any, Dict, Optional, Protocol
 
-import jsonschema
 from ruamel.yaml import YAML
 from ruamel.yaml.constructor import DuplicateKeyError
 from ruamel.yaml.error import YAMLError
@@ -720,33 +719,7 @@ class Tree:
 
         Raises utils.JsonSchemaError if the supplied schema was invalid.
         """
-        schema_store = schema_store or {}
-        try:
-            resolver = jsonschema.RefResolver.from_schema(
-                schema, store=schema_store)
-        except AttributeError as error:
-            raise utils.JsonSchemaError(
-                f'Provided schema cannot be loaded: {error}')
-
-        validator = jsonschema.Draft4Validator(schema, resolver=resolver)
-
-        try:
-            validator.validate(self.data)
-            return utils.JsonSchemaValidationResult(True, [])
-
-        # Data file validated by schema contains errors
-        except jsonschema.exceptions.ValidationError:
-            return utils.JsonSchemaValidationResult(
-                False, list(validator.iter_errors(self.data)))
-
-        # Schema file is invalid
-        except (
-                jsonschema.exceptions.SchemaError,
-                jsonschema.exceptions.RefResolutionError,
-                jsonschema.exceptions.UnknownType
-                ) as error:
-            raise utils.JsonSchemaError(
-                f'Errors found in provided schema: {error}')
+        return utils.validate_data(self.data, schema, schema_store=schema_store)
 
     def _locate_raw_data(self):
         """
