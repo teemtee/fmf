@@ -11,6 +11,10 @@ actions:
   get-current-version:
   - make version
 
+srpm_build_deps:
+  - make
+  - python3-docutils
+
 jobs:
   - job: copr_build
     trigger: pull_request
