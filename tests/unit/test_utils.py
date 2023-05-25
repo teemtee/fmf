@@ -39,100 +39,100 @@ class TestFilter:
 
     def test_basic(self):
         """ Basic stuff and negation """
-        assert(filter("tag: Tier1", self.data) is True)
-        assert(filter("tag: mod:S", self.data) is True)
-        assert(filter("tag: -Tier2", self.data) is True)
-        assert(filter("tag: -mod:S2", self.data) is True)
-        assert(filter("category: Sanity", self.data) is True)
-        assert(filter("category: -Regression", self.data) is True)
-        assert(filter("tag: Tier2", self.data) is False)
-        assert(filter("tag: -Tier1", self.data) is False)
-        assert(filter("category: Regression", self.data) is False)
-        assert(filter("category: -Sanity", self.data) is False)
+        assert filter("tag: Tier1", self.data) is True
+        assert filter("tag: mod:S", self.data) is True
+        assert filter("tag: -Tier2", self.data) is True
+        assert filter("tag: -mod:S2", self.data) is True
+        assert filter("category: Sanity", self.data) is True
+        assert filter("category: -Regression", self.data) is True
+        assert filter("tag: Tier2", self.data) is False
+        assert filter("tag: -Tier1", self.data) is False
+        assert filter("category: Regression", self.data) is False
+        assert filter("category: -Sanity", self.data) is False
 
     def test_operators(self):
         """ Operators """
-        assert(filter("tag: Tier1 | tag: Tier2", self.data) is True)
-        assert(filter("tag: Tier1 | tag: mod:S", self.data) is True)
-        assert(filter("tag: mod:X | tag: mod:S", self.data) is True)
-        assert(filter("tag: -Tier1 | tag: -Tier2", self.data) is True)
-        assert(filter("tag: Tier1 | tag: TIPpass", self.data) is True)
-        assert(filter("tag: Tier1 | category: Regression", self.data) is True)
-        assert(filter("tag: Tier1 & tag: TIPpass", self.data) is True)
-        assert(filter("tag: Tier1 & category: Sanity", self.data) is True)
-        assert(filter("tag: Tier2 | tag: Tier3", self.data) is False)
-        assert(filter("tag: Tier1 & tag: Tier2", self.data) is False)
-        assert(filter("tag: Tier2 & tag: Tier3", self.data) is False)
-        assert(filter("tag: Tier1 & category: Regression", self.data) is False)
-        assert(filter("tag: Tier2 | category: Regression", self.data) is False)
+        assert filter("tag: Tier1 | tag: Tier2", self.data) is True
+        assert filter("tag: Tier1 | tag: mod:S", self.data) is True
+        assert filter("tag: mod:X | tag: mod:S", self.data) is True
+        assert filter("tag: -Tier1 | tag: -Tier2", self.data) is True
+        assert filter("tag: Tier1 | tag: TIPpass", self.data) is True
+        assert filter("tag: Tier1 | category: Regression", self.data) is True
+        assert filter("tag: Tier1 & tag: TIPpass", self.data) is True
+        assert filter("tag: Tier1 & category: Sanity", self.data) is True
+        assert filter("tag: Tier2 | tag: Tier3", self.data) is False
+        assert filter("tag: Tier1 & tag: Tier2", self.data) is False
+        assert filter("tag: Tier2 & tag: Tier3", self.data) is False
+        assert filter("tag: Tier1 & category: Regression", self.data) is False
+        assert filter("tag: Tier2 | category: Regression", self.data) is False
 
     def test_sugar(self):
         """ Syntactic sugar """
-        assert(filter("tag: Tier1, Tier2", self.data) is True)
-        assert(filter("tag: Tier2, mod:S", self.data) is True)
-        assert(filter("tag: Tier1, TIPpass", self.data) is True)
-        assert(filter("tag: -Tier2", self.data) is True)
-        assert(filter("tag: -Tier1, -Tier2", self.data) is True)
-        assert(filter("tag: -Tier1, -Tier2", self.data) is True)
-        assert(filter("tag: Tier2, Tier3", self.data) is False)
+        assert filter("tag: Tier1, Tier2", self.data) is True
+        assert filter("tag: Tier2, mod:S", self.data) is True
+        assert filter("tag: Tier1, TIPpass", self.data) is True
+        assert filter("tag: -Tier2", self.data) is True
+        assert filter("tag: -Tier1, -Tier2", self.data) is True
+        assert filter("tag: -Tier1, -Tier2", self.data) is True
+        assert filter("tag: Tier2, Tier3", self.data) is False
 
     def test_regexp(self):
         """ Regular expressions """
-        assert(filter("tag: Tier.*", self.data, regexp=True) is True)
-        assert(filter("tag: Tier[123]", self.data, regexp=True) is True)
-        assert(filter("tag: mod:[XS]", self.data, regexp=True) is True)
-        assert(filter("tag: NoTier.*", self.data, regexp=True) is False)
-        assert(filter("tag: -Tier.*", self.data, regexp=True) is False)
+        assert filter("tag: Tier.*", self.data, regexp=True) is True
+        assert filter("tag: Tier[123]", self.data, regexp=True) is True
+        assert filter("tag: mod:[XS]", self.data, regexp=True) is True
+        assert filter("tag: NoTier.*", self.data, regexp=True) is False
+        assert filter("tag: -Tier.*", self.data, regexp=True) is False
 
     def test_case(self):
         """ Case insensitive """
-        assert(filter("tag: tier1", self.data, sensitive=False) is True)
-        assert(filter("tag: tippass", self.data, sensitive=False) is True)
+        assert filter("tag: tier1", self.data, sensitive=False) is True
+        assert filter("tag: tippass", self.data, sensitive=False) is True
 
     def test_unicode(self):
         """ Unicode support """
-        assert(filter("tag: -ťip", self.data) is True)
-        assert(filter("tag: ťip", self.data) is False)
-        assert(filter("tag: ťip", {"tag": ["ťip"]}) is True)
-        assert(filter("tag: -ťop", {"tag": ["ťip"]}) is True)
+        assert filter("tag: -ťip", self.data) is True
+        assert filter("tag: ťip", self.data) is False
+        assert filter("tag: ťip", {"tag": ["ťip"]}) is True
+        assert filter("tag: -ťop", {"tag": ["ťip"]}) is True
 
 
 class TestPluralize:
     """ Function pluralize() """
 
     def test_basic(self):
-        assert(utils.pluralize("cloud") == "clouds")
-        assert(utils.pluralize("sky") == "skies")
-        assert(utils.pluralize("boss") == "bosses")
+        assert utils.pluralize("cloud") == "clouds"
+        assert utils.pluralize("sky") == "skies"
+        assert utils.pluralize("boss") == "bosses"
 
 
 class TestListed:
     """ Function listed() """
 
     def test_basic(self):
-        assert(listed(range(1)) == '0')
-        assert(listed(range(2)) == '0 and 1')
+        assert listed(range(1)) == '0'
+        assert listed(range(2)) == '0 and 1'
 
     def test_quoting(self):
-        assert(listed(range(3), quote='"') == '"0", "1" and "2"')
+        assert listed(range(3), quote='"') == '"0", "1" and "2"'
 
     def test_max(self):
-        assert(listed(range(4), max=3) == '0, 1, 2 and 1 more')
-        assert(listed(range(5), 'number', max=2) == '0, 1 and 3 more numbers')
+        assert listed(range(4), max=3) == '0, 1, 2 and 1 more'
+        assert listed(range(5), 'number', max=2) == '0, 1 and 3 more numbers'
 
     def test_text(self):
-        assert(listed(range(6), 'category') == '6 categories')
-        assert(listed(7, "leaf", "leaves") == '7 leaves')
-        assert(listed(0, "item") == "0 items")
+        assert listed(range(6), 'category') == '6 categories'
+        assert listed(7, "leaf", "leaves") == '7 leaves'
+        assert listed(0, "item") == "0 items"
 
 
 class TestSplit:
     """ Function split() """
 
     def test_basic(self):
-        assert(utils.split('a b c') == ['a', 'b', 'c'])
-        assert(utils.split('a, b, c') == ['a', 'b', 'c'])
-        assert(utils.split(['a, b', 'c']) == ['a', 'b', 'c'])
+        assert utils.split('a b c') == ['a', 'b', 'c']
+        assert utils.split('a, b, c') == ['a', 'b', 'c']
+        assert utils.split(['a, b', 'c']) == ['a', 'b', 'c']
 
 
 class TestLogging:
@@ -141,7 +141,7 @@ class TestLogging:
     def test_level(self):
         for level in [1, 4, 7, 10, 20, 30, 40]:
             utils.Logging('fmf').set(level)
-            assert(utils.Logging('fmf').get() == level)
+            assert utils.Logging('fmf').get() == level
 
     def test_smoke(self):
         utils.Logging('fmf').set(utils.LOG_ALL)
@@ -163,7 +163,7 @@ class TestColoring:
     def test_mode(self):
         for mode in range(3):
             utils.Coloring().set(mode)
-            assert(utils.Coloring().get() == mode)
+            assert utils.Coloring().get() == mode
 
     def test_color(self):
         utils.Coloring().set()
@@ -296,8 +296,7 @@ class TestFetch:
         with pytest.raises(utils.GeneralError) as error:
             utils.fetch_repo(GIT_REPO, destination=str(dest))
         # Git's error message
-        assert ("already exists and is not an empty"
-                in error.value.args[1].output)
+        assert "already exists and is not an empty" in error.value.args[1].output
         # We report same error message as before
         assert str(error.value) == str(error.value.args[1])
 

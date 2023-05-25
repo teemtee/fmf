@@ -46,30 +46,30 @@ class TestTree:
 
     def test_hidden(self):
         """ Hidden files and directories """
-        assert(".hidden" not in self.wget.children)
+        assert ".hidden" not in self.wget.children
 
     def test_inheritance(self):
         """ Inheritance and data types """
         deep = self.wget.find('/recursion/deep')
-        assert(deep.data['depth'] == 1000)
-        assert(deep.data['description'] == 'Check recursive download options')
-        assert(deep.data['tags'] == ['Tier2'])
+        assert deep.data['depth'] == 1000
+        assert deep.data['description'] == 'Check recursive download options'
+        assert deep.data['tags'] == ['Tier2']
 
     def test_scatter(self):
         """ Scattered files """
         scatter = Tree(EXAMPLES + "scatter").find("/object")
-        assert(len(list(scatter.climb())) == 1)
-        assert(scatter.data['one'] == 1)
-        assert(scatter.data['two'] == 2)
-        assert(scatter.data['three'] == 3)
+        assert len(list(scatter.climb())) == 1
+        assert scatter.data['one'] == 1
+        assert scatter.data['two'] == 2
+        assert scatter.data['three'] == 3
 
     def test_scattered_inheritance(self):
         """ Inheritance of scattered files """
         grandson = Tree(EXAMPLES + "child").find("/son/grandson")
-        assert(grandson.data['name'] == 'Hugo')
-        assert(grandson.data['eyes'] == 'blue')
-        assert(grandson.data['nose'] == 'long')
-        assert(grandson.data['hair'] == 'fair')
+        assert grandson.data['name'] == 'Hugo'
+        assert grandson.data['eyes'] == 'blue'
+        assert grandson.data['nose'] == 'long'
+        assert grandson.data['hair'] == 'fair'
 
     def test_subtrees(self):
         """ Subtrees should be ignored """
@@ -123,13 +123,13 @@ class TestTree:
     def test_merge_plus(self):
         """ Extending attributes using the '+' suffix """
         child = self.merge.find('/parent/extended')
-        assert('General' in child.data['description'])
-        assert('Specific' in child.data['description'])
-        assert(child.data['tags'] == ['Tier0', 'Tier1', 'Tier2', 'Tier3'])
-        assert(child.data['time'] == 15)
-        assert(child.data['vars'] == dict(x=1, y=2, z=3))
-        assert(child.data['disabled'] is True)
-        assert('time+' not in child.data)
+        assert 'General' in child.data['description']
+        assert 'Specific' in child.data['description']
+        assert child.data['tags'] == ['Tier0', 'Tier1', 'Tier2', 'Tier3']
+        assert child.data['time'] == 15
+        assert child.data['vars'] == dict(x=1, y=2, z=3)
+        assert child.data['disabled'] is True
+        assert 'time+' not in child.data
         with pytest.raises(utils.MergeError):
             child.data["time+"] = "string"
             child.inherit()
@@ -137,12 +137,12 @@ class TestTree:
     def test_merge_minus(self):
         """ Reducing attributes using the '-' suffix """
         child = self.merge.find('/parent/reduced')
-        assert('General' in child.data['description'])
-        assert('description' not in child.data['description'])
-        assert(child.data['tags'] == ['Tier1'])
-        assert(child.data['time'] == 5)
-        assert(child.data['vars'] == dict(x=1))
-        assert('time+' not in child.data)
+        assert 'General' in child.data['description']
+        assert 'description' not in child.data['description']
+        assert child.data['tags'] == ['Tier1']
+        assert child.data['time'] == 5
+        assert child.data['vars'] == dict(x=1)
+        assert 'time+' not in child.data
         with pytest.raises(utils.MergeError):
             child.data["disabled-"] = True
             child.inherit()
@@ -154,37 +154,37 @@ class TestTree:
     def test_merge_deep(self):
         """ Merging a deeply nested dictionary """
         child = self.merge.find('/parent/buried')
-        assert(child.data['very']['deep']['dict'] == dict(x=2, y=1, z=0))
+        assert child.data['very']['deep']['dict'] == dict(x=2, y=1, z=0)
 
     def test_get(self):
         """ Get attributes """
-        assert(isinstance(self.wget.get(), dict))
-        assert('Petr' in self.wget.get('tester'))
+        assert isinstance(self.wget.get(), dict)
+        assert 'Petr' in self.wget.get('tester')
 
     def test_show(self):
         """ Show metadata """
-        assert(isinstance(self.wget.show(brief=True), type("")))
-        assert(self.wget.show(brief=True).endswith("\n"))
-        assert(isinstance(self.wget.show(), type("")))
-        assert(self.wget.show().endswith("\n"))
-        assert('tester' in self.wget.show())
+        assert isinstance(self.wget.show(brief=True), type(""))
+        assert self.wget.show(brief=True).endswith("\n")
+        assert isinstance(self.wget.show(), type(""))
+        assert self.wget.show().endswith("\n")
+        assert 'tester' in self.wget.show()
 
     def test_update(self):
         """ Update data """
         data = self.wget.get()
         self.wget.update(None)
-        assert(self.wget.data == data)
+        assert self.wget.data == data
 
     def test_find_node(self):
         """ Find node by name """
-        assert(self.wget.find("non-existent") is None)
+        assert self.wget.find("non-existent") is None
         protocols = self.wget.find('/protocols')
-        assert(isinstance(protocols, Tree))
+        assert isinstance(protocols, Tree)
 
     def test_find_root(self):
         """ Find metadata tree root """
         tree = Tree(os.path.join(EXAMPLES, "wget", "protocols"))
-        assert(tree.find("/download/test"))
+        assert tree.find("/download/test")
 
     def test_yaml_syntax_errors(self):
         """ Handle YAML syntax errors """
@@ -343,12 +343,12 @@ class TestRemote:
 
         # Full identifier
         node = Tree.node(reference)
-        assert (node.get() == expected_data)
+        assert node.get() == expected_data
 
         # Default ref
         reference.pop('ref')
         node = Tree.node(reference)
-        assert (node.get() == expected_data)
+        assert node.get() == expected_data
 
         # Raise exception for invalid tree nodes
         with pytest.raises(utils.ReferenceError):

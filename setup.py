@@ -74,6 +74,6 @@ default_setup = dict(
     provides=__provides__,
     scripts=__scripts__,
     version=__version__,
-)
+    )
 
 setup(**default_setup)

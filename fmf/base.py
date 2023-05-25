@@ -486,8 +486,8 @@ class Tree:
                     content = datafile.read()
                     data = YAML(typ="safe").load(content)
             except (YAMLError, DuplicateKeyError) as error:
-                raise(utils.FileError(
-                    f"Failed to parse '{fullpath}'.\n{error}"))
+                raise utils.FileError(
+                    f"Failed to parse '{fullpath}'.\n{error}")
             log.data(pretty(data))
             # Handle main.fmf as data for self
             if filename == MAIN:
@@ -524,7 +524,7 @@ class Tree:
         for name in list(self.children.keys()):
             child = self.children[name]
             if not child.children and not child._updated:
-                del(self.children[name])
+                del self.children[name]
                 log.debug("Empty tree '{0}' removed.".format(child.name))
 
     def climb(self, whole=False):
