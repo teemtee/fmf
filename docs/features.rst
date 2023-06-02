@@ -6,15 +6,18 @@
 Let's demonstrate the features on a simple wget example with the
 following directory structure::
 
-    wget
-    ├── download
-    ├── protocols
-    │   ├── ftp
-    │   ├── http
-    │   └── https
-    ├── recursion
-    └── smoke
+    wget/
+    ├── download/
+    ├── protocols/
+    │   ├── ftp/
+    │   ├── http/
+    │   └── https/
+    ├── recursion/
+    ├── smoke/
+    ├── main.fmf
+    └── runtest.sh
 
+    7 directories, 2 files
 
 Simple
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,7 +28,7 @@ metadata for a single test look like this::
     description: Check basic download options
     tester: Petr Šplíchal <psplicha@redhat.com>
     tags: [Tier2, TierSecurity]
-    test: runtest.sh
+    test: ./runtest.sh
     time: 3 min
 
 
