@@ -123,6 +123,11 @@ Values are always converted to a string representation. Each
 value is treated as if it was a component with version. Name of
 the dimension doesn't matter, all are treated equally.
 
+Values are case-sensitive by default, which means that values like
+``centos`` and ``CentOS`` are considered different. When calling
+the ``adjust()`` method on the tree, ``case_sensitive=False`` can
+be used to make the value comparison case insensitive.
+
 The characters ``:`` or ``.`` or ``-`` are used as version
 separators and are handled in the same way. The following examples
 demonstrate how the ``name`` and ``version`` parts are parsed::

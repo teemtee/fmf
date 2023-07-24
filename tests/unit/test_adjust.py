@@ -221,3 +221,15 @@ class TestAdjust:
         mock_callback = MagicMock(name='<mock>callback')
         mini.adjust(centos, decision_callback=mock_callback)
         mock_callback.assert_called_once_with(mini, rule, True)
+
+    def test_case_sensitive(self, mini, centos):
+        """ Make sure the adjust rules are case-sensitive by default """
+        mini.data['adjust'] = dict(when='distro = CentOS', enabled=False)
+        mini.adjust(centos)
+        assert mini.get('enabled') is True
+
+    def test_case_insensitive(self, mini, centos):
+        """ Make sure the adjust rules are case-insensitive when requested """
+        mini.data['adjust'] = dict(when='distro = CentOS', enabled=False)
+        mini.adjust(centos, case_sensitive=False)
+        assert mini.get('enabled') is False

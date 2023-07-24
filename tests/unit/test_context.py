@@ -269,6 +269,19 @@ class TestExample:
         assert distro.matches("distro < centos-stream-9, fedora-34")
         assert not distro.matches("distro < fedora-34, centos-stream-8")
 
+    def test_case_insensitive(self):
+        """ Test for case-insensitive matching """
+        python = Context(component="python3-3.8.5-5.fc32")
+        python.case_sensitive = False
+
+        assert python.matches("component == python3")
+        assert not python.matches("component == invalid")
+        assert python.matches("component == PYTHON3,INVALID")
+        assert python.matches("component == Python3")
+        assert python.matches("component == PyTHon3-3.8.5-5.FC32")
+        assert python.matches("component > python3-3.7")
+        assert python.matches("component < PYTHON3-3.9")
+
 
 class TestContextValue:
     impossible_split = ["x86_64", "ppc64", "fips", "errata"]
@@ -304,6 +317,9 @@ class TestContextValue:
         assert first.version_cmp(ContextValue("name"), minor_mode=True) == 0
         assert first.version_cmp(ContextValue("name"), ordered=True) == 0
         assert first.version_cmp(ContextValue("name"), ordered=False) == 0
+        assert first.version_cmp(ContextValue("NAME"), ordered=True, case_sensitive=False) == 0
+        assert first.version_cmp(ContextValue("NAME"), ordered=False, case_sensitive=False) == 0
+        assert first.version_cmp(ContextValue("NAME"), ordered=False, case_sensitive=True) == 1
 
         assert first.version_cmp(ContextValue("name-1"), ordered=False) == 1
         with pytest.raises(CannotDecide):
@@ -329,6 +345,11 @@ class TestContextValue:
                 ContextValue("name-1-2"),
                 minor_mode=True,
                 ordered=False)
+        with pytest.raises(CannotDecide):
+            first.version_cmp(
+                ContextValue("NAME"),
+                ordered=True,
+                case_sensitive=True)
 
         second = ContextValue("name-1-2-3")
         assert second.version_cmp(ContextValue("name"), ordered=False) == 0
@@ -403,6 +424,8 @@ class TestContextValue:
     def test_compare(self):
         assert ContextValue.compare("1", "1") == 0
         assert ContextValue.compare("a", "a") == 0
+        assert ContextValue.compare("1", "1", case_sensitive=False) == 0
+        assert ContextValue.compare("A", "a", case_sensitive=False) == 0
 
         assert ContextValue.compare("rawhide", "aaa") == 1
         assert ContextValue.compare("rawhide", "9999") == 1
@@ -411,6 +434,17 @@ class TestContextValue:
 
     def test_string_conversion(self):
         assert Context.parse_value(1) == ContextValue("1")
+
+    def test_compare_with_case(self):
+        assert ContextValue._compare_with_case("1", "1", case_sensitive=True)
+        assert ContextValue._compare_with_case("name_1", "name_1", case_sensitive=True)
+        assert not ContextValue._compare_with_case("NAME", "name", case_sensitive=True)
+        assert not ContextValue._compare_with_case("name_1", "NAME_1", case_sensitive=True)
+
+        assert ContextValue._compare_with_case("1", "1", case_sensitive=False)
+        assert ContextValue._compare_with_case("name_1", "name_1", case_sensitive=False)
+        assert ContextValue._compare_with_case("NAME", "name", case_sensitive=False)
+        assert ContextValue._compare_with_case("name_1", "NAME_1", case_sensitive=False)
 
 
 class TestParser:

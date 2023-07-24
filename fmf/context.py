@@ -59,7 +59,7 @@ class ContextValue:
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, repr(self._to_compare))
 
-    def version_cmp(self, other, minor_mode=False, ordered=True):
+    def version_cmp(self, other, minor_mode=False, ordered=True, case_sensitive=True):
         """
         Comparing two ContextValue objects
 
@@ -87,6 +87,10 @@ class ContextValue:
                         -1 when self < other
                          0 when self == other
                          1 when self > other
+
+        case_sensitive:
+            False ... ignore case when comparing
+            True ... case matters when comparing
         """
         if not isinstance(other, self.__class__):
             raise CannotDecide("Invalid types.")
@@ -94,7 +98,8 @@ class ContextValue:
         if len(self._to_compare) == 0 or len(other._to_compare) == 0:
             raise CannotDecide("Empty name part.")
 
-        if self._to_compare[0] != other._to_compare[0]:
+        if not self._compare_with_case(
+                self._to_compare[0], other._to_compare[0], case_sensitive=case_sensitive):
             if ordered:
                 raise CannotDecide(
                     "Name parts differ, cannot compare for order.")
@@ -103,7 +108,8 @@ class ContextValue:
         if minor_mode and len(other._to_compare) > 1:
             # right side cares about 'major'
             try:
-                if self._to_compare[1] != other._to_compare[1]:
+                if not self._compare_with_case(
+                        self._to_compare[1], other._to_compare[1], case_sensitive=case_sensitive):
                     if ordered:
                         if len(other._to_compare) > 2:
                             # future Y comparison not allowed
@@ -119,7 +125,7 @@ class ContextValue:
         # Now we can compare version parts as long as other needs to
         compared = 0
         for first, second in zip(self._to_compare[1:], other._to_compare[1:]):
-            compared = self.compare(first, second)
+            compared = self.compare(first, second, case_sensitive=case_sensitive)
             if compared != 0:  # not equal - return immediately
                 return compared
         leftover_version_parts = len(other._to_compare) - len(self._to_compare)
@@ -138,7 +144,7 @@ class ContextValue:
             return -1  # other is larger (more pars)
 
     @staticmethod
-    def compare(first, second):
+    def compare(first, second, case_sensitive=True):
         """ compare two version parts """
         # Ideally use `from packaging import version` but we need older
         # python support too so very rough
@@ -148,11 +154,32 @@ class ContextValue:
             second_version = int(second)
         except ValueError:
             # fallback to compare as strings
-            first_version = first
-            second_version = second
+            if case_sensitive:
+                first_version = first
+                second_version = second
+            else:
+                first_version = first.casefold()
+                second_version = second.casefold()
         return (
             (first_version > second_version) -
             (first_version < second_version))
+
+    @staticmethod
+    def _compare_with_case(first, second, case_sensitive=True):
+        """
+        Compare two values based on the case sensitivity setting.
+
+        :param first: first value
+        :param second: second value
+        :param case_sensitive: If True (default), the comparison is case-sensitive.
+                               If False, the comparison is case-insensitive.
+
+        :return: True if the values match, False otherwise.
+        :rtype: bool
+        """
+        if case_sensitive:
+            return first == second
+        return first.casefold() == second.casefold()
 
     @staticmethod
     def _split_to_version(text):
@@ -197,7 +224,8 @@ class Context:
         """ '=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, ordered=False) == 0
+            return dimension_value.version_cmp(
+                it_val, ordered=False, case_sensitive=self.case_sensitive) == 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -205,7 +233,8 @@ class Context:
         """ '!=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, ordered=False) != 0
+            return dimension_value.version_cmp(
+                it_val, ordered=False, case_sensitive=self.case_sensitive) != 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -214,7 +243,7 @@ class Context:
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=False) == 0
+                it_val, minor_mode=True, ordered=False, case_sensitive=self.case_sensitive) == 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -223,7 +252,7 @@ class Context:
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=False) != 0
+                it_val, minor_mode=True, ordered=False, case_sensitive=self.case_sensitive) != 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -232,7 +261,7 @@ class Context:
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True) <= 0
+                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) <= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -241,7 +270,7 @@ class Context:
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True) < 0
+                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) < 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -249,7 +278,8 @@ class Context:
         """ '<' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, ordered=True) < 0
+            return dimension_value.version_cmp(
+                it_val, ordered=True, case_sensitive=self.case_sensitive) < 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -257,7 +287,8 @@ class Context:
         """ '<=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, ordered=True) <= 0
+            return dimension_value.version_cmp(
+                it_val, ordered=True, case_sensitive=self.case_sensitive) <= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -265,7 +296,8 @@ class Context:
         """ '>=' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, ordered=True) >= 0
+            return dimension_value.version_cmp(
+                it_val, ordered=True, case_sensitive=self.case_sensitive) >= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -274,7 +306,7 @@ class Context:
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True) >= 0
+                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) >= 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -282,7 +314,8 @@ class Context:
         """ '>' operator """
 
         def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(it_val, ordered=True) > 0
+            return dimension_value.version_cmp(
+                it_val, ordered=True, case_sensitive=self.case_sensitive) > 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -291,7 +324,7 @@ class Context:
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True) > 0
+                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) > 0
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -372,6 +405,7 @@ class Context:
         :raises InvalidContext
         """
         self._dimensions = {}
+        self.case_sensitive = True
 
         # Initialized with rule
         if args:
@@ -392,6 +426,14 @@ class Context:
             self._dimensions[dimension_name] = set(
                 [self.parse_value(val) for val in values]
                 )
+
+    @property
+    def case_sensitive(self) -> bool:
+        return self._case_sensitive
+
+    @case_sensitive.setter
+    def case_sensitive(self, value: bool):
+        self._case_sensitive = value
 
     @staticmethod
     def parse_rule(rule):
