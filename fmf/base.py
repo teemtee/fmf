@@ -6,6 +6,7 @@ import re
 import subprocess
 from io import open
 from pprint import pformat as pretty
+from typing import Any, Dict, Optional, Protocol
 
 import jsonschema
 from ruamel.yaml import YAML
@@ -28,6 +29,25 @@ IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Metadata
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+class AdjustCallback(Protocol):
+    """
+    A callback for per-rule notifications made by Tree.adjust()
+
+    Function be be called for every rule inspected by adjust().
+    It will be given three arguments: fmf tree being inspected,
+    current adjust rule, and whether the rule was skipped (``None``),
+    applied (``True``) or not applied (``False``).
+    """
+
+    def __call__(
+            self,
+            node: 'Tree',
+            rule: Dict[str, Any],
+            applied: Optional[bool]) -> None:
+        pass
+
 
 class Tree:
     """ Metadata Tree """
@@ -320,7 +340,7 @@ class Tree:
         log.debug("Data for '{0}' updated.".format(self))
         log.data(pretty(self.data))
 
-    def adjust(self, context, key='adjust', undecided='skip'):
+    def adjust(self, context, key='adjust', undecided='skip', decision_callback=None):
         """
         Adjust tree data based on provided context and rules
 
@@ -334,6 +354,10 @@ class Tree:
         context dimension is not defined. By default, such rules are
         skipped. In order to raise the fmf.context.CannotDecide
         exception in such cases use undecided='raise'.
+
+        Optional 'decision_callback' callback would be called for every adjust
+        rule inspected, with three arguments: current fmf node, current
+        adjust rule, and whether it was applied or not.
         """
 
         # Check context sanity
@@ -363,6 +387,8 @@ class Tree:
             if not isinstance(rule, dict):
                 raise utils.FormatError("Adjust rule should be a dictionary.")
 
+            original_rule = rule.copy()
+
             # Missing 'when' means always enabled rule
             try:
                 condition = rule.pop('when')
@@ -382,13 +408,22 @@ class Tree:
             # Apply remaining rule attributes if context matches
             try:
                 if context.matches(condition):
+                    if decision_callback:
+                        decision_callback(self, original_rule, True)
+
                     self._merge_special(self.data, rule)
 
                     # First matching rule wins, skip the rest unless continue
                     if not continue_:
                         break
+                else:
+                    if decision_callback:
+                        decision_callback(self, original_rule, False)
             # Handle undecided rules as requested
             except fmf.context.CannotDecide:
+                if decision_callback:
+                    decision_callback(self, original_rule, None)
+
                 if undecided == 'skip':
                     continue
                 elif undecided == 'raise':
@@ -400,7 +435,7 @@ class Tree:
 
         # Adjust all child nodes as well
         for child in self.children.values():
-            child.adjust(context, key, undecided)
+            child.adjust(context, key, undecided, decision_callback=decision_callback)
 
     def get(self, name=None, default=None):
         """

@@ -1,4 +1,5 @@
 import copy
+from unittest.mock import MagicMock
 
 import pytest
 from ruamel.yaml import YAML
@@ -204,3 +205,19 @@ class TestAdjust:
         full.adjust(fedora)
         extend = full.find('/extend')
         assert extend.get('require') == ['one', 'two', 'three']
+
+    def test_adjust_callback(self, mini, fedora, centos):
+        # From the mini tree
+        rule = mini.data['adjust']
+
+        mock_callback = MagicMock(name='<mock>callback')
+        mini.adjust(fmf.Context(), decision_callback=mock_callback)
+        mock_callback.assert_called_once_with(mini, rule, None)
+
+        mock_callback = MagicMock(name='<mock>callback')
+        mini.adjust(fedora, decision_callback=mock_callback)
+        mock_callback.assert_called_once_with(mini, rule, False)
+
+        mock_callback = MagicMock(name='<mock>callback')
+        mini.adjust(centos, decision_callback=mock_callback)
+        mock_callback.assert_called_once_with(mini, rule, True)
