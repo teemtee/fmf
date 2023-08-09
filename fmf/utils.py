@@ -1,5 +1,7 @@
 """ Logging, config, constants & utilities """
 
+from __future__ import annotations
+
 import copy
 import logging
 import os
@@ -10,7 +12,8 @@ import sys
 import time
 import warnings
 from io import StringIO
-from typing import Any, List, NamedTuple
+# TODO: py3.10: typing.Optional, typing.Union -> '|' operator
+from typing import Any, NamedTuple, Optional
 
 from filelock import FileLock, Timeout
 from ruamel.yaml import YAML, scalarstring
@@ -89,6 +92,7 @@ class ReferenceError(GeneralError):
 
 class FetchError(GeneralError):
     """ Fatal error in helper command while fetching """
+
     # Keep previously used format of the message
 
     def __str__(self):
@@ -194,7 +198,8 @@ def info(message, newline=True):
 #  Filtering
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def evaluate(expression, data, _node=None):
+def evaluate(expression: str, data: fmf.base.TreeData,
+             _node: Optional[fmf.base.Tree] = None) -> Any:
     """
     Evaluate arbitrary Python expression against given data
 
@@ -210,7 +215,8 @@ def evaluate(expression, data, _node=None):
         raise FilterError("Internal key is not defined: {}".format(error))
 
 
-def filter(filter, data, sensitive=True, regexp=False):
+def filter(filter: str, data: fmf.base.TreeData,
+           sensitive: bool = True, regexp: bool = False) -> bool:
     """
     Return true if provided filter matches given dictionary of values
 
@@ -322,6 +328,7 @@ def filter(filter, data, sensitive=True, regexp=False):
     # At least one clause must be true
     return any([check_clause(clause)
                 for clause in re.split(r"\s*\|\s*", filter)])
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Logging
@@ -620,6 +627,7 @@ def invalidate_cache():
     if issues:  # pragma: no cover
         raise GeneralError("\n".join(issues))
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Tree from the Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -755,7 +763,7 @@ def fetch_repo(url, ref=None, destination=None, env=None):
                 if os.path.isfile(os.path.join(destination, '.git', 'shallow')):
                     # Make fetch get all remote refs (branches...)
                     run(["git", "config", "remote.origin.fetch",
-                        "+refs/heads/*:refs/remotes/origin/*"], cwd=destination)
+                         "+refs/heads/*:refs/remotes/origin/*"], cwd=destination)
                     # Fetch the whole history
                     run(['git', 'fetch', '--unshallow'], cwd=destination)
                     run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
@@ -852,4 +860,4 @@ class JsonSchemaValidationResult(NamedTuple):
     """ Represents JSON Schema validation result """
 
     result: bool
-    errors: List[Any]
+    errors: list[Any]
