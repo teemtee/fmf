@@ -1,12 +1,10 @@
 # Prepare variables
 TMP = $(CURDIR)/tmp
-VERSION = $(shell grep ^Version fmf.spec | sed 's/.* //')
-COMMIT = $(shell git rev-parse --short HEAD)
-REPLACE_VERSION = "s/running from the source/$(VERSION) ($(COMMIT))/"
+VERSION = $(hatch version)
 PACKAGE = fmf-$(VERSION)
 FILES = LICENSE README.rst \
-		Makefile fmf.spec setup.py \
-		examples fmf bin tests
+		Makefile fmf.spec pyproject.toml \
+		examples fmf tests
 
 # Define special targets
 all: docs packages
@@ -19,11 +17,11 @@ tmp:
 
 # Run the test suite, optionally with coverage
 test: tmp
-	pytest tests/unit -c tests/unit/pytest.ini
+	pytest tests/unit
 smoke: tmp
-	pytest tests/unit/test_smoke.py -c tests/unit/pytest.ini
+	pytest tests/unit/test_smoke.py
 coverage: tmp
-	coverage run --source=fmf,bin -m py.test -c tests/unit/pytest.ini tests
+	coverage run --source=fmf -m py.test tests
 	coverage report
 	coverage annotate
 
@@ -31,23 +29,15 @@ coverage: tmp
 # Build documentation, prepare man page
 docs: man
 	cd docs && make html
-man: source
+man:
 	cp docs/header.txt $(TMP)/man.rst
 	tail -n+7 README.rst >> $(TMP)/man.rst
 	rst2man $(TMP)/man.rst > $(TMP)/$(PACKAGE)/fmf.1
 
 
 # RPM packaging
-source: clean tmp
-	mkdir -p $(TMP)/SOURCES
-	mkdir -p $(TMP)/$(PACKAGE)
-	cp -a $(FILES) $(TMP)/$(PACKAGE)
-	sed -i $(REPLACE_VERSION) $(TMP)/$(PACKAGE)/fmf/__init__.py
-tarball: source man
-	cd $(TMP) && tar cfz SOURCES/$(PACKAGE).tar.gz $(PACKAGE)
-	@echo ./tmp/SOURCES/$(PACKAGE).tar.gz
-version:
-	@echo "$(VERSION)"
+tarball: man
+	python3 -m build --sdist
 rpm: tarball
 	rpmbuild --define '_topdir $(TMP)' -bb fmf.spec
 srpm: tarball
@@ -57,10 +47,9 @@ packages: rpm srpm
 
 # Python packaging
 wheel:
-	python setup.py bdist_wheel
-	python3 setup.py bdist_wheel
-upload:
-	twine upload dist/*.whl
+	python3 -m build
+upload: wheel tarball
+	twine upload dist/*
 
 
 # Vim tags and cleanup
