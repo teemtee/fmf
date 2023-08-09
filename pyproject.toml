@@ -40,7 +40,6 @@ Homepage = 'https://github.com/psss/fmf'
 [project.optional-dependencies]
 tests = [
     'pytest',
-    'python-coveralls',
 ]
 dev = [
     'fmf[tests]',
