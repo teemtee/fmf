@@ -1,5 +1,5 @@
 Name:          fmf
-Version:       1.4.1
+Version:       0.0.0
 Release:       1%{?dist}
 
 Summary:       Flexible Metadata Format
