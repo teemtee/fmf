@@ -209,3 +209,12 @@ def main(arguments=None, path=None):
     """ Parse options, do what is requested """
     parser = Parser(arguments, path)
     return parser.output
+
+
+def cli_entry():
+    try:
+        main()
+    except fmf.utils.GeneralError as error:
+        if "--debug" not in sys.argv:
+            fmf.utils.log.error(error)
+        raise
