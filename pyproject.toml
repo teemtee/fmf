@@ -54,7 +54,7 @@ docs = [
 ]
 
 [project.scripts]
-fmf = 'fmf.cli:main'
+fmf = 'fmf.cli:cli_entry'
 
 [tool.pytest.ini_options]
 markers = [
