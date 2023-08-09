@@ -1,6 +1,6 @@
 Name: fmf
-Version: 1.3.0
-Release: 1%{?dist}
+Version: 0.0.0
+Release: %autorelease
 
 Summary: Flexible Metadata Format
 License: GPLv2+
