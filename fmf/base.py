@@ -45,7 +45,7 @@ JsonSchema: TypeAlias = Mapping[str, Any]
 #  Metadata
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class Tree:
+class Tree(Mapping[str, Union['Tree', DataType]]):
     """ Metadata Tree """
     parent: Optional[Tree]
     children: dict[str, Tree]
@@ -71,7 +71,7 @@ class Tree:
         """
 
         # Bail out if no data and no parent given
-        if not data and not parent:
+        if not data and parent is None:
             raise utils.GeneralError(
                 "No data or parent provided to initialize the tree.")
 
@@ -835,3 +835,18 @@ class Tree:
             return self.children[key[1:]]
         else:
             return self.data[key]
+
+    def __len__(self) -> int:
+        return len(self.children) + len(self.data)
+
+    def __iter__(self) -> Iterator[str]:
+        for c in self.children:
+            yield f"/{c}"
+        for d in self.data:
+            yield d
+
+    def __contains__(self, item: str):
+        if item.startswith("/"):
+            return item[1:] in self.children
+        else:
+            return item in self.data
