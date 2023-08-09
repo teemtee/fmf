@@ -1,0 +1,66 @@
+[build-system]
+requires = ['hatchling']
+build-backend = 'hatchling.build'
+
+[project]
+name = 'fmf'
+authors = [
+    { name = 'Petr Splichal', email = 'psplicha@redhat.com' },
+]
+maintainers = [
+    { name = 'Petr Splichal', email = 'psplicha@redhat.com' },
+]
+description = 'Flexible Metadata Format'
+readme = 'README.rst'
+license = 'GPL-2.0-or-later'
+license-files = { paths = ['LICENSE'] }
+requires-python = '>=3.9'
+classifiers = [
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Topic :: Utilities',
+]
+version = '1.3.0'
+keywords = [
+    'metadata',
+    'testing',
+]
+dependencies = [
+    'ruamel.yaml',
+    'filelock',
+    'jsonschema',
+]
+
+[project.urls]
+Homepage = 'https://github.com/teemtee/fmf'
+Documentation = 'https://fmf.readthedocs.io'
+
+[project.optional-dependencies]
+tests = [
+    'pytest',
+]
+tests-cov = [
+    'fmf[tests]',
+    'pytest-cov',
+]
+docs = [
+    'sphinx',
+    'sphinx_rtd_theme',
+]
+
+[project.scripts]
+fmf = 'fmf.cli:main'
+
+[tool.hatch.build.targets.wheel]
+packages = ['fmf']
+
+[tool.pytest.ini_options]
+markers = [
+    "web: tests which need to access the web",
+]
+testpaths = [
+    'tests',
+]
