@@ -42,7 +42,7 @@ This package contains the Python 3 module.
 
 
 %generate_buildrequires
-%pyproject_buildrequires -x tests
+%pyproject_buildrequires -x tests %{?epel:-w}
 
 
 %build
