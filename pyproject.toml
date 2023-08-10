@@ -31,6 +31,7 @@ dependencies = [
     'ruamel.yaml',
     'filelock',
     'jsonschema',
+    'typing-extensions ; python_version<"3.10"',
 ]
 dynamic = ['version']
 
@@ -78,3 +79,12 @@ testpaths = [
 
 [tool.coverage]
 run.source = ["fmf"]
+
+[tool.mypy]
+strict = true
+files = ["fmf"]
+python_version = "3.9"
+warn_unused_configs = true
+show_error_codes = true
+disallow_untyped_defs = false
+follow_imports = "normal"

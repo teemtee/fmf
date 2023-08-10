@@ -19,9 +19,15 @@ See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 from __future__ import annotations
 
 import re
+import sys
 from collections.abc import Callable
 # TODO: py3.10: typing.Optional, typing.Union -> '|' operator
-from typing import Optional, TypeAlias, Union
+from typing import Optional, Union
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 # TypeHints
 ExpressionType: TypeAlias = tuple[Optional[str], Union[str, bool], Optional[list[str]]]
