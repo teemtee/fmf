@@ -5,16 +5,6 @@ synced_files:
 upstream_package_name: fmf
 downstream_package_name: fmf
 
-actions:
-  create-archive:
-  - make tarball
-  get-current-version:
-  - make version
-
-srpm_build_deps:
-  - make
-  - python3-docutils
-
 jobs:
   - job: copr_build
     trigger: pull_request
