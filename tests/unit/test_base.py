@@ -3,14 +3,17 @@ import queue
 import tempfile
 import threading
 import time
+from pathlib import Path
 from shutil import rmtree
 
 import pytest
+from click.testing import CliRunner
 from ruamel.yaml import YAML
 
-import fmf.cli
+import fmf
 import fmf.utils as utils
 from fmf.base import Tree
+from fmf.cli import cd, main
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -186,42 +189,39 @@ class TestTree:
         tree = Tree(os.path.join(EXAMPLES, "wget", "protocols"))
         assert tree.find("/download/test")
 
-    def test_yaml_syntax_errors(self):
+    def test_yaml_syntax_errors(self, tmp_path):
         """ Handle YAML syntax errors """
-        path = tempfile.mkdtemp()
-        fmf.cli.main("fmf init", path)
-        with open(os.path.join(path, "main.fmf"), "w") as main:
-            main.write("missing\ncolon:")
-        with pytest.raises(utils.FileError):
-            fmf.Tree(path)
-        rmtree(path)
+        with cd(tmp_path):
+            CliRunner().invoke(main, args=['init'])
+            with open("main.fmf", "w") as main_fmf:
+                main_fmf.write("missing\ncolon:")
+            with pytest.raises(utils.FileError):
+                fmf.Tree('.')
 
-    def test_yaml_duplicate_keys(self):
+    def test_yaml_duplicate_keys(self, tmp_path):
         """ Handle YAML duplicate keys """
-        path = tempfile.mkdtemp()
-        fmf.cli.main("fmf init", path)
+        with cd(tmp_path):
+            CliRunner().invoke(main, args=['init'])
 
-        # Simple test
-        with open(os.path.join(path, "main.fmf"), "w") as main:
-            main.write("a: b\na: c\n")
-        with pytest.raises(utils.FileError):
-            fmf.Tree(path)
+            # Simple test
+            with open("main.fmf", "w") as main_fmf:
+                main_fmf.write("a: b\na: c\n")
+            with pytest.raises(utils.FileError):
+                fmf.Tree('.')
 
-        # Add some hierarchy
-        subdir = os.path.join(path, "dir")
-        os.makedirs(subdir)
-        with open(os.path.join(subdir, "a.fmf"), "w") as new_file:
-            new_file.write("a: d\n")
-        with pytest.raises(utils.FileError):
-            fmf.Tree(path)
+            # Add some hierarchy
+            subdir = Path(".", "dir")
+            subdir.mkdir()
+            with open(subdir / "a.fmf", "w") as new_file:
+                new_file.write("a: d\n")
+            with pytest.raises(utils.FileError):
+                fmf.Tree('.')
 
-        # Remove duplicate key, check that inheritance doesn't
-        # raise an exception
-        with open(os.path.join(path, "main.fmf"), "w") as main:
-            main.write("a: b\n")
-        fmf.Tree(path)
-
-        rmtree(path)
+            # Remove duplicate key, check that inheritance doesn't
+            # raise an exception
+            with open("main.fmf", "w") as main_fmf:
+                main_fmf.write("a: b\n")
+            fmf.Tree('.')
 
     def test_inaccessible_directories(self):
         """ Inaccessible directories should be silently ignored """

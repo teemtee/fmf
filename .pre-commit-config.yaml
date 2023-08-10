@@ -45,4 +45,5 @@ repos:
       - id: mypy
         files: ^(fmf)
         additional_dependencies:
+          - click
           - types-jsonschema
