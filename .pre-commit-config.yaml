@@ -44,3 +44,5 @@ repos:
     hooks:
       - id: mypy
         files: ^(fmf)
+        additional_dependencies:
+          - types-jsonschema
