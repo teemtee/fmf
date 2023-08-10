@@ -11,6 +11,7 @@ from fmf.utils import filter
 __version__ = importlib.metadata.version("fmf")
 
 __all__ = [
+    "__version__",
     "Context",
     "Tree",
     "filter",

@@ -31,6 +31,8 @@ dependencies = [
     'ruamel.yaml',
     'filelock',
     'jsonschema',
+    'click',
+    'click-option-group',
 ]
 dynamic = ['version']
 
@@ -50,7 +52,7 @@ docs = [
 ]
 
 [project.scripts]
-fmf = 'fmf.cli:cli_entry'
+fmf = 'fmf.cli:main'
 
 [tool.hatch]
 version.source = 'vcs'

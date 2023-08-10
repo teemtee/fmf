@@ -6,6 +6,7 @@ import time
 from shutil import rmtree
 
 import pytest
+from click.testing import CliRunner
 from ruamel.yaml import YAML
 
 import fmf.cli
@@ -231,7 +232,7 @@ class TestTree:
     def test_yaml_syntax_errors(self, tmp_path):
         """ Handle YAML syntax errors """
         with utils.cd(tmp_path):
-            fmf.cli.main("fmf init")
+            CliRunner().invoke(fmf.cli.main, "init")
             with (tmp_path / "main.fmf").open("w") as main:
                 main.write("missing\ncolon:")
             with pytest.raises(utils.FileError):
@@ -241,7 +242,7 @@ class TestTree:
     def test_yaml_duplicate_keys(self, tmp_path):
         """ Handle YAML duplicate keys """
         with utils.cd(tmp_path):
-            fmf.cli.main("fmf init")
+            CliRunner().invoke(fmf.cli.main, "init")
 
             # Simple test
             with (tmp_path / "main.fmf").open("w") as main:
