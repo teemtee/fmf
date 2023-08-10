@@ -17,18 +17,16 @@ tmp:
 
 # Run the test suite, optionally with coverage
 test: tmp
-	pytest tests/unit
+	hatch run test:unit
 smoke: tmp
-	pytest tests/unit/test_smoke.py
+	hatch run test:smoke
 coverage: tmp
-	coverage run --source=fmf -m py.test tests
-	coverage report
-	coverage annotate
+	hatch run cov:cov
 
 
 # Build documentation, prepare man page
 docs: man
-	cd docs && make html
+	hatch run docs:html
 man:
 	cp docs/header.txt $(TMP)/man.rst
 	tail -n+7 README.rst >> $(TMP)/man.rst
@@ -37,7 +35,7 @@ man:
 
 # RPM packaging
 tarball: man
-	python3 -m build --sdist
+	hatch build -t sdist
 rpm: tarball
 	rpmbuild --define '_topdir $(TMP)' -bb fmf.spec
 srpm: tarball
@@ -47,9 +45,9 @@ packages: rpm srpm
 
 # Python packaging
 wheel:
-	python3 -m build
+	hatch build -t wheel
 upload: wheel tarball
-	twine upload dist/*
+	hatch publish
 
 
 # Vim tags and cleanup
