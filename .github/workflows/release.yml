@@ -26,6 +26,6 @@ jobs:
           ref: ${{ github.event.inputs.ref }}
         if: ${{ github.event_name == 'workflow_dispatch' }}
       - name: Build package
-        run: pipx run build
+        run: pipx hatch build
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
