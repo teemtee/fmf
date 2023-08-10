@@ -23,10 +23,3 @@ prepare:
       # newer yq requires tomlkit>=0.11.7 which is python 3.7+ only.
       - pip3 install --user yq==3.1.1 || pip3 install yq==3.1.1
       - yq --help
-
-adjust+:
-  - when: distro == centos-stream-8 and trigger == commit
-    environment+:
-      # Default PATH, spiked with ~/.local/bin for Python packages installed with --user.
-      # This is needed on Centos Stream 8 where the user-specific path is not in PATH.
-      PATH: "/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
