@@ -30,7 +30,12 @@ MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
 
 # TypeHints
-DataType: TypeAlias = Any
+RawDataType: TypeAlias = Union[None, int, float, str, bool]
+ListDataType: TypeAlias = list[Union[RawDataType, 'ListDataType', 'DictDataType']]
+DictDataType: TypeAlias = dict[str, Union[RawDataType, ListDataType, 'DictDataType']]
+# Equivalent to:
+# JSON: TypeAlias = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
+DataType: TypeAlias = Union[RawDataType, ListDataType, DictDataType]
 TreeData: TypeAlias = dict[str, DataType]
 TreeDataPath: TypeAlias = Union[TreeData, str]  # Either TreeData or path
 JsonSchema: TypeAlias = Mapping[str, Any]
