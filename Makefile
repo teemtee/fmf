@@ -1,11 +1,10 @@
 # Prepare variables
 TMP = $(CURDIR)/tmp
 VERSION = $(hatch version)
-COMMIT = $(shell git rev-parse --short HEAD)
 PACKAGE = fmf-$(VERSION)
 FILES = LICENSE README.rst \
-		Makefile fmf.spec setup.py \
-		examples fmf bin tests
+		Makefile fmf.spec pyproject.toml \
+		examples fmf tests
 
 # Define special targets
 all: docs packages
@@ -18,11 +17,11 @@ tmp:
 
 # Run the test suite, optionally with coverage
 test: tmp
-	pytest tests/unit -c tests/unit/pytest.ini
+	pytest tests/unit
 smoke: tmp
-	pytest tests/unit/test_smoke.py -c tests/unit/pytest.ini
+	pytest tests/unit/test_smoke.py
 coverage: tmp
-	coverage run --source=fmf,bin -m py.test -c tests/unit/pytest.ini tests
+	coverage run --source=fmf -m py.test tests
 	coverage report
 	coverage annotate
 
@@ -53,8 +52,7 @@ packages: rpm srpm
 
 # Python packaging
 wheel:
-	python setup.py bdist_wheel
-	python3 setup.py bdist_wheel
+	python3 -m build
 upload:
 	twine upload dist/*.whl
 
