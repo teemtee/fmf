@@ -6,11 +6,17 @@ import copy
 import os
 import re
 import subprocess
+import sys
 from collections.abc import Iterator, Mapping
 from io import open
 from pprint import pformat as pretty
 # TODO: py3.10: typing.Optional, typing.Union -> '|' operator
-from typing import Any, Optional, TypeAlias, Union
+from typing import Any, Optional, Union
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 import jsonschema
 from ruamel.yaml import YAML

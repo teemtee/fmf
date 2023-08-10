@@ -24,6 +24,7 @@ install_requires = [
     'ruamel.yaml',
     'filelock',
     'jsonschema',
+    'typing-extensions ; python_version<"3.10"',
     ]
 extras_require = {
     'docs': ['sphinx>=3', 'sphinx_rtd_theme'],
