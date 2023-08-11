@@ -16,11 +16,11 @@ license = 'GPL-2.0-or-later'
 license-files = { paths = ['LICENSE'] }
 requires-python = '>=3.9'
 classifiers = [
-    'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
     'Natural Language :: English',
-    'Programming Language :: Python :: 2.7',
-    'Programming Language :: Python :: 3.6',
-    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
     'Topic :: Utilities',
 ]
 keywords = [
@@ -40,6 +40,10 @@ Homepage = 'https://github.com/psss/fmf'
 [project.optional-dependencies]
 tests = [
     'pytest',
+]
+tests-cov = [
+    'fmf[tests]',
+    'pytest-cov',
 ]
 dev = [
     'fmf[tests]',
@@ -71,3 +75,6 @@ markers = [
 testpaths = [
     'tests',
 ]
+
+[tool.coverage]
+run.source = ["fmf"]
