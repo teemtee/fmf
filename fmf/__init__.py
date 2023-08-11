@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from fmf._version import __version__  # noqa: F401
+import importlib.metadata
+
 from fmf.base import Tree
 from fmf.context import Context
 from fmf.utils import filter
+
+__version__ = importlib.metadata.version("fmf")
 
 __all__ = [
     "Context",
