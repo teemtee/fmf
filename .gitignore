@@ -10,4 +10,3 @@ docs/_build
 docs/spec
 docs/stories
 __pycache__
-/fmf/_version.py

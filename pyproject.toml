@@ -60,7 +60,6 @@ fmf = 'fmf.cli:cli_entry'
 [tool.hatch]
 version.source = 'vcs'
 version.raw-options.version_scheme = 'post-release'
-build.hooks.vcs.version-file = "fmf/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ['fmf']
