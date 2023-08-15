@@ -7,7 +7,7 @@ import os
 import re
 import subprocess
 import sys
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Iterator, Mapping
 from io import open
 from pprint import pformat as pretty
 # TODO: py3.10: typing.Optional, typing.Union -> '|' operator
@@ -136,6 +136,17 @@ class Tree:
             self.inherit()
 
         log.debug(f"New tree '{self}' created.")
+
+    @property
+    def rel_name(self) -> str:
+        if self.parent is None:
+            assert self.name == "/"
+            return "/"
+        parent_name = self.parent.name
+        if not parent_name.endswith('/'):
+            parent_name = f"{parent_name}/"
+        assert parent_name in self.name
+        return self.name.removeprefix(parent_name)
 
     @property
     def commit(self) -> Union[str, bool]:
@@ -904,3 +915,29 @@ class Tree:
         child = self[str_path]
         assert isinstance(child, self.__class__)
         return child
+
+    def iterdir(self) -> Generator[Tree, None, None]:
+        yield from self.children.values()
+
+    def walk(self, top_down: bool = True) -> Iterator[tuple[Self, list[str], list[str]]]:
+        paths: list[Union[Self, tuple[Self, list[str], list[str]]]] = [self]
+        while paths:
+            path = paths.pop()
+            if isinstance(path, tuple):
+                yield path
+                continue
+
+            branch_names: list[str] = []
+            leaf_names: list[str] = []
+            for child in path.children.values():
+                if child.children:
+                    branch_names.append(child.rel_name)
+                else:
+                    leaf_names.append(child.rel_name)
+
+            if top_down:
+                yield path, branch_names, leaf_names
+            else:
+                paths.append((path, branch_names, leaf_names))
+            assert isinstance(path, Tree)
+            paths += [path[f"/{b}"] for b in reversed(branch_names)]  # type: ignore
