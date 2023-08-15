@@ -13,10 +13,12 @@ from pprint import pformat as pretty
 # TODO: py3.10: typing.Optional, typing.Union -> '|' operator
 from typing import Any, Optional, Union
 
+from _typeshed import StrPath
+
 if sys.version_info >= (3, 10):
-    from typing import TypeAlias
+    from typing import Self, TypeAlias
 else:
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, Self
 
 import jsonschema
 from ruamel.yaml import YAML
@@ -874,3 +876,31 @@ class Tree:
             return item[1:] in self.children
         else:
             return item in self.data
+
+    def __fspath__(self) -> str:
+        path = self.name
+        parent = self.parent
+        while parent is not None:
+            path = f"{parent}/{path}"
+        return path
+
+    def __truediv__(self: Self, key: StrPath) -> Self:
+        # TODO: Properly resolve path navigation e.g. /path/../other_path
+        key_str = str(key)
+        if not key_str.startswith('/'):
+            key_str = f"/{key_str}"
+        child = self[key_str]
+        assert isinstance(child, self.__class__)
+        return child
+
+    def __rtruediv__(self: Self, key: StrPath) -> Self:
+        # TODO: Implement if virtual tree is possible
+        raise NotImplementedError
+
+    def joinpath(self: Self, *other: StrPath) -> Self:
+        # TODO: Properly resolve path navigation e.g. /path/../other_path
+        str_path = '/'.join(list(*other))
+        str_path = f"/{str_path}"
+        child = self[str_path]
+        assert isinstance(child, self.__class__)
+        return child
