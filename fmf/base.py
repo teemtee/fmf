@@ -11,15 +11,18 @@ from collections.abc import (Generator, ItemsView, Iterator, KeysView, Mapping,
                              ValuesView)
 from io import open
 from pprint import pformat as pretty
-# TODO: py3.10: typing.Optional, typing.Union -> '|' operator
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING
 
-from _typeshed import StrPath
+if TYPE_CHECKING:
+    # TODO: py3.10: typing.Optional, typing.Union -> '|' operator
+    from typing import Any, Optional, Union
 
-if sys.version_info >= (3, 10):
-    from typing import Self, TypeAlias
-else:
-    from typing_extensions import TypeAlias, Self
+    from _typeshed import StrPath
+
+    if sys.version_info >= (3, 10):
+        from typing import Self, TypeAlias
+    else:
+        from typing_extensions import TypeAlias, Self
 
 import jsonschema
 from ruamel.yaml import YAML
@@ -38,16 +41,17 @@ SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
 
-# TypeHints
-RawDataType: TypeAlias = Union[None, int, float, str, bool]
-ListDataType: TypeAlias = list[Union[RawDataType, 'ListDataType', 'DictDataType']]
-DictDataType: TypeAlias = dict[str, Union[RawDataType, ListDataType, 'DictDataType']]
-# Equivalent to:
-# JSON: TypeAlias = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
-DataType: TypeAlias = Union[RawDataType, ListDataType, DictDataType]
-TreeData: TypeAlias = dict[str, DataType]
-TreeDataPath: TypeAlias = Union[TreeData, str]  # Either TreeData or path
-JsonSchema: TypeAlias = Mapping[str, Any]
+if TYPE_CHECKING:
+    # TypeHints
+    RawDataType: TypeAlias = Union[None, int, float, str, bool]
+    ListDataType: TypeAlias = list[Union[RawDataType, 'ListDataType', 'DictDataType']]
+    DictDataType: TypeAlias = dict[str, Union[RawDataType, ListDataType, 'DictDataType']]
+    # Equivalent to:
+    # JSON: TypeAlias = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
+    DataType: TypeAlias = Union[RawDataType, ListDataType, DictDataType]
+    TreeData: TypeAlias = dict[str, DataType]
+    TreeDataPath: TypeAlias = Union[TreeData, str]  # Either TreeData or path
+    JsonSchema: TypeAlias = Mapping[str, Any]
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
