@@ -7,7 +7,8 @@ import os
 import re
 import subprocess
 import sys
-from collections.abc import Generator, Iterator, Mapping
+from collections.abc import (Generator, ItemsView, Iterator, KeysView, Mapping,
+                             ValuesView)
 from io import open
 from pprint import pformat as pretty
 # TODO: py3.10: typing.Optional, typing.Union -> '|' operator
@@ -887,6 +888,15 @@ class Tree:
             return item[1:] in self.children
         else:
             return item in self.data
+
+    def keys(self) -> KeysView[str]:
+        return self.data.keys()
+
+    def values(self) -> ValuesView[DataType]:
+        return self.data.values()
+
+    def items(self) -> ItemsView[str, DataType]:
+        return self.data.items()
 
     def __fspath__(self) -> str:
         path = self.name
