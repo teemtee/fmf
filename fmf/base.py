@@ -338,8 +338,7 @@ class Tree:
         # Handle fmf directives first
         try:
             directives = data.pop("/")
-            assert isinstance(directives, dict)
-            self._process_directives(directives)
+            self._process_directives(directives)  # type: ignore
         except KeyError:
             pass
 
@@ -497,8 +496,11 @@ class Tree:
         # Save source file
         if source is not None:
             self.children[name].sources.append(source)
-            assert isinstance(data, dict)
-            self.children[name]._raw_data = copy.deepcopy(data)
+            if data is None:
+                self.children[name]._raw_data = {}
+            else:
+                assert isinstance(data, dict)
+                self.children[name]._raw_data = copy.deepcopy(data)
 
     def grow(self, path: str) -> None:
         """
@@ -692,7 +694,7 @@ class Tree:
         if 'url' in reference:
             tree = utils.fetch_tree(
                 str(reference.get('url')),
-                str(reference.get('ref')),
+                reference.get('ref'),  # type: ignore
                 str(reference.get('path', '.')).lstrip('/'))
         # Use local files
         else:
