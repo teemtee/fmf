@@ -1,0 +1,90 @@
+[build-system]
+requires = ['hatchling', 'hatch-vcs']
+build-backend = 'hatchling.build'
+
+[project]
+name = 'fmf'
+authors = [
+    { name = 'Petr Splichal', email = 'psplicha@redhat.com' },
+]
+maintainers = [
+    { name = 'Petr Splichal', email = 'psplicha@redhat.com' },
+]
+description = 'Flexible Metadata Format'
+readme = 'README.rst'
+license = 'GPL-2.0-or-later'
+license-files = { paths = ['LICENSE'] }
+requires-python = '>=3.9'
+classifiers = [
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Topic :: Utilities',
+]
+keywords = [
+    'metadata',
+    'testing',
+]
+dependencies = [
+    'ruamel.yaml',
+    'filelock',
+    'jsonschema',
+    'typing-extensions ; python_version<"3.10"',
+]
+dynamic = ['version']
+
+[project.urls]
+Homepage = 'https://github.com/psss/fmf'
+
+[project.optional-dependencies]
+tests = [
+    'pytest',
+]
+tests-cov = [
+    'fmf[tests]',
+    'pytest-cov',
+]
+dev = [
+    'fmf[tests]',
+    'pre-commit',
+]
+docs = [
+    'sphinx',
+    'sphinx_rtd_theme',
+]
+all = [
+    'fmf[dev]',
+    'fmf[docs]',
+]
+
+[project.scripts]
+fmf = 'fmf.cli:cli_entry'
+
+[tool.hatch]
+version.source = 'vcs'
+version.raw-options.version_scheme = 'post-release'
+
+[tool.hatch.build.targets.wheel]
+packages = ['fmf']
+
+[tool.pytest.ini_options]
+markers = [
+    "web: tests which need to access the web",
+]
+testpaths = [
+    'tests',
+]
+
+[tool.coverage]
+run.source = ["fmf"]
+
+[tool.mypy]
+strict = true
+files = ["fmf"]
+python_version = "3.9"
+warn_unused_configs = true
+show_error_codes = true
+disallow_untyped_defs = false
+follow_imports = "normal"

@@ -21,6 +21,7 @@ import os
 import os.path
 import shlex
 import sys
+from typing import Optional
 
 import fmf
 import fmf.utils as utils
@@ -32,8 +33,9 @@ import fmf.utils as utils
 
 class Parser:
     """ Command line options parser """
+    arguments: list[str]
 
-    def __init__(self, arguments=None, path=None):
+    def __init__(self, arguments: Optional[list[str]] = None, path: Optional[str] = None):
         """ Prepare the parser. """
         # Change current working directory (used for testing)
         if path is not None:
@@ -69,7 +71,7 @@ class Parser:
         self.output = ""
         getattr(self, "command_" + self.command)()
 
-    def options_select(self):
+    def options_select(self) -> None:
         """ Select by name, filter """
         group = self.parser.add_argument_group("Select")
         group.add_argument(
@@ -92,7 +94,7 @@ class Parser:
             "--whole", dest="whole", action="store_true",
             help="Consider the whole tree (leaves only by default)")
 
-    def options_formatting(self):
+    def options_formatting(self) -> None:
         """ Formating options """
         group = self.parser.add_argument_group("Format")
         group.add_argument(
@@ -102,7 +104,7 @@ class Parser:
             "--value", dest="values", action="append", default=[],
             help="Values for the custom formatting string")
 
-    def options_utils(self):
+    def options_utils(self) -> None:
         """ Utilities """
         group = self.parser.add_argument_group("Utils")
         group.add_argument(
@@ -115,7 +117,7 @@ class Parser:
             "--debug", action="store_true",
             help="Turn on debugging output, do not catch exceptions")
 
-    def command_ls(self):
+    def command_ls(self) -> None:
         """ List names """
         self.parser = argparse.ArgumentParser(
             description="List names of available objects")
@@ -124,13 +126,13 @@ class Parser:
         self.options = self.parser.parse_args(self.arguments[2:])
         self.show(brief=True)
 
-    def command_clean(self):
+    def command_clean(self) -> None:
         """ Clean cache """
         self.parser = argparse.ArgumentParser(
             description="Remove cache directory and its content")
         self.clean()
 
-    def command_show(self):
+    def command_show(self) -> None:
         """ Show metadata """
         self.parser = argparse.ArgumentParser(
             description="Show metadata of available objects")
@@ -140,7 +142,7 @@ class Parser:
         self.options = self.parser.parse_args(self.arguments[2:])
         self.show(brief=False)
 
-    def command_init(self):
+    def command_init(self) -> None:
         """ Initialize tree """
         self.parser = argparse.ArgumentParser(
             description="Initialize a new metadata tree")
@@ -151,7 +153,7 @@ class Parser:
             root = fmf.Tree.init(path)
             print("Metadata tree '{0}' successfully initialized.".format(root))
 
-    def show(self, brief=False):
+    def show(self, brief: bool = False) -> None:
         """ Show metadata for each path given """
         output = []
         for path in self.options.paths or ["."]:
@@ -190,7 +192,7 @@ class Parser:
                 utils.listed(len(output), "object")))
         self.output = joined
 
-    def clean(self):
+    def clean(self) -> None:
         """ Remove cache directory """
         try:
             cache = utils.get_cache_directory(create=False)
@@ -205,7 +207,16 @@ class Parser:
 #  Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def main(arguments=None, path=None):
+def main(arguments: Optional[list[str]] = None, path: Optional[str] = None) -> str:
     """ Parse options, do what is requested """
     parser = Parser(arguments, path)
     return parser.output
+
+
+def cli_entry():
+    try:
+        main()
+    except fmf.utils.GeneralError as error:
+        if "--debug" not in sys.argv:
+            fmf.utils.log.error(error)
+        raise
