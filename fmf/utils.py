@@ -1,5 +1,7 @@
 """ Logging, config, constants & utilities """
 
+from __future__ import annotations
+
 import copy
 import logging
 import os
@@ -9,8 +11,11 @@ import subprocess
 import sys
 import time
 import warnings
+from collections.abc import Callable
 from io import StringIO
-from typing import Any, List, NamedTuple
+from logging import Logger as _Logger
+# TODO: py3.10: typing.Optional, typing.Union -> '|' operator
+from typing import Any, NamedTuple, Optional, Union
 
 from filelock import FileLock, Timeout
 from ruamel.yaml import YAML, scalarstring
@@ -89,6 +94,7 @@ class ReferenceError(GeneralError):
 
 class FetchError(GeneralError):
     """ Fatal error in helper command while fetching """
+
     # Keep previously used format of the message
 
     def __str__(self):
@@ -100,10 +106,22 @@ class JsonSchemaError(GeneralError):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Type hints
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class Logger(_Logger):
+    DATA: int
+    CACHE: int
+    ALL: int
+    cache: Callable[[str], None]
+    data: Callable[[str], None]
+    all: Callable[[str], None]
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Utils
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def pluralize(singular=None):
+def pluralize(singular: str) -> str:
     """ Naively pluralize words """
     if singular.endswith("y") and not singular.endswith("ay"):
         plural = singular[:-1] + "ies"
@@ -114,7 +132,11 @@ def pluralize(singular=None):
     return plural
 
 
-def listed(items, singular=None, plural=None, max=None, quote="", join="and"):
+def listed(items: Union[int, list[Union[int, str]]],
+           singular: Optional[str] = None,
+           plural: Optional[str] = None,
+           max: Optional[int] = None,
+           quote: str = "", join: str = "and") -> str:
     """
     Convert an iterable into a nice, human readable list or description::
 
@@ -133,7 +155,7 @@ def listed(items, singular=None, plural=None, max=None, quote="", join="and"):
     """
 
     # Convert items to list if necessary
-    items = range(items) if isinstance(items, int) else list(items)
+    items = list(range(items)) if isinstance(items, int) else list(items)
     more = " more"
     # Description mode expected when singular provided but no maximum set
     if singular is not None and max is None:
@@ -143,29 +165,30 @@ def listed(items, singular=None, plural=None, max=None, quote="", join="and"):
     if singular is not None and plural is None:
         plural = pluralize(singular)
     # Convert to strings and optionally quote each item
-    items = ["{0}{1}{0}".format(quote, item) for item in items]
+    items_str = [f"{quote}{item}{quote}" for item in items]
 
     # Select the maximum of items and describe the rest if max provided
     if max is not None:
         # Special case when the list is empty (0 items)
-        if max == 0 and len(items) == 0:
-            return "0 {0}".format(plural)
+        if max == 0 and len(items_str) == 0:
+            return f"0 {plural}"
         # Cut the list if maximum exceeded
-        if len(items) > max:
-            rest = len(items[max:])
-            items = items[:max]
+        if len(items_str) > max:
+            rest = len(items_str[max:])
+            items_str = items_str[:max]
             if singular is not None:
-                more += " {0}".format(singular if rest == 1 else plural)
-            items.append("{0}{1}".format(rest, more))
+                more += f" {singular if rest == 1 else plural}"
+            items_str.append(f"{rest}{more}")
 
     # For two and more items use 'and' instead of the last comma
-    if len(items) < 2:
-        return "".join(items)
+    if len(items_str) < 2:
+        return "".join(items_str)
     else:
-        return ", ".join(items[0:-2] + [' {} '.format(join).join(items[-2:])])
+        return ", ".join(items_str[0:-2] + [f" {join} ".join(items_str[-2:])])
 
 
-def split(values, separator=re.compile("[ ,]+")):
+def split(values: Union[str, list[str]], separator: re.Pattern[str]
+          = re.compile("[ ,]+")) -> list[str]:
     """
     Convert space-or-comma-separated values into a single list
 
@@ -185,7 +208,7 @@ def split(values, separator=re.compile("[ ,]+")):
     return sum([separator.split(value) for value in values], [])
 
 
-def info(message, newline=True):
+def info(message: str, newline: bool = True) -> None:
     """ Log provided info message to the standard error output """
     sys.stderr.write(message + ("\n" if newline else ""))
 
@@ -194,7 +217,8 @@ def info(message, newline=True):
 #  Filtering
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def evaluate(expression, data, _node=None):
+def evaluate(expression: str, data: fmf.base.TreeData,
+             _node: Optional[fmf.base.Tree] = None) -> Any:
     """
     Evaluate arbitrary Python expression against given data
 
@@ -205,12 +229,13 @@ def evaluate(expression, data, _node=None):
     try:
         return eval(expression)
     except NameError as error:
-        raise FilterError("Key is not defined in data: {}".format(error))
+        raise FilterError(f"Key is not defined in data: {error}")
     except KeyError as error:
-        raise FilterError("Internal key is not defined: {}".format(error))
+        raise FilterError(f"Internal key is not defined: {error}")
 
 
-def filter(filter, data, sensitive=True, regexp=False):
+def filter(filter: str, data: fmf.base.TreeData,
+           sensitive: bool = True, regexp: bool = False) -> bool:
     """
     Return true if provided filter matches given dictionary of values
 
@@ -238,14 +263,14 @@ def filter(filter, data, sensitive=True, regexp=False):
     True, regular expressions can be used in the filter values as well.
     """
 
-    def match_value(pattern, text):
+    def match_value(pattern: str, text: str) -> bool:
         """ Match value against data (simple or regexp) """
         if regexp:
-            return re.match("^{0}$".format(pattern), text)
+            return bool(re.match(f"^{pattern}$", text))
         else:
             return pattern == text
 
-    def check_value(dimension, value):
+    def check_value(dimension: str, value: str) -> bool:
         """ Check whether the value matches data """
         # E.g. value = 'A, B' or value = "C" or value = "-D"
         # If there are multiple values, at least one must match
@@ -254,7 +279,10 @@ def filter(filter, data, sensitive=True, regexp=False):
             if atom.startswith("-"):
                 atom = atom[1:]
                 # Check each value for given dimension
-                for dato in data[dimension]:
+                dim_data = data_copy[dimension]
+                assert isinstance(dim_data, list)
+                for dato in dim_data:
+                    assert isinstance(dato, str)
                     if match_value(atom, dato):
                         break
                 # Pattern not found ---> good
@@ -263,33 +291,36 @@ def filter(filter, data, sensitive=True, regexp=False):
             # Handle positive values (return True upon first successful match)
             else:
                 # Check each value for given dimension
-                for dato in data[dimension]:
+                dim_data = data_copy[dimension]
+                assert isinstance(dim_data, list)
+                for dato in dim_data:
+                    assert isinstance(dato, str)
                     if match_value(atom, dato):
                         # Pattern found ---> good
                         return True
         # No value matched the data
         return False
 
-    def check_dimension(dimension, values):
+    def check_dimension(dimension: str, values: list[str]) -> bool:
         """ Check whether all values for given dimension match data """
         # E.g. dimension = 'tag', values = ['A, B', 'C', '-D']
         # Raise exception upon unknown dimension
-        if dimension not in data:
-            raise FilterError("Invalid filter '{0}'".format(dimension))
+        if dimension not in data_copy:
+            raise FilterError(f"Invalid filter '{dimension}'")
         # Every value must match at least one value for data
-        return all([check_value(dimension, value) for value in values])
+        return all(check_value(dimension, value) for value in values)
 
-    def check_clause(clause):
+    def check_clause(clause: str) -> bool:
         """ Split into literals and check whether all match """
         # E.g. clause = 'tag: A, B & tag: C & tag: -D'
         # Split into individual literals by dimension
-        literals = dict()
+        literals: dict[str, list[str]] = {}
         for literal in re.split(r"\s*&\s*", clause):
             # E.g. literal = 'tag: A, B'
             # Make sure the literal matches dimension:value format
             matched = re.match(r"^([^:]*)\s*:\s*(.*)$", literal)
             if not matched:
-                raise FilterError("Invalid filter '{0}'".format(literal))
+                raise FilterError(f"Invalid filter '{literal}'")
             dimension, value = matched.groups()
             values = [value]
             # Append the literal value(s) to corresponding dimension list
@@ -302,26 +333,29 @@ def filter(filter, data, sensitive=True, regexp=False):
     if filter is None or filter == "":
         return True
     if not isinstance(data, dict):
-        raise FilterError("Invalid data type '{0}'".format(type(data)))
+        raise FilterError(f"Invalid data type '{type(data)}'")
 
     # Make sure that data dictionary contains lists of strings
-    data = copy.deepcopy(data)
+    data_copy = copy.deepcopy(data)
     for key in data:
-        if isinstance(data[key], list):
-            data[key] = [str(item) for item in data[key]]
+        data_val = data_copy[key]
+        if isinstance(data_val, list):
+            data_copy[key] = [str(item) for item in data_val]
         else:
-            data[key] = [str(data[key])]
+            data_copy[key] = [str(data_val)]
     # Turn all data into lowercase if sensitivity is off
     if not sensitive:
         filter = filter.lower()
-        lowered = dict()
-        for key, values in data.items():
-            lowered[key.lower()] = [value.lower() for value in values]
-        data = lowered
+        lowered: fmf.base.TreeData = {}
+        for key, values in data_copy.items():
+            assert isinstance(values, list) and all(isinstance(value, str) for value in values)
+            lowered[key.lower()] = [value.lower() for value in values]  # type: ignore
+        data_copy = lowered
 
     # At least one clause must be true
     return any([check_clause(clause)
                 for clause in re.split(r"\s*\|\s*", filter)])
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Logging
@@ -356,9 +390,9 @@ class Logging:
     _level = LOG_WARN
 
     # Already initialized loggers by their name
-    _loggers = dict()
+    _loggers: dict[str, Logger] = {}
 
-    def __init__(self, name='fmf'):
+    def __init__(self, name: str = 'fmf'):
         # Use existing logger if already initialized
         try:
             self.logger = Logging._loggers[name]
@@ -390,11 +424,11 @@ class Logging:
             if Coloring().enabled():
                 level = color(" " + levelname + " ", "lightwhite", colour)
             else:
-                level = "[{0}]".format(levelname)
-            return u"{0} {1}".format(level, record.getMessage())
+                level = f"[{levelname}]"
+            return f"{level} {record.getMessage()}"
 
     @staticmethod
-    def _create_logger(name='fmf', level=None):
+    def _create_logger(name: str = 'fmf', level: Optional[str] = None) -> Logger:
         """ Create fmf logger """
         # Create logger, handler and formatter
         logger = logging.getLogger(name)
@@ -402,18 +436,18 @@ class Logging:
         handler.setFormatter(Logging.ColoredFormatter())
         logger.addHandler(handler)
         # Save log levels in the logger itself (backward compatibility)
-        for level in Logging.LEVELS:
-            setattr(logger, level, getattr(logging, level))
+        for lev in Logging.LEVELS:
+            setattr(logger, lev, getattr(logging, lev))
         # Additional logging constants and methods for cache and xmlrpc
-        logger.DATA = LOG_DATA
-        logger.CACHE = LOG_CACHE
-        logger.ALL = LOG_ALL
-        logger.cache = lambda message: logger.log(LOG_CACHE, message)  # NOQA
-        logger.data = lambda message: logger.log(LOG_DATA, message)  # NOQA
-        logger.all = lambda message: logger.log(LOG_ALL, message)  # NOQA
-        return logger
+        logger.DATA = LOG_DATA  # type: ignore
+        logger.CACHE = LOG_CACHE  # type: ignore
+        logger.ALL = LOG_ALL  # type: ignore
+        logger.cache = lambda message: logger.log(LOG_CACHE, message)  # type: ignore # NOQA
+        logger.data = lambda message: logger.log(LOG_DATA, message)  # type: ignore # NOQA
+        logger.all = lambda message: logger.log(LOG_ALL, message)  # type: ignore # NOQA
+        return logger  # type: ignore
 
-    def set(self, level=None):
+    def set(self, level: Optional[int] = None) -> None:
         """
         Set the default log level
 
@@ -438,7 +472,7 @@ class Logging:
                 Logging._level = logging.WARN
         self.logger.setLevel(Logging._level)
 
-    def get(self):
+    def get(self) -> int:
         """ Get the current log level """
         return self.logger.level
 
@@ -447,7 +481,9 @@ class Logging:
 #  Coloring
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def color(text, color=None, background=None, light=False, enabled="auto"):
+def color(text: str, color: Optional[str] = None,
+          background: Optional[str] = None,
+          light: bool = False, enabled: Union[str, bool] = "auto") -> str:
     """
     Return text in desired color if coloring enabled
 
@@ -465,11 +501,10 @@ def color(text, color=None, background=None, light=False, enabled="auto"):
     if color and color.startswith("light"):
         light = True
         color = color[5:]
-    color = color and ";{0}".format(colors[color]) or ""
-    background = background and ";{0}".format(colors[background] + 10) or ""
-    light = light and 1 or 0
+    color = color and f";{colors[color]}" or ""
+    background = background and f";{colors[background] + 10}" or ""
     # Starting and finishing sequence
-    start = "\033[{0}{1}{2}m".format(light, color, background)
+    start = f"\033[{int(light)}{color}{background}m"
     finish = "\033[1;m"
     return "".join([start, text, finish])
 
@@ -478,7 +513,7 @@ class Coloring:
     """ Coloring configuration """
 
     # Default color mode is auto-detected from the terminal presence
-    _mode = None
+    _mode: Optional[int] = None
     MODES = ["COLOR_OFF", "COLOR_ON", "COLOR_AUTO"]
     # We need only a single config instance
     _instance = None
@@ -489,7 +524,7 @@ class Coloring:
             cls._instance = super(Coloring, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
-    def __init__(self, mode=None):
+    def __init__(self, mode: Optional[int] = None):
         """ Initialize the coloring mode """
         # Nothing to do if already initialized
         if self._mode is not None:
@@ -497,7 +532,7 @@ class Coloring:
         # Set the mode
         self.set(mode)
 
-    def set(self, mode=None):
+    def set(self, mode: Optional[int] = None) -> None:
         """
         Set the coloring mode
 
@@ -523,18 +558,17 @@ class Coloring:
             except Exception:
                 mode = COLOR_AUTO
         elif mode < 0 or mode > 2:
-            raise RuntimeError("Invalid color mode '{0}'".format(mode))
+            raise RuntimeError(f"Invalid color mode '{mode}'")
         self._mode = mode
         log.debug(
-            "Coloring {0} ({1})".format(
-                "enabled" if self.enabled() else "disabled",
-                self.MODES[self._mode]))
+            f"Coloring {'enabled' if self.enabled() else 'disabled'} ({self.MODES[self._mode]})")
 
-    def get(self):
+    def get(self) -> int:
         """ Get the current color mode """
+        assert self._mode is not None
         return self._mode
 
-    def enabled(self):
+    def enabled(self) -> bool:
         """ True if coloring is currently enabled """
         # In auto-detection mode color enabled when terminal attached
         if self._mode == COLOR_AUTO:
@@ -546,7 +580,7 @@ class Coloring:
 #  Cache directory
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def get_cache_directory(create=True):
+def get_cache_directory(create: bool = True) -> str:
     """
     Return cache directory, created by this call if necessary
 
@@ -569,8 +603,7 @@ def get_cache_directory(create=True):
         try:
             os.makedirs(cache, exist_ok=True)
         except OSError:
-            raise GeneralError(
-                "Failed to create cache directory '{0}'.".format(cache))
+            raise GeneralError(f"Failed to create cache directory '{cache}'.")
     return cache
 
 
@@ -586,7 +619,7 @@ def set_cache_expiration(seconds):
     CACHE_EXPIRATION = int(seconds)
 
 
-def clean_cache_directory():
+def clean_cache_directory() -> None:
     """ Delete used cache directory if it exists """
     cache = get_cache_directory(create=False)
     if os.path.isdir(cache):
@@ -609,23 +642,24 @@ def invalidate_cache():
         try:
             if os.path.isfile(fetch_head):
                 lock_path = root + LOCK_SUFFIX_FETCH
-                log.debug("Remove '{0}'.".format(fetch_head))
+                log.debug(f"Remove '{fetch_head}'.")
                 with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT):
                     os.remove(fetch_head)
         except (IOError, Timeout) as error:  # pragma: no cover
             issues.append(
-                "Couldn't remove file '{0}': {1}".format(fetch_head, error))
+                f"Couldn't remove file '{fetch_head}': {error}")
         # Already found a .git so no need to continue inside the root
         del dirs[:]
     if issues:  # pragma: no cover
         raise GeneralError("\n".join(issues))
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Fetch Tree from the Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-def fetch_tree(url, ref=None, path='.'):
+def fetch_tree(url: str, ref: Optional[str] = None, path: str = '.') -> fmf.base.Tree:
     """
     Get initialized Tree from a remote git repository
 
@@ -655,8 +689,7 @@ def fetch_tree(url, ref=None, path='.'):
             return fmf.base.Tree(root)
     except Timeout:
         raise GeneralError(
-            "Failed to acquire lock for {0} within {1} seconds".format(
-                lock_path, NODE_LOCK_TIMEOUT))
+            f"Failed to acquire lock for {lock_path} within {NODE_LOCK_TIMEOUT} seconds")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -678,7 +711,7 @@ def fetch(url, ref=None, destination=None, env=None):
 #  Fetch Remote Repository
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def default_branch(repository, remote="origin"):
+def default_branch(repository: str, remote: str = "origin") -> str:
     """ Detect default branch from given local git repository """
     head = os.path.join(repository, f".git/refs/remotes/{remote}/HEAD")
     # Make sure the HEAD reference is available
@@ -689,7 +722,10 @@ def default_branch(repository, remote="origin"):
         return ref.read().strip().split('/')[-1]
 
 
-def fetch_repo(url, ref=None, destination=None, env=None):
+def fetch_repo(url: str,
+               ref: Optional[str] = None,
+               destination: Optional[str] = None,
+               env: Optional[dict[str, str]] = None) -> str:
     """
     Fetch remote git repository and return local directory
 
@@ -713,7 +749,7 @@ def fetch_repo(url, ref=None, destination=None, env=None):
     # Lock for possibly shared cache directory. Add the extension
     # LOCK_SUFFIX_FETCH manually in the constructor. Everything under
     # the with statement to correctly remove lock upon exception.
-    log.debug("Acquire lock for '{0}'.".format(destination))
+    log.debug(f"Acquire lock for '{destination}'.")
     try:
         lock_path = destination + LOCK_SUFFIX_FETCH
         with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
@@ -733,7 +769,7 @@ def fetch_repo(url, ref=None, destination=None, env=None):
                     if not depth:
                         # Do not retry if shallow clone was not used
                         raise
-                    log.debug("Clone failed with '{0}', trying without '--depth=1'.".format(error))
+                    log.debug(f"Clone failed with '{error}', trying without '--depth=1'.")
                     run(['git', 'clone', url, destination], cwd=cache, env=env)
             # Detect the default branch if 'ref' not provided
             if ref is None:
@@ -755,7 +791,7 @@ def fetch_repo(url, ref=None, destination=None, env=None):
                 if os.path.isfile(os.path.join(destination, '.git', 'shallow')):
                     # Make fetch get all remote refs (branches...)
                     run(["git", "config", "remote.origin.fetch",
-                        "+refs/heads/*:refs/remotes/origin/*"], cwd=destination)
+                         "+refs/heads/*:refs/remotes/origin/*"], cwd=destination)
                     # Fetch the whole history
                     run(['git', 'fetch', '--unshallow'], cwd=destination)
                     run(['git', 'checkout', '-f', ref], cwd=destination, env=env)
@@ -764,14 +800,13 @@ def fetch_repo(url, ref=None, destination=None, env=None):
                     raise error
             # Reset to origin to get possible changes but no exit code check
             # ref could be tag or commit where it is expected to fail
-            run(['git', 'reset', '--hard', "origin/{0}".format(ref)],
+            run(['git', 'reset', '--hard', f"origin/{ref}"],
                 cwd=destination, check_exit_code=False, env=env)
     except Timeout:
         raise GeneralError(
-            "Failed to acquire lock for '{0}' within {1} seconds.".format(
-                destination, FETCH_LOCK_TIMEOUT))
+            f"Failed to acquire lock for '{destination}' within {FETCH_LOCK_TIMEOUT} seconds.")
     except (OSError, subprocess.CalledProcessError) as error:
-        raise FetchError("{0}".format(error), error)
+        raise FetchError(f"{error}", error)
 
     return destination
 
@@ -780,7 +815,9 @@ def fetch_repo(url, ref=None, destination=None, env=None):
 #  Run command
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def run(command, cwd=None, check_exit_code=True, env=None):
+def run(command: Union[str, list[str]], cwd: Optional[str] = None,
+        check_exit_code: bool = True,
+        env: Optional[dict[str, str]] = None) -> tuple[str, str]:
     """
     Run command and return a (stdout, stderr) tuple
 
@@ -789,16 +826,15 @@ def run(command, cwd=None, check_exit_code=True, env=None):
     :check_exit_code raise CalledProcessError if exit code is non-zero
     :env dictionary of the environment variables for the command
     """
-    log.debug("Running command: '{0}'.".format(' '.join(command)))
+    log.debug(f"Running command: '{' '.join(command)}'.")
 
     process = subprocess.Popen(
         command, cwd=cwd, env=env, universal_newlines=True,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
-    log.debug("stdout: {0}".format(stdout.strip()))
-    log.debug("stderr: {0}".format(stderr.strip()))
-    log.debug("exit_code: {0}{1}".format(
-        process.returncode, ('' if check_exit_code else ' (ignored)')))
+    log.debug(f"stdout: {stdout.strip()}")
+    log.debug(f"stderr: {stderr.strip()}")
+    log.debug(f"exit_code: {process.returncode}{('' if check_exit_code else ' (ignored)')}")
     if check_exit_code and process.returncode != 0:
         raise subprocess.CalledProcessError(
             process.returncode, ' '.join(command), output=stdout + stderr)
@@ -817,7 +853,9 @@ log = Logging('fmf').logger
 #  Convert dict to yaml
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def dict_to_yaml(data, width=None, sort=False):
+def dict_to_yaml(data: fmf.base.TreeData,
+                 width: Optional[int] = None,
+                 sort: bool = False) -> str:
     """ Convert dictionary into yaml """
     output = StringIO()
 
@@ -852,4 +890,4 @@ class JsonSchemaValidationResult(NamedTuple):
     """ Represents JSON Schema validation result """
 
     result: bool
-    errors: List[Any]
+    errors: list[Any]
