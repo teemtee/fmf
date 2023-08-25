@@ -16,7 +16,22 @@ To use it from your code:
 See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 """
 
+from __future__ import annotations
+
 import re
+import sys
+from collections.abc import Callable
+# TODO: py3.10: typing.Optional, typing.Union -> '|' operator
+from typing import Any, Optional, Union
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
+
+# TypeHints
+ExpressionType: TypeAlias = tuple[Optional[str], Union[str, bool], Optional[list['ContextValue']]]
+ExpressionType_raw: TypeAlias = tuple[Optional[str], Union[str, bool], Optional[list[str]]]
 
 
 class CannotDecide(Exception):
@@ -34,7 +49,7 @@ class InvalidContext(Exception):
 class ContextValue:
     """ Value for dimension """
 
-    def __init__(self, origin):
+    def __init__(self, origin: Union[str, tuple[str, ...]]):
         """
         ContextValue("foo-1.2.3")
         ContextValue(["foo", "1", "2", "3"])
@@ -44,22 +59,26 @@ class ContextValue:
         else:
             self._to_compare = self._split_to_version(origin)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, self.__class__):
             return self._to_compare == other._to_compare
         else:
             return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._to_compare)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}({})".format(self.__class__.__name__, repr(self._to_compare))
 
-    def version_cmp(self, other, minor_mode=False, ordered=True):
+    def version_cmp(
+            self,
+            other: ContextValue,
+            minor_mode: bool = False,
+            ordered: bool = True) -> int:
         """
         Comparing two ContextValue objects
 
@@ -138,7 +157,7 @@ class ContextValue:
             return -1  # other is larger (more pars)
 
     @staticmethod
-    def compare(first, second):
+    def compare(first: str, second: str) -> int:
         """ compare two version parts """
         # Ideally use `from packaging import version` but we need older
         # python support too so very rough
@@ -146,16 +165,15 @@ class ContextValue:
             # convert to int
             first_version = int(first)
             second_version = int(second)
+            return (
+                (first_version > second_version) -
+                (first_version < second_version))
         except ValueError:
             # fallback to compare as strings
-            first_version = first
-            second_version = second
-        return (
-            (first_version > second_version) -
-            (first_version < second_version))
+            return (first > second) - (first < second)
 
     @staticmethod
-    def _split_to_version(text):
+    def _split_to_version(text: str) -> tuple[str, ...]:
         """
         Try to split text into name + version parts
 
@@ -173,7 +191,6 @@ class ContextValue:
         :param text: original value
 
         :return: tuple of name followed by version parts
-        :rtype: tuple
         """
         return tuple(re.split(r":|-|\.", text))
 
@@ -183,119 +200,121 @@ class ContextValue:
 
 class Context:
     """ Represents https://fmf.readthedocs.io/en/latest/context.html """
+
     # Operators' definitions
 
-    def _op_defined(self, dimension_name, values):
+    def _op_defined(self, dimension_name: str, values: Any) -> bool:
         """ 'is defined' operator """
         return dimension_name in self._dimensions
 
-    def _op_not_defined(self, dimension_name, values):
+    def _op_not_defined(self, dimension_name: str, values: Any) -> bool:
         """ 'is not defined' operator """
         return dimension_name not in self._dimensions
 
-    def _op_eq(self, dimension_name, values):
+    def _op_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '=' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(it_val, ordered=False) == 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_not_eq(self, dimension_name, values):
+    def _op_not_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '!=' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(it_val, ordered=False) != 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_eq(self, dimension_name, values):
+    def _op_minor_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~=' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(
                 it_val, minor_mode=True, ordered=False) == 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_not_eq(self, dimension_name, values):
+    def _op_minor_not_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~!=' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(
                 it_val, minor_mode=True, ordered=False) != 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_less_or_eq(self, dimension_name, values):
+    def _op_minor_less_or_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~<=' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(
                 it_val, minor_mode=True, ordered=True) <= 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_less(self, dimension_name, values):
+    def _op_minor_less(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~<' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(
                 it_val, minor_mode=True, ordered=True) < 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_less(self, dimension_name, values):
+    def _op_less(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '<' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(it_val, ordered=True) < 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_less_or_equal(self, dimension_name, values):
+    def _op_less_or_equal(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '<=' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(it_val, ordered=True) <= 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_greater_or_equal(self, dimension_name, values):
+    def _op_greater_or_equal(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '>=' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(it_val, ordered=True) >= 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_greater_or_equal(self, dimension_name, values):
+    def _op_minor_greater_or_equal(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~>=' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(
                 it_val, minor_mode=True, ordered=True) >= 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_greater(self, dimension_name, values):
+    def _op_greater(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '>' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(it_val, ordered=True) > 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_greater(self, dimension_name, values):
+    def _op_minor_greater(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~>' operator """
 
-        def comparator(dimension_value, it_val):
+        def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
             return dimension_value.version_cmp(
                 it_val, minor_mode=True, ordered=True) > 0
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_core(self, dimension_name, values, comparator):
+    def _op_core(self, dimension_name: str, values: list[ContextValue],
+                 comparator: Callable[[ContextValue, ContextValue], bool]) -> bool:
         """
         Evaluate value from dimension vs target values combination
 
@@ -362,6 +381,7 @@ class Context:
 
     # To split by 'or' operator
     re_or_split = re.compile(r'\bor\b')
+    _dimensions: dict[str, set[ContextValue]]
 
     def __init__(self, *args, **kwargs):
         """
@@ -384,17 +404,20 @@ class Context:
             for dim, op, values in definition[0]:
                 if op != "==":
                     raise InvalidContext()
+                assert dim is not None
+                assert values is not None
                 self._dimensions[dim] = set(values)
         # Initialized with dimension=value(s)
         for dimension_name, values in kwargs.items():
             if not isinstance(values, list):
+                assert values is not None
                 values = [values]
             self._dimensions[dimension_name] = set(
                 [self.parse_value(val) for val in values]
                 )
 
     @staticmethod
-    def parse_rule(rule):
+    def parse_rule(rule: Union[str, bool]) -> list[list[ExpressionType]]:
         """
         Parses rule into expressions
 
@@ -408,7 +431,6 @@ class Context:
         expr_6 and expr_7 is returned as [[expr_6, expr_7]]
 
         :param rule: rule to parse
-        :type rule: str | bool
         :return: nested list of expressions from the rule
         :raises InvalidRule:  Syntax error in the rule
         """
@@ -437,19 +459,18 @@ class Context:
         return parsed_rule
 
     @staticmethod
-    def parse_value(value):
+    def parse_value(value: Any) -> ContextValue:
         """ Single place to convert to ContextValue """
         return ContextValue(str(value))
 
     @staticmethod
-    def split_rule_to_groups(rule):
+    def split_rule_to_groups(rule: str) -> list[list[str]]:
         """
         Split rule into nested lists, no real parsing
 
         expr0 and expr1 or expr2 is split into [[expr0, expr1], [expr2]]
 
         :param rule: rule to split
-        :type rule: str
         :raises InvalidRule: Syntax error in the rule
         """
         rule_parts = []
@@ -467,7 +488,7 @@ class Context:
         return rule_parts
 
     @staticmethod
-    def split_expression(expression):
+    def split_expression(expression: str) -> ExpressionType_raw:
         """
         Split expression to dimension name, operator and values
 
@@ -475,19 +496,17 @@ class Context:
         of the list of values.
 
         :param expression: expression to split
-        :type expression: str
         :raises InvalidRule: When expression cannot be split, e.g. syntax error
         :return: tuple(dimension name, operator, list of values)
-        :rtype: tuple(str|None, str|bool, list|None)
         """
         # true/false
         match = Context.re_boolean.match(expression)
         if match:
             # convert to bool and return expression tuple
             if match.group(1)[0].lower() == 't':
-                return (None, True, None)
+                return None, True, None
             else:
-                return (None, False, None)
+                return None, False, None
         # Triple expressions
         match = Context.re_expression_triple.match(expression)
         if match:
@@ -500,7 +519,7 @@ class Context:
             return (match.group(1), match.group(2), None)
         raise InvalidRule("Cannot parse expression '{}'.".format(expression))
 
-    def matches(self, rule):
+    def matches(self, rule: Union[str, bool]) -> bool:
         """
         Does the rule match the current Context?
 
@@ -512,8 +531,6 @@ class Context:
         CannotDecide or False == False or CannotDecide == CannotDecide
 
         :param rule: Single rule to decide
-        :type rule: str | bool
-        :rtype: bool
         :raises CannotDecide: Impossible to decide the rule wrt current
             Context, e.g. dimension is missing
         :raises InvalidRule:  Syntax error in the rule
@@ -570,8 +587,9 @@ class Context:
         else:
             raise CannotDecide()  # It's up to callee how to treat this
 
-    def evaluate(self, expression):
+    def evaluate(self, expression: ExpressionType) -> bool:
         dimension_name, operator, values = expression
         if isinstance(operator, bool):
             return operator
+        assert dimension_name is not None
         return self.operator_map[operator](self, dimension_name, values)

@@ -31,6 +31,7 @@ BuildRequires: python%{python3_pkgversion}-pytest
 BuildRequires: python%{python3_pkgversion}-ruamel-yaml
 BuildRequires: python%{python3_pkgversion}-filelock
 BuildRequires: python%{python3_pkgversion}-jsonschema
+BuildRequires: python%{python3_pkgversion}-typing-extensions
 BuildRequires: git-core
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{name}}
 Requires:       git-core
