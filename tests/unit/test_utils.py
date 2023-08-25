@@ -3,6 +3,7 @@ import queue
 import shutil
 import threading
 import time
+from subprocess import CalledProcessError
 
 import pytest
 
@@ -293,21 +294,22 @@ class TestFetch:
         # Is a directory, but not empty
         dest = tmpdir.mkdir('yet_another')
         dest.join('some_file').write('content')
-        with pytest.raises(utils.GeneralError) as error:
+        with pytest.raises(utils.FetchError) as error:
             utils.fetch_repo(GIT_REPO, destination=str(dest))
         # Git's error message
-        assert "already exists and is not an empty" in error.value.args[1].output
-        # We report same error message as before
-        assert str(error.value) == str(error.value.args[1])
+        assert isinstance(error.value.__cause__, CalledProcessError)
+        assert "already exists and is not an empty" in error.value.__cause__.output
 
     def test_env(self):
         # Nonexistent repo on github makes git to ask for password
         # Set handler for user input as echo to return immediately
-        with pytest.raises(utils.GeneralError) as error:
+        with pytest.raises(utils.FetchError) as error:
             utils.fetch_repo('https://github.com/psss/fmf-nope-nope.git',
                              env={"GIT_ASKPASS": "echo"})
         # Assert 'git clone' string in exception's message
-        assert "git clone" in error.value.args[0]
+        assert isinstance(error.value.__cause__, CalledProcessError)
+        assert "git clone" in error.value.__cause__.cmd
+        assert "Authentication failed" in error.value.__cause__.output
 
     @pytest.mark.parametrize("ref", ["main", "0.10", "8566a39"])
     def test_out_of_sync_ref(self, ref):
