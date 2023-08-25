@@ -186,8 +186,7 @@ class Tree:
                 self.version = int(version.read())
                 log.info(f"Format version detected: {self.version}")
         except IOError as error:
-            raise utils.FormatError(
-                f"Unable to detect format version: {error}")
+            raise utils.FormatError("Unable to detect format version") from error
         except ValueError:
             raise utils.FormatError("Invalid version format")
 
@@ -212,8 +211,7 @@ class Tree:
                 data_val = data_val + value  # type: ignore
             data[key] = data_val
         except TypeError as error:
-            raise utils.MergeError(
-                f"MergeError: Key '{key}' in {self.name} ({str(error)}).")
+            raise utils.MergeError(f"MergeError: Key '{key}' in {self.name}.") from error
 
     def _merge_minus(self, data: TreeData, key: str, value: DataType) -> None:
         """ Handle reducing attributes using the '-' suffix """
@@ -241,9 +239,9 @@ class Tree:
             else:
                 raise TypeError(f"Incompatible types: {type(data_val)} - {type(value)}")
             data[key] = data_val
-        except TypeError as err:
+        except TypeError as error:
             raise utils.MergeError(
-                f"MergeError: Key '{key}' in {self.name} (wrong type).") from err
+                f"MergeError: Key '{key}' in {self.name} (wrong type).") from error
 
     def _merge_special(self, data: TreeData, source: TreeData) -> None:
         """ Merge source dict into data, handle special suffixes """
@@ -298,7 +296,7 @@ class Tree:
             with open(os.path.join(root, "version"), "w") as version:
                 version.write(f"{utils.VERSION}\n")
         except OSError as error:
-            raise utils.FileError(f"Failed to create '{root}': {error}.")
+            raise utils.FileError(f"Failed to create '{root}'.") from error
         return root
 
     def merge(self, parent: Optional[Tree] = None) -> None:
@@ -542,8 +540,7 @@ class Tree:
                     content = datafile.read()
                     data = YAML(typ="safe").load(content)
             except (YAMLError, DuplicateKeyError) as error:
-                raise utils.FileError(
-                    f"Failed to parse '{fullpath}'.\n{error}")
+                raise utils.FileError(f"Failed to parse '{fullpath}'.") from error
             log.data(pretty(data))
             # Handle main.fmf as data for self
             if filename == MAIN:
@@ -749,8 +746,7 @@ class Tree:
             resolver = jsonschema.RefResolver.from_schema(
                 schema, store=schema_store)
         except AttributeError as error:
-            raise utils.JsonSchemaError(
-                f'Provided schema cannot be loaded: {error}')
+            raise utils.JsonSchemaError("Provided schema cannot be loaded.") from error
 
         validator = jsonschema.Draft4Validator(schema, resolver=resolver)
 
@@ -769,8 +765,7 @@ class Tree:
                 jsonschema.exceptions.RefResolutionError,
                 jsonschema.exceptions.UnknownType
                 ) as error:
-            raise utils.JsonSchemaError(
-                f'Errors found in provided schema: {error}')
+            raise utils.JsonSchemaError("Errors found in provided schema:") from error
 
     def _locate_raw_data(self) -> tuple[TreeData, TreeData, str]:
         """

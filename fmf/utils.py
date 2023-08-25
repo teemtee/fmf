@@ -229,9 +229,9 @@ def evaluate(expression: str, data: fmf.base.TreeData,
     try:
         return eval(expression)
     except NameError as error:
-        raise FilterError(f"Key is not defined in data: {error}")
+        raise FilterError("Key is not defined in data") from error
     except KeyError as error:
-        raise FilterError(f"Internal key is not defined: {error}")
+        raise FilterError("Internal key is not defined") from error
 
 
 def filter(filter: str, data: fmf.base.TreeData,
