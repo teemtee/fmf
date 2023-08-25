@@ -95,11 +95,6 @@ class ReferenceError(GeneralError):
 class FetchError(GeneralError):
     """ Fatal error in helper command while fetching """
 
-    # Keep previously used format of the message
-
-    def __str__(self):
-        return self.args[0] if self.args else ''
-
 
 class JsonSchemaError(GeneralError):
     """ Invalid JSON Schema """
@@ -807,7 +802,7 @@ def fetch_repo(url: str,
         raise GeneralError(
             f"Failed to acquire lock for '{destination}' within {FETCH_LOCK_TIMEOUT} seconds.")
     except (OSError, subprocess.CalledProcessError) as error:
-        raise FetchError(f"{error}", error)
+        raise FetchError(f"Could not fetch repository: {url}") from error
 
     return destination
 
