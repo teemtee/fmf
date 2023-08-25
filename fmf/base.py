@@ -133,7 +133,7 @@ class Tree:
         if self.parent is None:
             self.inherit()
 
-        log.debug("New tree '{0}' created.".format(self))
+        log.debug(f"New tree '{self}' created.")
 
     @property
     def commit(self) -> Union[str, bool]:
@@ -174,18 +174,17 @@ class Tree:
             while ".fmf" not in next(os.walk(root))[1]:
                 if root == "/":
                     raise utils.RootError(
-                        "Unable to find tree root for '{0}'.".format(
-                            os.path.abspath(path)))
+                        f"Unable to find tree root for '{os.path.abspath(path)}'.")
                 root = os.path.abspath(os.path.join(root, os.pardir))
         except StopIteration:
-            raise utils.FileError("Invalid directory path: {0}".format(root))
-        log.info("Root directory found: {0}".format(root))
+            raise utils.FileError(f"Invalid directory path: {root}")
+        log.info(f"Root directory found: {root}")
         self.root = root
         # Detect format version
         try:
             with open(os.path.join(self.root, ".fmf", "version")) as version:
                 self.version = int(version.read())
-                log.info("Format version detected: {0}".format(self.version))
+                log.info(f"Format version detected: {self.version}")
         except IOError as error:
             raise utils.FormatError(
                 f"Unable to detect format version: {error}")
@@ -214,8 +213,7 @@ class Tree:
             data[key] = data_val
         except TypeError as error:
             raise utils.MergeError(
-                "MergeError: Key '{0}' in {1} ({2}).".format(
-                    key, self.name, str(error)))
+                f"MergeError: Key '{key}' in {self.name} ({str(error)}).")
 
     def _merge_minus(self, data: TreeData, key: str, value: DataType) -> None:
         """ Handle reducing attributes using the '-' suffix """
@@ -224,8 +222,7 @@ class Tree:
             if key not in data:
                 data[key] = value
                 raise utils.MergeError(
-                    "MergeError: Key '{0}' in {1} (not inherited).".format(
-                        key, self.name))
+                    f"MergeError: Key '{key}' in {self.name} (not inherited).")
             # Subtract numbers
             data_val = data[key]
             if type(data_val) == type(value) in [int, float]:
@@ -246,8 +243,7 @@ class Tree:
             data[key] = data_val
         except TypeError as err:
             raise utils.MergeError(
-                "MergeError: Key '{0}' in {1} (wrong type).".format(
-                    key, self.name)) from err
+                f"MergeError: Key '{key}' in {self.name} (wrong type).") from err
 
     def _merge_special(self, data: TreeData, source: TreeData) -> None:
         """ Merge source dict into data, handle special suffixes """
@@ -295,15 +291,14 @@ class Tree:
         """ Create metadata tree root under given path """
         root = os.path.abspath(os.path.join(path, ".fmf"))
         if os.path.exists(root):
-            raise utils.FileError("{0} '{1}' already exists.".format(
-                "Directory" if os.path.isdir(root) else "File", root))
+            raise utils.FileError(
+                f"{'Directory' if os.path.isdir(root) else 'File'} '{root}' already exists.")
         try:
             os.makedirs(root)
             with open(os.path.join(root, "version"), "w") as version:
-                version.write("{0}\n".format(utils.VERSION))
+                version.write(f"{utils.VERSION}\n")
         except OSError as error:
-            raise utils.FileError("Failed to create '{}': {}.".format(
-                root, error))
+            raise utils.FileError(f"Failed to create '{root}': {error}.")
         return root
 
     def merge(self, parent: Optional[Tree] = None) -> None:
@@ -328,7 +323,7 @@ class Tree:
         # (original data needed for custom inheritance extensions)
         self.original_data = self.data
         self.merge()
-        log.debug("Data for '{0}' inherited.".format(self))
+        log.debug(f"Data for '{self}' inherited.")
         log.data(pretty(self.data))
         # Apply inheritance to all children
         for child in self.children.values():
@@ -370,7 +365,7 @@ class Tree:
             # Update regular attributes
             else:
                 self.data[key] = value
-        log.debug("Data for '{0}' updated.".format(self))
+        log.debug(f"Data for '{self}' updated.")
         log.data(pretty(self.data))
 
     def adjust(self,
@@ -395,20 +390,20 @@ class Tree:
         # Check context sanity
         if not isinstance(context, fmf.context.Context):
             raise utils.GeneralError(
-                "Invalid adjust context: '{}'.".format(type(context).__name__))
+                f"Invalid adjust context: '{type(context).__name__}'.")
 
         # Adjust rules should be a dictionary or a list of dictionaries
         try:
             rules = copy.deepcopy(self.data[key])
-            log.debug("Applying adjust rules for '{}'.".format(self))
+            log.debug(f"Applying adjust rules for '{self}'.")
             log.data(str(rules))
             if isinstance(rules, dict):
                 rules = [rules]
             if not isinstance(rules, list):
                 raise utils.FormatError(
-                    "Invalid adjust rule format in '{}'. "
-                    "Should be a dictionary or a list of dictionaries, "
-                    "got '{}'.".format(self.name, type(rules).__name__))
+                    f"Invalid adjust rule format in '{self.name}'. "
+                    f"Should be a dictionary or a list of dictionaries, "
+                    f"got '{type(rules).__name__}'.")
         except KeyError:
             rules = []
 
@@ -430,8 +425,7 @@ class Tree:
             continue_ = rule.pop('continue', True)
             if not isinstance(continue_, bool):
                 raise utils.FormatError(
-                    "The 'continue' value should be bool, "
-                    "got '{}'.".format(continue_))
+                    f"The 'continue' value should be bool, got '{continue_}'.")
 
             # The 'because' key is reserved for optional comments (ignored)
             rule.pop('because', None)
@@ -452,8 +446,8 @@ class Tree:
                     raise
                 else:
                     raise utils.GeneralError(
-                        "Invalid value for the 'undecided' parameter. Should "
-                        "be 'skip' or 'raise', got '{}'.".format(undecided))
+                        f"Invalid value for the 'undecided' parameter. Should "
+                        f"be 'skip' or 'raise', got '{undecided}'.")
 
         # Adjust all child nodes as well
         for child in self.children.values():
@@ -521,14 +515,13 @@ class Tree:
         if path != '/':
             path = path.rstrip("/")
         if path in IGNORED_DIRECTORIES:  # pragma: no cover
-            log.debug("Ignoring '{0}' (special directory).".format(path))
+            log.debug(f"Ignoring '{path}' (special directory).")
             return
-        log.info("Walking through directory {0}".format(
-            os.path.abspath(path)))
+        log.info(f"Walking through directory {os.path.abspath(path)}")
         try:
             dirpath, dirnames, filenames = next(os.walk(path))
         except StopIteration:
-            log.debug("Skipping '{0}' (not accessible).".format(path))
+            log.debug(f"Skipping '{path}' (not accessible).")
             return
         # Investigate main.fmf as the first file (for correct inheritance)
         filenames = sorted(
@@ -542,7 +535,7 @@ class Tree:
             if filename.startswith("."):
                 continue
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
-            log.info("Checking file {0}".format(fullpath))
+            log.info(f"Checking file {fullpath}")
             try:
                 with open(fullpath, encoding='utf-8') as datafile:
                     # Workadound ruamel s390x read issue - fmf/issues/164
@@ -572,14 +565,14 @@ class Tree:
                 # more than one node
                 fullpath = os.path.realpath(fulldir)
                 if fullpath in self._symlinkdirs:
-                    log.debug("Not entering symlink loop {}".format(fulldir))
+                    log.debug(f"Not entering symlink loop {fulldir}")
                     continue
                 else:
                     self._symlinkdirs.append(fullpath)
 
             # Ignore metadata subtrees
             if os.path.isdir(os.path.join(path, dirname, SUFFIX)):
-                log.debug("Ignoring metadata tree '{0}'.".format(dirname))
+                log.debug(f"Ignoring metadata tree '{dirname}'.")
                 continue
             self.child(dirname, os.path.join(path, dirname))
         # Ignore directories with no metadata (remove all child nodes which
@@ -588,7 +581,7 @@ class Tree:
             child = self.children[name]
             if not child.children and not child._updated:
                 del self.children[name]
-                log.debug("Empty tree '{0}' removed.".format(child.name))
+                log.debug(f"Empty tree '{child.name}' removed.")
 
     def climb(self, whole: bool = False) -> Iterator[Tree]:
         """ Climb through the tree (iterate leaf/all nodes) """
@@ -670,17 +663,17 @@ class Tree:
         # Show the name
         output = utils.color(self.name, 'red')
         if brief or not self.data:
-            return output + "\n"
+            return f"{output}\n"
         # List available attributes
         for key, val in sorted(self.data.items()):
-            output += "\n{0}: ".format(utils.color(key, 'green'))
+            output = f"{output}\n{utils.color(key, 'green')}: "
             if isinstance(val, str):
                 output += val.rstrip("\n")
             elif isinstance(val, list) and all(isinstance(item, str) for item in val):
                 output += utils.listed(val)  # type: ignore
             else:
                 output += pretty(val)
-        return output + "\n"
+        return f"{output}\n"
 
     @staticmethod
     def node(reference: TreeData) -> Tree:
@@ -710,12 +703,12 @@ class Tree:
             root = str(reference.get('path', '.'))
             if not root.startswith('/') and root != '.':
                 raise utils.ReferenceError(
-                    'Relative path "%s" specified.' % root)
+                    f'Relative path "{root}" specified.')
             tree = Tree(root)
         found_node = tree.find(str(reference.get('name', '/')))
         if found_node is None:
             raise utils.ReferenceError(
-                "No tree node found for '{0}' reference".format(reference))
+                f"No tree node found for '{reference}' reference")
         assert isinstance(found_node, Tree)
         return found_node
 

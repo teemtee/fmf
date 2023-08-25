@@ -72,7 +72,7 @@ class ContextValue:
         return str(self._to_compare)
 
     def __repr__(self) -> str:
-        return "{}({})".format(self.__class__.__name__, repr(self._to_compare))
+        return f"{self.__class__.__name__}({repr(self._to_compare)})"
 
     def version_cmp(
             self,
@@ -340,7 +340,7 @@ class Context:
             raise CannotDecide("No values could be compared.")
         except KeyError:
             raise CannotDecide(
-                "Dimension {0} is not defined.".format(dimension_name))
+                f"Dimension {dimension_name} is not defined.")
 
     operator_map = {
         "is defined": _op_defined,
@@ -476,13 +476,13 @@ class Context:
         rule_parts = []
         for or_group in Context.re_or_split.split(rule):
             if not or_group:
-                raise InvalidRule("Empty OR expression in {}.".format(rule))
+                raise InvalidRule(f"Empty OR expression in {rule}.")
             and_group = []
             for part in Context.re_and_split.split(or_group):
                 part_stripped = part.strip()
                 if not part_stripped:
                     raise InvalidRule(
-                        "Empty AND expression in {}.".format(rule))
+                        f"Empty AND expression in {rule}.")
                 and_group.append(part_stripped)
             rule_parts.append(and_group)
         return rule_parts
@@ -517,7 +517,7 @@ class Context:
         match = Context.re_expression_double.match(expression)
         if match:
             return (match.group(1), match.group(2), None)
-        raise InvalidRule("Cannot parse expression '{}'.".format(expression))
+        raise InvalidRule(f"Cannot parse expression '{expression}'.")
 
     def matches(self, rule: Union[str, bool]) -> bool:
         """
@@ -563,7 +563,7 @@ class Context:
                     break
             # Just making sure, parse_rule should have raised it already
             assert and_valid, (
-                "Malformed expression: Missing AND part in {0}".format(rule))
+                f"Malformed expression: Missing AND part in {rule}")
             # AND group finished as True, no need to process the rest of
             # OR groups
             if and_outcome is True:
@@ -581,7 +581,7 @@ class Context:
                 valid = True
         # Just making sure, parse_rule should have raised it already
         assert valid, (
-            "Malformed expression: Missing OR part in {0}".format(rule))
+            f"Malformed expression: Missing OR part in {rule}")
         if final_outcome is False:
             return False
         else:

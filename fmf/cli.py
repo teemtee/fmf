@@ -66,7 +66,7 @@ class Parser:
         if not hasattr(self, "command_" + self.command):
             self.parser.print_help()
             raise utils.GeneralError(
-                "Unrecognized command: '{0}'".format(self.command))
+                f"Unrecognized command: '{self.command}'")
         # Initialize the rest and run the subcommand
         self.output = ""
         getattr(self, "command_" + self.command)()
@@ -151,14 +151,14 @@ class Parser:
         # For each path create an .fmf directory and version file
         for path in self.options.paths or ["."]:
             root = fmf.Tree.init(path)
-            print("Metadata tree '{0}' successfully initialized.".format(root))
+            print(f"Metadata tree '{root}' successfully initialized.")
 
     def show(self, brief: bool = False) -> None:
         """ Show metadata for each path given """
         output = []
         for path in self.options.paths or ["."]:
             if self.options.verbose:
-                utils.info("Checking {0} for metadata.".format(path))
+                utils.info(f"Checking {path} for metadata.")
             tree = fmf.Tree(path)
             for node in tree.prune(
                     self.options.whole,
@@ -177,7 +177,7 @@ class Parser:
                 # List source files when in debug mode
                 if self.options.debug:
                     for source in node.sources:
-                        show += utils.color("{0}\n".format(source), "blue")
+                        show += utils.color(f"{source}\n", "blue")
                 if show is not None:
                     output.append(show)
 
@@ -188,8 +188,7 @@ class Parser:
             joined = "\n".join(output)
         print(joined, end="")
         if self.options.verbose:
-            utils.info("Found {0}.".format(
-                utils.listed(len(output), "object")))
+            utils.info(f"Found {utils.listed(len(output), 'object')}.")
         self.output = joined
 
     def clean(self) -> None:
@@ -197,10 +196,10 @@ class Parser:
         try:
             cache = utils.get_cache_directory(create=False)
             utils.clean_cache_directory()
-            print("Cache directory '{0}' has been removed.".format(cache))
+            print(f"Cache directory '{cache}' has been removed.")
         except Exception as error:  # pragma: no cover
             utils.log.error(
-                "Unable to remove cache, exception was: {0}".format(error))
+                f"Unable to remove cache, exception was: {error}")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

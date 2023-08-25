@@ -165,7 +165,7 @@ def listed(items: Union[int, list[Union[int, str]]],
     if singular is not None and plural is None:
         plural = pluralize(singular)
     # Convert to strings and optionally quote each item
-    items_str = ["{0}{1}{0}".format(quote, item) for item in items]
+    items_str = [f"{quote}{item}{quote}" for item in items]
 
     # Select the maximum of items and describe the rest if max provided
     if max is not None:
@@ -177,8 +177,8 @@ def listed(items: Union[int, list[Union[int, str]]],
             rest = len(items_str[max:])
             items_str = items_str[:max]
             if singular is not None:
-                more += " {0}".format(singular if rest == 1 else plural)
-            items_str.append("{0}{1}".format(rest, more))
+                more += f" {singular if rest == 1 else plural}"
+            items_str.append(f"{rest}{more}")
 
     # For two and more items use 'and' instead of the last comma
     if len(items_str) < 2:
@@ -229,9 +229,9 @@ def evaluate(expression: str, data: fmf.base.TreeData,
     try:
         return eval(expression)
     except NameError as error:
-        raise FilterError("Key is not defined in data: {}".format(error))
+        raise FilterError(f"Key is not defined in data: {error}")
     except KeyError as error:
-        raise FilterError("Internal key is not defined: {}".format(error))
+        raise FilterError(f"Internal key is not defined: {error}")
 
 
 def filter(filter: str, data: fmf.base.TreeData,
@@ -266,7 +266,7 @@ def filter(filter: str, data: fmf.base.TreeData,
     def match_value(pattern: str, text: str) -> bool:
         """ Match value against data (simple or regexp) """
         if regexp:
-            return bool(re.match("^{0}$".format(pattern), text))
+            return bool(re.match(f"^{pattern}$", text))
         else:
             return pattern == text
 
@@ -306,7 +306,7 @@ def filter(filter: str, data: fmf.base.TreeData,
         # E.g. dimension = 'tag', values = ['A, B', 'C', '-D']
         # Raise exception upon unknown dimension
         if dimension not in data_copy:
-            raise FilterError("Invalid filter '{0}'".format(dimension))
+            raise FilterError(f"Invalid filter '{dimension}'")
         # Every value must match at least one value for data
         return all(check_value(dimension, value) for value in values)
 
@@ -320,7 +320,7 @@ def filter(filter: str, data: fmf.base.TreeData,
             # Make sure the literal matches dimension:value format
             matched = re.match(r"^([^:]*)\s*:\s*(.*)$", literal)
             if not matched:
-                raise FilterError("Invalid filter '{0}'".format(literal))
+                raise FilterError(f"Invalid filter '{literal}'")
             dimension, value = matched.groups()
             values = [value]
             # Append the literal value(s) to corresponding dimension list
@@ -333,7 +333,7 @@ def filter(filter: str, data: fmf.base.TreeData,
     if filter is None or filter == "":
         return True
     if not isinstance(data, dict):
-        raise FilterError("Invalid data type '{0}'".format(type(data)))
+        raise FilterError(f"Invalid data type '{type(data)}'")
 
     # Make sure that data dictionary contains lists of strings
     data_copy = copy.deepcopy(data)
@@ -424,8 +424,8 @@ class Logging:
             if Coloring().enabled():
                 level = color(" " + levelname + " ", "lightwhite", colour)
             else:
-                level = "[{0}]".format(levelname)
-            return u"{0} {1}".format(level, record.getMessage())
+                level = f"[{levelname}]"
+            return f"{level} {record.getMessage()}"
 
     @staticmethod
     def _create_logger(name: str = 'fmf', level: Optional[str] = None) -> Logger:
@@ -501,10 +501,10 @@ def color(text: str, color: Optional[str] = None,
     if color and color.startswith("light"):
         light = True
         color = color[5:]
-    color = color and ";{0}".format(colors[color]) or ""
-    background = background and ";{0}".format(colors[background] + 10) or ""
+    color = color and f";{colors[color]}" or ""
+    background = background and f";{colors[background] + 10}" or ""
     # Starting and finishing sequence
-    start = "\033[{0}{1}{2}m".format(int(light), color, background)
+    start = f"\033[{int(light)}{color}{background}m"
     finish = "\033[1;m"
     return "".join([start, text, finish])
 
@@ -558,12 +558,10 @@ class Coloring:
             except Exception:
                 mode = COLOR_AUTO
         elif mode < 0 or mode > 2:
-            raise RuntimeError("Invalid color mode '{0}'".format(mode))
+            raise RuntimeError(f"Invalid color mode '{mode}'")
         self._mode = mode
         log.debug(
-            "Coloring {0} ({1})".format(
-                "enabled" if self.enabled() else "disabled",
-                self.MODES[self._mode]))
+            f"Coloring {'enabled' if self.enabled() else 'disabled'} ({self.MODES[self._mode]})")
 
     def get(self) -> int:
         """ Get the current color mode """
@@ -606,7 +604,7 @@ def get_cache_directory(create: bool = True) -> str:
             os.makedirs(cache, exist_ok=True)
         except OSError:
             raise GeneralError(
-                "Failed to create cache directory '{0}'.".format(cache))
+                f"Failed to create cache directory '{cache}'.")
     return cache
 
 
@@ -645,12 +643,12 @@ def invalidate_cache():
         try:
             if os.path.isfile(fetch_head):
                 lock_path = root + LOCK_SUFFIX_FETCH
-                log.debug("Remove '{0}'.".format(fetch_head))
+                log.debug(f"Remove '{fetch_head}'.")
                 with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT):
                     os.remove(fetch_head)
         except (IOError, Timeout) as error:  # pragma: no cover
             issues.append(
-                "Couldn't remove file '{0}': {1}".format(fetch_head, error))
+                f"Couldn't remove file '{fetch_head}': {error}")
         # Already found a .git so no need to continue inside the root
         del dirs[:]
     if issues:  # pragma: no cover
@@ -692,8 +690,7 @@ def fetch_tree(url: str, ref: Optional[str] = None, path: str = '.') -> fmf.base
             return fmf.base.Tree(root)
     except Timeout:
         raise GeneralError(
-            "Failed to acquire lock for {0} within {1} seconds".format(
-                lock_path, NODE_LOCK_TIMEOUT))
+            f"Failed to acquire lock for {lock_path} within {NODE_LOCK_TIMEOUT} seconds")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -753,7 +750,7 @@ def fetch_repo(url: str,
     # Lock for possibly shared cache directory. Add the extension
     # LOCK_SUFFIX_FETCH manually in the constructor. Everything under
     # the with statement to correctly remove lock upon exception.
-    log.debug("Acquire lock for '{0}'.".format(destination))
+    log.debug(f"Acquire lock for '{destination}'.")
     try:
         lock_path = destination + LOCK_SUFFIX_FETCH
         with FileLock(lock_path, timeout=FETCH_LOCK_TIMEOUT) as lock:
@@ -773,7 +770,7 @@ def fetch_repo(url: str,
                     if not depth:
                         # Do not retry if shallow clone was not used
                         raise
-                    log.debug("Clone failed with '{0}', trying without '--depth=1'.".format(error))
+                    log.debug(f"Clone failed with '{error}', trying without '--depth=1'.")
                     run(['git', 'clone', url, destination], cwd=cache, env=env)
             # Detect the default branch if 'ref' not provided
             if ref is None:
@@ -804,14 +801,13 @@ def fetch_repo(url: str,
                     raise error
             # Reset to origin to get possible changes but no exit code check
             # ref could be tag or commit where it is expected to fail
-            run(['git', 'reset', '--hard', "origin/{0}".format(ref)],
+            run(['git', 'reset', '--hard', f"origin/{ref}"],
                 cwd=destination, check_exit_code=False, env=env)
     except Timeout:
         raise GeneralError(
-            "Failed to acquire lock for '{0}' within {1} seconds.".format(
-                destination, FETCH_LOCK_TIMEOUT))
+            f"Failed to acquire lock for '{destination}' within {FETCH_LOCK_TIMEOUT} seconds.")
     except (OSError, subprocess.CalledProcessError) as error:
-        raise FetchError("{0}".format(error), error)
+        raise FetchError(f"{error}", error)
 
     return destination
 
@@ -831,16 +827,15 @@ def run(command: Union[str, list[str]], cwd: Optional[str] = None,
     :check_exit_code raise CalledProcessError if exit code is non-zero
     :env dictionary of the environment variables for the command
     """
-    log.debug("Running command: '{0}'.".format(' '.join(command)))
+    log.debug(f"Running command: '{' '.join(command)}'.")
 
     process = subprocess.Popen(
         command, cwd=cwd, env=env, universal_newlines=True,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
-    log.debug("stdout: {0}".format(stdout.strip()))
-    log.debug("stderr: {0}".format(stderr.strip()))
-    log.debug("exit_code: {0}{1}".format(
-        process.returncode, ('' if check_exit_code else ' (ignored)')))
+    log.debug(f"stdout: {stdout.strip()}")
+    log.debug(f"stderr: {stderr.strip()}")
+    log.debug(f"exit_code: {process.returncode}{('' if check_exit_code else ' (ignored)')}")
     if check_exit_code and process.returncode != 0:
         raise subprocess.CalledProcessError(
             process.returncode, ' '.join(command), output=stdout + stderr)
