@@ -51,7 +51,9 @@ JsonSchema: TypeAlias = Mapping[str, Any]
 #  Metadata
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-class Tree(Mapping[str, Union['Tree', DataType]]):
+# Cannot specify class Tree(Mapping[str, Tree | DataType]]):
+# This has a different .get method interface incompatible with mypy
+class Tree:
     """ Metadata Tree """
     parent: Optional[Tree]
     children: dict[str, Tree]
@@ -60,13 +62,14 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
     root: Optional[str]
     version: int
     original_data: TreeData
+    name: str
     _commit: Optional[Union[str, bool]]
     _raw_data: TreeData
     _updated: bool
     _directives: TreeData
     _symlinkdirs: list[str]
 
-    def __init__(self, data: TreeDataPath,
+    def __init__(self, data: Optional[TreeDataPath],
                  name: Optional[str] = None,
                  parent: Optional[Tree] = None):
         """
@@ -109,11 +112,13 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         if self.parent is None:
             self.name = "/"
             if not isinstance(data, dict):
+                assert data is not None
                 self._initialize(path=data)
                 data = self.root
         # Handle child node creation
         else:
             self.root = self.parent.root
+            assert name is not None
             self.name = os.path.join(self.parent.name, name)
 
         # Update data from a dictionary (handle empty nodes)
@@ -152,9 +157,10 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
             output, _ = utils.run(
                 ['git', 'rev-parse', '--verify', 'HEAD'], cwd=self.root)
             self._commit = output.strip()
+            return self._commit
         except subprocess.CalledProcessError:
             self._commit = False
-        return self._commit
+            return self._commit
 
     def __str__(self):
         """ Use tree name as identifier """
@@ -182,27 +188,30 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
                 log.info("Format version detected: {0}".format(self.version))
         except IOError as error:
             raise utils.FormatError(
-                "Unable to detect format version: {0}".format(error))
+                f"Unable to detect format version: {error}")
         except ValueError:
             raise utils.FormatError("Invalid version format")
 
     def _merge_plus(self, data: TreeData, key: str,
                     value: DataType, prepend: bool = False) -> None:
         """ Handle extending attributes using the '+' suffix """
-        # Nothing to do if key not in parent
-        if key not in data:
-            data[key] = value
-            return
-        # Use the special merge for merging dictionaries
-        if type(data[key]) == type(value) == dict:
-            self._merge_special(data[key], value)
-            return
-        # Attempt to apply the plus operator
         try:
+            # Nothing to do if key not in parent
+            if key not in data:
+                data[key] = value
+                return
+            # Use the special merge for merging dictionaries
+            data_val = data[key]
+            if isinstance(data_val, dict) and isinstance(value, (dict, Mapping)):
+                self._merge_special(data_val, value)
+                data[key] = data_val
+                return
+            # Attempt to apply the plus operator
             if prepend:
-                data[key] = value + data[key]
+                data_val = value + data_val  # type: ignore
             else:
-                data[key] = data[key] + value
+                data_val = data_val + value  # type: ignore
+            data[key] = data_val
         except TypeError as error:
             raise utils.MergeError(
                 "MergeError: Key '{0}' in {1} ({2}).".format(
@@ -210,29 +219,35 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
 
     def _merge_minus(self, data: TreeData, key: str, value: DataType) -> None:
         """ Handle reducing attributes using the '-' suffix """
-        # Cannot reduce attribute if key is not present in parent
-        if key not in data:
-            data[key] = value
-            raise utils.MergeError(
-                "MergeError: Key '{0}' in {1} (not inherited).".format(
-                    key, self.name))
-        # Subtract numbers
-        if type(data[key]) == type(value) in [int, float]:
-            data[key] = data[key] - value
-        # Replace matching regular expression with empty string
-        elif type(data[key]) == type(value) == type(""):
-            data[key] = re.sub(value, '', data[key])
-        # Remove given values from the parent list
-        elif type(data[key]) == type(value) == list:
-            data[key] = [item for item in data[key] if item not in value]
-        # Remove given key from the parent dictionary
-        elif isinstance(data[key], dict) and isinstance(value, list):
-            for item in value:
-                data[key].pop(item, None)
-        else:
+        try:
+            # Cannot reduce attribute if key is not present in parent
+            if key not in data:
+                data[key] = value
+                raise utils.MergeError(
+                    "MergeError: Key '{0}' in {1} (not inherited).".format(
+                        key, self.name))
+            # Subtract numbers
+            data_val = data[key]
+            if type(data_val) == type(value) in [int, float]:
+                data_val -= value  # type: ignore
+            # Replace matching regular expression with empty string
+            elif isinstance(data_val, str) and isinstance(value, str):
+                data_val = re.sub(value, '', data_val)
+            # Remove given values from the parent list
+            elif isinstance(data_val, list) and isinstance(value, list):
+                data_val = [item for item in data_val if item not in value]
+            # Remove given key from the parent dictionary
+            elif isinstance(data_val, dict) and isinstance(value, list):
+                for item in value:
+                    assert isinstance(item, str)
+                    data_val.pop(item, None)
+            else:
+                raise TypeError(f"Incompatible types: {type(data_val)} - {type(value)}")
+            data[key] = data_val
+        except TypeError as err:
             raise utils.MergeError(
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
-                    key, self.name))
+                    key, self.name)) from err
 
     def _merge_special(self, data: TreeData, source: TreeData) -> None:
         """ Merge source dict into data, handle special suffixes """
@@ -251,7 +266,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
     def _process_directives(self, directives: TreeData) -> None:
         """ Check and process special fmf directives """
 
-        def check(value: DataType, type_: type, name: Optional[str] = None):
+        def check(value: DataType, type_: type, name: Optional[str] = None) -> None:
             """ Check for correct type """
             if not isinstance(value, type_):
                 name = f" '{name}'" if name else ""
@@ -331,7 +346,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         # Handle fmf directives first
         try:
             directives = data.pop("/")
-            self._process_directives(directives)
+            self._process_directives(directives)  # type: ignore
         except KeyError:
             pass
 
@@ -350,6 +365,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
                     name = match.groups()[0]
                     value = {match.groups()[1]: value}
                 # Update existing child or create a new one
+                assert isinstance(value, dict) or isinstance(value, str) or value is None
                 self.child(name, value)
             # Update regular attributes
             else:
@@ -385,7 +401,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         try:
             rules = copy.deepcopy(self.data[key])
             log.debug("Applying adjust rules for '{}'.".format(self))
-            log.data(rules)
+            log.data(str(rules))
             if isinstance(rules, dict):
                 rules = [rules]
             if not isinstance(rules, list):
@@ -409,6 +425,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
             except KeyError:
                 condition = True
 
+            assert isinstance(condition, str) or isinstance(condition, bool)
             # The optional 'continue' key should be a bool
             continue_ = rule.pop('continue', True)
             if not isinstance(continue_, bool):
@@ -442,8 +459,8 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         for child in self.children.values():
             child.adjust(context, key, undecided)
 
-    def get(self, name: Optional[Union[list[str], str]]
-            = None, default: DataType = None) -> DataType:
+    def get(self, name: Optional[Union[list[str], str]] = None,
+            default: DataType = None) -> DataType:
         """
         Get attribute value or return default
 
@@ -467,7 +484,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         data = self.data
         try:
             for key in name:
-                data = data[key]
+                data = data[key]  # type: ignore
         except KeyError:
             return default
         return data
@@ -487,7 +504,11 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         # Save source file
         if source is not None:
             self.children[name].sources.append(source)
-            self.children[name]._raw_data = copy.deepcopy(data)
+            if data is None:
+                self.children[name]._raw_data = {}
+            else:
+                assert isinstance(data, dict)
+                self.children[name]._raw_data = copy.deepcopy(data)
 
     def grow(self, path: str) -> None:
         """
@@ -584,9 +605,12 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
                 return node
         return None
 
-    def prune(self, whole: bool = False, keys: Optional[list[str]] = None,
-              names: Optional[list[str]] = None, filters: Optional[list[str]] = None,
-              conditions: Optional[list[str]] = None, sources: Optional[list[str]] = None):
+    def prune(self, whole: bool = False,
+              keys: Optional[list[str]] = None,
+              names: Optional[list[str]] = None,
+              filters: Optional[list[str]] = None,
+              conditions: Optional[list[str]] = None,
+              sources: Optional[list[str]] = None) -> Iterator[Tree]:
         """ Filter tree nodes based on given criteria """
         keys = keys or []
         names = names or []
@@ -594,8 +618,9 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         conditions = conditions or []
 
         # Expand paths to absolute
+        sources_set = set()
         if sources:
-            sources = {os.path.abspath(src) for src in sources}
+            sources_set = {os.path.abspath(src) for src in sources}
 
         for node in self.climb(whole):
             # Select only nodes with key content
@@ -606,7 +631,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
                     [re.search(name, node.name) for name in names]):
                 continue
             # Select nodes defined by any of the source files
-            if sources and not sources.intersection(node.sources):
+            if sources_set and not sources_set.intersection(node.sources):
                 continue
             # Apply filters and conditions if given
             try:
@@ -626,7 +651,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
             self,
             brief: bool = False,
             formatting: Optional[str] = None,
-            values: Optional[list] = None) -> str:
+            values: Optional[list[str]] = None) -> str:
         """ Show metadata """
         values = values or []
 
@@ -638,8 +663,8 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
             root = self.root  # noqa: F841
             sources = self.sources  # noqa: F841
             evaluated = []
-            for value in values:
-                evaluated.append(eval(value))
+            for str_v in values:
+                evaluated.append(eval(str_v))
             return formatting.format(*evaluated)
 
         # Show the name
@@ -647,15 +672,14 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         if brief or not self.data:
             return output + "\n"
         # List available attributes
-        for key, value in sorted(self.data.items()):
+        for key, val in sorted(self.data.items()):
             output += "\n{0}: ".format(utils.color(key, 'green'))
-            if isinstance(value, type("")):
-                output += value.rstrip("\n")
-            elif isinstance(value, list) and all(
-                    [isinstance(item, type("")) for item in value]):
-                output += utils.listed(value)
+            if isinstance(val, str):
+                output += val.rstrip("\n")
+            elif isinstance(val, list) and all(isinstance(item, str) for item in val):
+                output += utils.listed(val)  # type: ignore
             else:
-                output += pretty(value)
+                output += pretty(val)
         return output + "\n"
 
     @staticmethod
@@ -678,20 +702,21 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         # Fetch remote git repository
         if 'url' in reference:
             tree = utils.fetch_tree(
-                reference.get('url'),
-                reference.get('ref'),
-                reference.get('path', '.').lstrip('/'))
+                str(reference.get('url')),
+                reference.get('ref'),  # type: ignore
+                str(reference.get('path', '.')).lstrip('/'))
         # Use local files
         else:
-            root = reference.get('path', '.')
+            root = str(reference.get('path', '.'))
             if not root.startswith('/') and root != '.':
                 raise utils.ReferenceError(
                     'Relative path "%s" specified.' % root)
             tree = Tree(root)
-        found_node = tree.find(reference.get('name', '/'))
+        found_node = tree.find(str(reference.get('name', '/')))
         if found_node is None:
             raise utils.ReferenceError(
                 "No tree node found for '{0}' reference".format(reference))
+        assert isinstance(found_node, Tree)
         return found_node
 
     def copy(self) -> Tree:
@@ -709,8 +734,10 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         self.parent = duplicate.parent = original_parent
         return duplicate
 
-    def validate(self, schema: JsonSchema,
-                 schema_store: Optional[dict] = None) -> utils.JsonSchemaValidationResult:
+    def validate(self,
+                 schema: JsonSchema,
+                 schema_store: Optional[dict[str,
+                                             Any]] = None) -> utils.JsonSchemaValidationResult:
         """
         Validate node data with given JSON Schema and schema references.
 
@@ -768,7 +795,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
 
         """
         # List of node names in the virtual hierarchy
-        hierarchy = list()
+        hierarchy: list[str] = []
 
         # Find the closest parent with raw data defined
         node = self
@@ -790,11 +817,12 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         for key in hierarchy:
             # Create a virtual hierarchy level if missing
             if key not in node_data:
-                node_data[key] = dict()
+                node_data[key] = {}
             # Initialize as an empty dict if leaf node is empty
             if node_data[key] is None:
-                node_data[key] = dict()
-            node_data = node_data[key]
+                node_data[key] = {}
+            assert isinstance(node_data, dict)
+            node_data = node_data[key]  # type: ignore
 
         # The full raw data were read from the last source
         return node_data, full_data, node.sources[-1]
@@ -851,7 +879,7 @@ class Tree(Mapping[str, Union['Tree', DataType]]):
         for d in self.data:
             yield d
 
-    def __contains__(self, item: str):
+    def __contains__(self, item: str) -> bool:
         if item.startswith("/"):
             return item[1:] in self.children
         else:

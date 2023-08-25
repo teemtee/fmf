@@ -22,7 +22,7 @@ import re
 import sys
 from collections.abc import Callable
 # TODO: py3.10: typing.Optional, typing.Union -> '|' operator
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
@@ -30,7 +30,8 @@ else:
     from typing_extensions import TypeAlias
 
 # TypeHints
-ExpressionType: TypeAlias = tuple[Optional[str], Union[str, bool], Optional[list[str]]]
+ExpressionType: TypeAlias = tuple[Optional[str], Union[str, bool], Optional[list['ContextValue']]]
+ExpressionType_raw: TypeAlias = tuple[Optional[str], Union[str, bool], Optional[list[str]]]
 
 
 class CannotDecide(Exception):
@@ -58,19 +59,19 @@ class ContextValue:
         else:
             self._to_compare = self._split_to_version(origin)
 
-    def __eq__(self, other: ContextValue):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, self.__class__):
             return self._to_compare == other._to_compare
         else:
             return False
 
-    def __ne__(self, other: ContextValue):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._to_compare)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}({})".format(self.__class__.__name__, repr(self._to_compare))
 
     def version_cmp(
@@ -156,7 +157,7 @@ class ContextValue:
             return -1  # other is larger (more pars)
 
     @staticmethod
-    def compare(first: str, second: str):
+    def compare(first: str, second: str) -> int:
         """ compare two version parts """
         # Ideally use `from packaging import version` but we need older
         # python support too so very rough
@@ -164,13 +165,12 @@ class ContextValue:
             # convert to int
             first_version = int(first)
             second_version = int(second)
+            return (
+                (first_version > second_version) -
+                (first_version < second_version))
         except ValueError:
             # fallback to compare as strings
-            first_version = first
-            second_version = second
-        return (
-            (first_version > second_version) -
-            (first_version < second_version))
+            return (first > second) - (first < second)
 
     @staticmethod
     def _split_to_version(text: str) -> tuple[str, ...]:
@@ -203,15 +203,15 @@ class Context:
 
     # Operators' definitions
 
-    def _op_defined(self, dimension_name: str, values: list[ContextValue]):
+    def _op_defined(self, dimension_name: str, values: Any) -> bool:
         """ 'is defined' operator """
         return dimension_name in self._dimensions
 
-    def _op_not_defined(self, dimension_name: str, values: list[ContextValue]):
+    def _op_not_defined(self, dimension_name: str, values: Any) -> bool:
         """ 'is not defined' operator """
         return dimension_name not in self._dimensions
 
-    def _op_eq(self, dimension_name: str, values: list[ContextValue]):
+    def _op_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '=' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -219,7 +219,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_not_eq(self, dimension_name: str, values: list[ContextValue]):
+    def _op_not_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '!=' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -227,7 +227,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_eq(self, dimension_name: str, values: list[ContextValue]):
+    def _op_minor_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~=' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -236,7 +236,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_not_eq(self, dimension_name: str, values: list[ContextValue]):
+    def _op_minor_not_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~!=' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -245,7 +245,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_less_or_eq(self, dimension_name: str, values: list[ContextValue]):
+    def _op_minor_less_or_eq(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~<=' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -254,7 +254,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_less(self, dimension_name: str, values: list[ContextValue]):
+    def _op_minor_less(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~<' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -263,7 +263,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_less(self, dimension_name: str, values: list[ContextValue]):
+    def _op_less(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '<' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -271,7 +271,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_less_or_equal(self, dimension_name: str, values: list[ContextValue]):
+    def _op_less_or_equal(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '<=' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -279,7 +279,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_greater_or_equal(self, dimension_name: str, values: list[ContextValue]):
+    def _op_greater_or_equal(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '>=' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -287,7 +287,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_greater_or_equal(self, dimension_name: str, values: list[ContextValue]):
+    def _op_minor_greater_or_equal(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~>=' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -296,7 +296,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_greater(self, dimension_name: str, values: list[ContextValue]):
+    def _op_greater(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '>' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -304,7 +304,7 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
-    def _op_minor_greater(self, dimension_name: str, values: list[ContextValue]):
+    def _op_minor_greater(self, dimension_name: str, values: list[ContextValue]) -> bool:
         """ '~>' operator """
 
         def comparator(dimension_value: ContextValue, it_val: ContextValue) -> bool:
@@ -314,7 +314,7 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_core(self, dimension_name: str, values: list[ContextValue],
-                 comparator: Callable[[ContextValue, ContextValue], bool]):
+                 comparator: Callable[[ContextValue, ContextValue], bool]) -> bool:
         """
         Evaluate value from dimension vs target values combination
 
@@ -381,7 +381,7 @@ class Context:
 
     # To split by 'or' operator
     re_or_split = re.compile(r'\bor\b')
-    _dimensions: dict[str]
+    _dimensions: dict[str, set[ContextValue]]
 
     def __init__(self, *args, **kwargs):
         """
@@ -404,10 +404,13 @@ class Context:
             for dim, op, values in definition[0]:
                 if op != "==":
                     raise InvalidContext()
+                assert dim is not None
+                assert values is not None
                 self._dimensions[dim] = set(values)
         # Initialized with dimension=value(s)
         for dimension_name, values in kwargs.items():
             if not isinstance(values, list):
+                assert values is not None
                 values = [values]
             self._dimensions[dimension_name] = set(
                 [self.parse_value(val) for val in values]
@@ -456,7 +459,7 @@ class Context:
         return parsed_rule
 
     @staticmethod
-    def parse_value(value: str) -> ContextValue:
+    def parse_value(value: Any) -> ContextValue:
         """ Single place to convert to ContextValue """
         return ContextValue(str(value))
 
@@ -485,7 +488,7 @@ class Context:
         return rule_parts
 
     @staticmethod
-    def split_expression(expression: str) -> ExpressionType:
+    def split_expression(expression: str) -> ExpressionType_raw:
         """
         Split expression to dimension name, operator and values
 
@@ -501,9 +504,9 @@ class Context:
         if match:
             # convert to bool and return expression tuple
             if match.group(1)[0].lower() == 't':
-                return (None, True, None)
+                return None, True, None
             else:
-                return (None, False, None)
+                return None, False, None
         # Triple expressions
         match = Context.re_expression_triple.match(expression)
         if match:
@@ -588,4 +591,5 @@ class Context:
         dimension_name, operator, values = expression
         if isinstance(operator, bool):
             return operator
+        assert dimension_name is not None
         return self.operator_map[operator](self, dimension_name, values)
