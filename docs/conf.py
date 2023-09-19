@@ -15,21 +15,6 @@
 import os
 import sys
 
-try:
-    # use bootstrap theme if user has it installed
-    import sphinx_bootstrap_theme
-    HTML_THEME = 'bootstrap'
-    html_theme_path = [sphinx_bootstrap_theme.get_html_theme_path()]
-except ImportError:
-    try:
-        # fall back to sphinx_rtd_theme if available
-        import sphinx_rtd_theme
-        HTML_THEME = 'sphinx_rtd_theme'
-        html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-    except ImportError:
-        # and fall back to 'default' if neither of those are available
-        HTML_THEME = 'default'
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -45,6 +30,7 @@ sys.path.insert(0, os.path.abspath('../'))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx_rtd_theme',
     ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -81,7 +67,7 @@ release = ''
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -125,15 +111,7 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = HTML_THEME
-
-# 1.3.1 sphinx READTHEDOCS build compat
-# SEE:
-# https://github.com/shabda/pysaml2/commit/d55bfeebe
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-if on_rtd:  # only import and set the theme if we're building docs locally
-    html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

@@ -26,7 +26,7 @@ install_requires = [
     'jsonschema',
     ]
 extras_require = {
-    'docs': ['sphinx>=3', 'sphinx_rtd_theme'],
+    'docs': ['sphinx==7.2.4', 'sphinx-rtd-theme==1.3.0'],
     'tests': ['pytest', 'python-coveralls', 'pre-commit'],
     }
 extras_require['all'] = [
