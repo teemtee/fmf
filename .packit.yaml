@@ -36,5 +36,5 @@ jobs:
     - epel-9
     list_on_homepage: True
     preserve_project: True
-    owner: psss
+    owner: "@teemtee"
     project: fmf

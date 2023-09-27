@@ -148,7 +148,7 @@ The fmf package is available in Fedora and EPEL::
 
 Install the latest version from the Copr repository::
 
-    dnf copr enable psss/fmf
+    dnf copr enable @teemtee/fmf
     dnf install fmf
 
 or use PIP::
@@ -171,28 +171,22 @@ Links
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Git:
-https://github.com/psss/fmf
+https://github.com/teemtee/fmf
 
 Docs:
 http://fmf.readthedocs.io/
 
 Issues:
-https://github.com/psss/fmf/issues
+https://github.com/teemtee/fmf/issues
 
 Releases:
-https://github.com/psss/fmf/releases
+https://github.com/teemtee/fmf/releases
 
 Copr:
-http://copr.fedoraproject.org/coprs/psss/fmf
+http://copr.fedoraproject.org/coprs/g/teemtee/fmf
 
 PIP:
 https://pypi.org/project/fmf/
-
-Travis:
-https://travis-ci.org/psss/fmf
-
-Coveralls:
-https://coveralls.io/github/psss/fmf
 
 
 Authors
