@@ -38,7 +38,7 @@ This package contains the Python 3 module.
 
 
 %prep
-%autosetup -n fmf-%{version}
+%autosetup -p1 -n fmf-%{version}
 
 
 %generate_buildrequires
@@ -61,11 +61,8 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %check
-%pytest -vv \
-    -m 'not web'
+%pytest -vv -m 'not web'
 
-
-%{!?_licensedir:%global license %%doc}
 
 %files
 %{_mandir}/man1/*

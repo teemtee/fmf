@@ -9,6 +9,9 @@ on:
         description: 'Tag to release'
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   build-wheel:
     name: Build wheel

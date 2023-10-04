@@ -2,12 +2,6 @@ name: CI
 
 on:
   workflow_dispatch:
-    inputs:
-      upload-wheel:
-        type: boolean
-        required: false
-        default: false
-        description: Upload wheel as an artifact
   pull_request:
   push:
     branches: [ main ]
@@ -24,9 +18,3 @@ jobs:
     uses: ./.github/workflows/step_test.yml
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  build-wheel:
-    uses: ./.github/workflows/step_build-wheel.yml
-    needs: [ tests ]
-    with:
-      upload: ${{ inputs.upload-wheel || false }}

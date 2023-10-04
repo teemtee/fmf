@@ -18,8 +18,8 @@ jobs:
       - uses: pre-commit/action@v3.0.0
 
   checks:
-    name:
-      Check 🐍 ${{ matrix.python-version }}
+    name: Check 🐍 ${{ matrix.python-version }}
+    needs: [ pre-commit ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
