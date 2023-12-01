@@ -17,18 +17,16 @@ tmp:
 
 # Run the test suite, optionally with coverage
 test: tmp
-	pytest tests/unit
+	hatch run test:unit
 smoke: tmp
-	pytest tests/unit/test_smoke.py
+	hatch run test:smoke
 coverage: tmp
-	coverage run --source=fmf -m py.test tests
-	coverage report
-	coverage annotate
+	hatch run cov:cov
 
 
 # Build documentation, prepare man page
 docs: man
-	cd docs && make html
+	hatch run docs:html
 man: source
 	cp docs/header.txt $(TMP)/man.rst
 	tail -n+7 README.rst >> $(TMP)/man.rst
@@ -52,9 +50,9 @@ packages: rpm srpm
 
 # Python packaging
 wheel:
-	python3 -m build
+	hatch build
 upload:
-	twine upload dist/*.whl
+	hatch publish
 
 
 # Vim tags and cleanup

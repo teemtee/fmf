@@ -77,6 +77,11 @@ features = ["tests-cov"]
 
 [tool.hatch.envs.cov.scripts]
 xml = ["pytest --cov --cov-report=xml"]
+cov = [
+    "coverage run -m pytest -vvv -ra --showlocals tests",
+    "coverage report",
+    "coverage annotate",
+    ]
 
 [tool.hatch.envs.dev]
 description = "Development environment"
