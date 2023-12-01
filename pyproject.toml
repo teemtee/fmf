@@ -35,7 +35,7 @@ dependencies = [
 dynamic = ['version']
 
 [project.urls]
-Homepage = 'https://github.com/psss/fmf'
+Homepage = 'https://github.com/teemtee/fmf'
 
 [project.optional-dependencies]
 tests = [
@@ -67,6 +67,34 @@ version.raw-options.version_scheme = 'post-release'
 
 [tool.hatch.build.targets.wheel]
 packages = ['fmf']
+
+[tool.hatch.envs.default]
+platforms = ["linux"]
+
+[tool.hatch.envs.dev]
+description = "Development environment"
+features = ["dev"]
+
+[tool.hatch.envs.dev.scripts]
+type = ["mypy {args:tmt}"]
+check = ["lint", "type"]
+
+unit = "pytest -vvv -ra --showlocals tests/unit"
+smoke = "pytest -vvv -ra --showlocals tests/unit/test_cli.py"
+
+[tool.hatch.envs.test]
+template = "dev"
+description = "Run scripts with multiple Python versions"
+features = ["tests"]
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.9", "3.11", "3.12"]
+
+[tool.hatch.envs.docs]
+features = ["docs"]
+
+[tool.hatch.envs.docs.scripts]
+html = "sphinx-build -b html {root}/docs {root}/docs/_build {args}"
 
 [tool.pytest.ini_options]
 markers = [
