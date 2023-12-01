@@ -71,6 +71,13 @@ packages = ['fmf']
 [tool.hatch.envs.default]
 platforms = ["linux"]
 
+[tool.hatch.envs.cov]
+description = "Test coverage environment"
+features = ["tests-cov"]
+
+[tool.hatch.envs.cov.scripts]
+xml = ["pytest --cov --cov-report=xml"]
+
 [tool.hatch.envs.dev]
 description = "Development environment"
 features = ["dev"]
