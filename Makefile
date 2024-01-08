@@ -1,12 +1,10 @@
 # Prepare variables
 TMP = $(CURDIR)/tmp
-VERSION = $(shell grep ^Version fmf.spec | sed 's/.* //')
-COMMIT = $(shell git rev-parse --short HEAD)
-REPLACE_VERSION = "s/running from the source/$(VERSION) ($(COMMIT))/"
+VERSION = $(hatch version)
 PACKAGE = fmf-$(VERSION)
 FILES = LICENSE README.rst \
-		Makefile fmf.spec setup.py \
-		examples fmf bin tests
+		Makefile fmf.spec pyproject.toml \
+		examples fmf tests
 
 # Define special targets
 all: docs packages
@@ -19,18 +17,16 @@ tmp:
 
 # Run the test suite, optionally with coverage
 test: tmp
-	pytest tests/unit -c tests/unit/pytest.ini
+	hatch run test:unit
 smoke: tmp
-	pytest tests/unit/test_smoke.py -c tests/unit/pytest.ini
+	hatch run test:smoke
 coverage: tmp
-	coverage run --source=fmf,bin -m py.test -c tests/unit/pytest.ini tests
-	coverage report
-	coverage annotate
+	hatch run cov:cov
 
 
 # Build documentation, prepare man page
 docs: man
-	cd docs && make html
+	hatch run docs:html
 man: source
 	cp docs/header.txt $(TMP)/man.rst
 	tail -n+7 README.rst >> $(TMP)/man.rst
@@ -42,12 +38,9 @@ source: clean tmp
 	mkdir -p $(TMP)/SOURCES
 	mkdir -p $(TMP)/$(PACKAGE)
 	cp -a $(FILES) $(TMP)/$(PACKAGE)
-	sed -i $(REPLACE_VERSION) $(TMP)/$(PACKAGE)/fmf/__init__.py
 tarball: source man
 	cd $(TMP) && tar cfz SOURCES/$(PACKAGE).tar.gz $(PACKAGE)
 	@echo ./tmp/SOURCES/$(PACKAGE).tar.gz
-version:
-	@echo "$(VERSION)"
 rpm: tarball
 	rpmbuild --define '_topdir $(TMP)' -bb fmf.spec
 srpm: tarball
@@ -57,10 +50,9 @@ packages: rpm srpm
 
 # Python packaging
 wheel:
-	python setup.py bdist_wheel
-	python3 setup.py bdist_wheel
+	hatch build
 upload:
-	twine upload dist/*.whl
+	hatch publish
 
 
 # Vim tags and cleanup

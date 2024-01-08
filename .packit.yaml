@@ -5,15 +5,18 @@ synced_files:
 upstream_package_name: fmf
 downstream_package_name: fmf
 
+# Epel9 fails to build with dynamic version. Need to create archive with PKG-INFO
+# F37 works with setuptools_scm 7.0
 actions:
   create-archive:
-  - make tarball
+    - "hatch build -t sdist"
+    - "sh -c 'echo dist/fmf-*.tar.gz'"
   get-current-version:
-  - make version
+    - "hatch version"
 
 srpm_build_deps:
-  - make
-  - python3-docutils
+  - hatch
+  - python3-hatch-vcs
 
 jobs:
   - job: copr_build
