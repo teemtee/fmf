@@ -609,7 +609,7 @@ class Tree:
                 continue
             # Apply filters and conditions if given
             try:
-                if not all([utils.filter(filter, node.data, regexp=True)
+                if not all([utils.filter(filter, node.data, regexp=True, name=node.name)
                             for filter in filters]):
                     continue
                 if not all([utils.evaluate(condition, node.data, node)

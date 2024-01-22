@@ -26,8 +26,6 @@ class TestFilter:
     def test_invalid(self):
         """ Invalid filter format """
         with pytest.raises(utils.FilterError):
-            filter("x & y", self.data)
-        with pytest.raises(utils.FilterError):
             filter("status:proposed", self.data)
         with pytest.raises(utils.FilterError):
             filter("x: 1", None)
@@ -36,6 +34,30 @@ class TestFilter:
         """ Empty filter should return True """
         assert filter(None, self.data) is True
         assert filter("", self.data) is True
+
+    def test_name_missing(self):
+        """ Node name has to be provided when searching for names """
+        with pytest.raises(utils.FilterError):
+            filter("/tests/core", self.data)
+        with pytest.raises(utils.FilterError):
+            filter("/tests/one | /tests/two", self.data)
+
+    def test_name_provided(self):
+        """ Searching by node names """
+        # Basic
+        assert filter("/tests/one", self.data, name="/tests/one") is True
+        assert filter("/tests/two", self.data, name="/tests/one") is False
+
+        # Combined
+        assert filter("/tests/one | /tests/two", self.data, name="/tests/one") is True
+        assert filter("/tests/one | tag: bad", self.data, name="/tests/one") is True
+        assert filter("/tests/one & tag: bad", self.data, name="/tests/one") is False
+        assert filter("/tests/wrong | tag: Tier1", self.data, name="/tests/one") is True
+        assert filter("/tests/wrong & tag: Tier1", self.data, name="/tests/one") is False
+
+        # Regular expressions
+        assert filter("/.*/one", self.data, name="/tests/one") is False
+        assert filter("/.*/one", self.data, name="/tests/one", regexp=True) is True
 
     def test_basic(self):
         """ Basic stuff and negation """

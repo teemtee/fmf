@@ -211,9 +211,9 @@ def evaluate(expression, data, _node=None):
         raise FilterError("Internal key is not defined: {}".format(error))
 
 
-def filter(filter, data, sensitive=True, regexp=False):
+def filter(filter, data, sensitive=True, regexp=False, name=None):
     """
-    Return true if provided filter matches given dictionary of values
+    Apply advanced filter on the provided data dictionary
 
     Filter supports disjunctive normal form with '|' used for OR, '&'
     for AND and '-' for negation. Individual values are prefixed with
@@ -227,16 +227,35 @@ def filter(filter, data, sensitive=True, regexp=False):
 
         tag: A, B, C ---> tag: A | tag: B | tag: C
 
+    If the ``key: value`` format is not detected, that is when ``:``
+    character is not used in the literal, the expression is considered
+    to be a search for the node name and will return ``True`` if
+    provided string matches the content of the optional ``name``
+    parameter::
+
+        /tests/core & tag: quick
+
     Values should be provided as a dictionary of lists each describing
     the values against which the filter is to be matched. For example::
 
         data = {tag: ["Tier1", "TIPpass"], category: ["Sanity"]}
 
     Other types of dictionary values are converted into a string.
-    A FilterError exception is raised when a dimension parsed from the
-    filter is not found in the data dictionary. Set option 'sensitive'
-    to False to enable case-insensitive matching. If 'regexp' option is
-    True, regular expressions can be used in the filter values as well.
+
+    :param sensitive: Set to False to enable case-insensitive matching.
+
+    :param regexp: If True, regular expressions can be used in the
+        filter values and name search as well.
+
+    :param name: Node name to be used when searching by name.
+
+    :raises FilterError: when a dimension parsed from the filter is not
+        found in the data dictionary or search for node name is detected
+        but node name is not provided.
+
+    :returns: True if the filter matches given dictionary of values and
+        the node name (if provided).
+
     """
 
     def match_value(pattern, text):
@@ -280,6 +299,24 @@ def filter(filter, data, sensitive=True, regexp=False):
         # Every value must match at least one value for data
         return all([check_value(dimension, value) for value in values])
 
+    def check_name(pattern: str) -> bool:
+        """
+        Check whether the node name matches
+
+        Search for regular expression pattern if `regexp` is turned on,
+        simply compare strings otherwise.
+        """
+        # Node name has to be provided if name search requested
+        if name is None:
+            raise FilterError(
+                f"Filter by name '{pattern}' requested "
+                f"but node name not provided to 'filter()'.")
+
+        if regexp:
+            return bool(re.search(pattern, name))
+        else:
+            return pattern == name
+
     def check_clause(clause):
         """ Split into literals and check whether all match """
         # E.g. clause = 'tag: A, B & tag: C & tag: -D'
@@ -287,10 +324,16 @@ def filter(filter, data, sensitive=True, regexp=False):
         literals = dict()
         for literal in re.split(r"\s*&\s*", clause):
             # E.g. literal = 'tag: A, B'
-            # Make sure the literal matches dimension:value format
+            # Check whether the literal matches dimension:value format
             matched = re.match(r"^([^:]*)\s*:\s*(.*)$", literal)
             if not matched:
-                raise FilterError("Invalid filter '{0}'".format(literal))
+                # Handle literal as a node name check. If name matches,
+                # no action needed, the decision is left on the
+                # remaining literals.
+                if check_name(literal):
+                    continue
+                else:
+                    return False
             dimension, value = matched.groups()
             values = [value]
             # Append the literal value(s) to corresponding dimension list
