@@ -222,6 +222,13 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
         tag: Tier1 | tag: Tier2 | tag: Tier3
         category: Sanity, Security & tag: -destructive
 
+    Use the back slash character ``\\`` to escape the boolean
+    operators if you need to specify them as part of the filter
+    expressions::
+
+        tag: Tier(1\\|2)
+        text: Q\\&A
+
     Note that multiple comma-separated values can be used as a syntactic
     sugar to shorten the filter notation::
 
@@ -322,7 +329,10 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
         # E.g. clause = 'tag: A, B & tag: C & tag: -D'
         # Split into individual literals by dimension
         literals = dict()
-        for literal in re.split(r"\s*&\s*", clause):
+
+        for literal in re.split(r"\s*(?<!\\)&\s*", clause):
+            # Remove the possible escaping
+            literal = re.sub(r"\\&", "&", literal)
             # E.g. literal = 'tag: A, B'
             # Check whether the literal matches dimension:value format
             matched = re.match(r"^([^:]*)\s*:\s*(.*)$", literal)
@@ -364,8 +374,9 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
         data = lowered
 
     # At least one clause must be true
-    return any([check_clause(clause)
-                for clause in re.split(r"\s*\|\s*", filter)])
+    return any([
+        check_clause(re.sub(r"\\\|", "|", clause))
+        for clause in re.split(r"\s*(?<!\\)\|\s*", filter)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Logging

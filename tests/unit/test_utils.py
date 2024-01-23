@@ -1,5 +1,6 @@
 import os
 import queue
+import re
 import shutil
 import threading
 import time
@@ -117,6 +118,32 @@ class TestFilter:
         assert filter("tag: ťip", self.data) is False
         assert filter("tag: ťip", {"tag": ["ťip"]}) is True
         assert filter("tag: -ťop", {"tag": ["ťip"]}) is True
+
+    def test_escape_or(self):
+        """ Escaping the | operator """
+
+        # Escaped
+        assert filter(r"category: (Sanity\|Security)", self.data, regexp=True) is True
+        assert filter(r"tag: Tier(1\|2)", self.data, regexp=True) is True
+
+        # Unescaped
+        with pytest.raises(re.error):
+            assert filter(r"category: (Sanity|Security)", self.data, regexp=True) is True
+        with pytest.raises(re.error):
+            assert filter(r"tag: Tier(1|2)", self.data, regexp=True) is True
+
+    def test_escape_and(self):
+        """ Escaping the & operator """
+        self.data["text"] = "Q&A"
+
+        # Escaped
+        assert filter(r"text: Q\&A", self.data) is True
+        assert filter(r"text: Q\&A", self.data) is True
+
+        # Unescaped
+        assert filter(r"text: Q&A", self.data, name="foo") is False
+        with pytest.raises(utils.FilterError):
+            filter(r"text: foo & bar", self.data)
 
 
 class TestPluralize:
