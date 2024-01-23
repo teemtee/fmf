@@ -320,8 +320,9 @@ def filter(filter, data, sensitive=True, regexp=False):
         data = lowered
 
     # At least one clause must be true
-    return any([check_clause(clause)
-                for clause in re.split(r"\s*\|\s*", filter)])
+    return any([
+        check_clause(re.sub(r"\|", "|", clause))
+        for clause in re.split(r"\s*(?<!\\)\|\s*", filter)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Logging
