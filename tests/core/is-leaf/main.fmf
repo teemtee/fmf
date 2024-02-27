@@ -1,0 +1,7 @@
+summary: Verify functionality of the `is-leaf` directive
+description:
+    Sometimes the node should stay reported as a object
+    even though it has child nodes. Using this directive
+    allows it. Real life example is to keep "/test" available
+    after virtual tests "/test/virtual_foo" and "test/virtual_bar"
+    are created.
