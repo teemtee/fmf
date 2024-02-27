@@ -194,6 +194,20 @@ The key content attributes are not supposed to be hard-coded in
 the Flexible Metadata Format but freely configurable. Multiple key
 content attributes (e.g. script & backend) could be used as well.
 
+Select
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes it is necessary to select node from the metadata tree
+even though it is not a leaf. For example, when virtual tests are
+created from a parent test but one wants to keep the parent available
+as a test as well. On the other hand, one might want to hide leaf node,
+instead of deleting it completely. To do so, one can set the directive::
+
+    /:
+        select: boolean
+
+By default all leaves have it set to ``true`` (such node is selected)
+and branches have set it to ``false`` (such node is not selected).
 
 .. _virtual:
 
