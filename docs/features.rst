@@ -194,6 +194,14 @@ The key content attributes are not supposed to be hard-coded in
 the Flexible Metadata Format but freely configurable. Multiple key
 content attributes (e.g. script & backend) could be used as well.
 
+Sometimes it is necessary to select node from the metadata tree
+even though it is not leaf. For example, when virtual tests are
+created from a parent test but one wants to keep the parent available
+as a test as well. To do so, one can set fhe following directive::
+
+    /:
+        is-leaf: true
+
 
 .. _virtual:
 

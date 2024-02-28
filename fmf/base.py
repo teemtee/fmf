@@ -250,10 +250,12 @@ class Tree:
         for key, value in directives.items():
             if key == "inherit":
                 check(value, bool, name="inherit")
-                continue
-            # No other directive supported
-            raise fmf.utils.FormatError(
-                f"Unknown fmf directive '{key}' in '{self.name}'.")
+            elif key == "is-leaf":
+                check(value, bool, name="is-leaf")
+            else:
+                # No other directive supported
+                raise fmf.utils.FormatError(
+                    f"Unknown fmf directive '{key}' in '{self.name}'.")
 
         # Everything ok, store the directives
         self._directives.update(directives)
@@ -572,7 +574,7 @@ class Tree:
 
     def climb(self, whole=False):
         """ Climb through the tree (iterate leaf/all nodes) """
-        if whole or not self.children:
+        if whole or not self.children or self._directives.get("is-leaf"):
             yield self
         for name, child in self.children.items():
             for node in child.climb(whole):
