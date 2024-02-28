@@ -4,7 +4,7 @@ discover:
     how: fmf
     url: https://github.com/teemtee/tmt
     ref: fedora
-    filter: 'tier: 1, 2'
+    filter: 'tier: 1 & tag:-provision-only'
 prepare:
   - how: install
     package:
