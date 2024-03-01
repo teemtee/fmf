@@ -210,7 +210,7 @@ def evaluate(expression, data, _node=None):
         raise FilterError("Internal key is not defined: {}".format(error))
 
 
-def filter(filter, data, sensitive=True, regexp=False):
+def filter(filter, data, sensitive=True, regexp=False, name=None):
     """
     Return true if provided filter matches given dictionary of values
 
@@ -236,6 +236,8 @@ def filter(filter, data, sensitive=True, regexp=False):
     filter is not found in the data dictionary. Set option 'sensitive'
     to False to enable case-insensitive matching. If 'regexp' option is
     True, regular expressions can be used in the filter values as well.
+    Optional parameter 'name', if provided, will be included in the data
+    as 'fmf-name' and can be used for filtering as well.
     """
 
     def match_value(pattern, text):
@@ -304,13 +306,18 @@ def filter(filter, data, sensitive=True, regexp=False):
     if not isinstance(data, dict):
         raise FilterError("Invalid data type '{0}'".format(type(data)))
 
-    # Make sure that data dictionary contains lists of strings
+    # Add fmf name to the data dictionary if provided
     data = copy.deepcopy(data)
+    if name is not None:
+        data["fmf-name"] = name
+
+    # Make sure that data dictionary contains lists of strings
     for key in data:
         if isinstance(data[key], list):
             data[key] = [str(item) for item in data[key]]
         else:
             data[key] = [str(data[key])]
+
     # Turn all data into lowercase if sensitivity is off
     if not sensitive:
         filter = filter.lower()
