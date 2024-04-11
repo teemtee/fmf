@@ -127,6 +127,11 @@ class TestAdjust:
         mini.adjust(centos)
         assert mini.get('enabled') is False
 
+    def test_adjusted_additional(self, mini, centos):
+        """ Additional rule is evaluated even if 'main' rule matched """
+        mini.adjust(centos, additional_rules={'enabled': True})
+        assert mini.get('enabled') is True
+
     def test_keep_original_adjust_rules(self, mini, centos):
         original_adjust = copy.deepcopy(mini.get('adjust'))
         mini.adjust(centos)
@@ -210,6 +215,8 @@ class TestAdjust:
         # From the mini tree
         rule = mini.data['adjust']
 
+        add_rule = {"when": "distro == centos", "foo": "bar"}
+
         mock_callback = MagicMock(name='<mock>callback')
         mini.adjust(fmf.Context(), decision_callback=mock_callback)
         mock_callback.assert_called_once_with(mini, rule, None)
@@ -221,6 +228,12 @@ class TestAdjust:
         mock_callback = MagicMock(name='<mock>callback')
         mini.adjust(centos, decision_callback=mock_callback)
         mock_callback.assert_called_once_with(mini, rule, True)
+
+        mock_callback = MagicMock(name='<mock>callback')
+        mini.adjust(centos, decision_callback=mock_callback, additional_rules=[add_rule])
+        mock_callback.assert_any_call(mini, rule, True)
+        mock_callback.assert_any_call(mini, add_rule, True)
+        assert mock_callback.call_count == 2
 
     def test_case_sensitive(self, mini, centos):
         """ Make sure the adjust rules are case-sensitive by default """

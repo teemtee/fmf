@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 from io import open
+from itertools import chain
 from pprint import pformat as pretty
 from typing import Any, Dict, Optional, Protocol
 
@@ -343,7 +344,8 @@ class Tree:
         log.data(pretty(self.data))
 
     def adjust(self, context, key='adjust', undecided='skip',
-               case_sensitive=True, decision_callback=None):
+               case_sensitive=True, decision_callback=None,
+               additional_rules=None):
         """
         Adjust tree data based on provided context and rules
 
@@ -365,6 +367,11 @@ class Tree:
         Optional 'decision_callback' callback would be called for every adjust
         rule inspected, with three arguments: current fmf node, current
         adjust rule, and whether it was applied or not.
+
+        Optional 'additional_rules' parameter can be used to specify rules
+        which should be applied in addition to those defined in the node itself.
+        These additional rules are processed even when the applied
+        rule defined in the data has ``continue: false`` set.
         """
 
         # Check context sanity
@@ -387,10 +394,18 @@ class Tree:
         except KeyError:
             rules = []
 
+        additional_rules = copy.deepcopy(additional_rules)
+
+        # Accept same type as rules from data
+        if additional_rules is None:
+            additional_rules = []
+        elif isinstance(additional_rules, dict):
+            additional_rules = [additional_rules]
+
         context.case_sensitive = case_sensitive
 
         # Check and apply each rule
-        for rule in rules:
+        for rule in chain(rules, additional_rules):
 
             # Rule must be a dictionary
             if not isinstance(rule, dict):
@@ -423,7 +438,7 @@ class Tree:
                         }
                     self._merge_special(self.data, apply_rule)
 
-                    # First matching rule wins, skip the rest unless continue
+                    # First matching rule wins, skip the rest of this set unless continue
                     if not continue_:
                         break
                 else:
@@ -446,7 +461,9 @@ class Tree:
         # Adjust all child nodes as well
         for child in self.children.values():
             child.adjust(context, key, undecided,
-                         case_sensitive=case_sensitive, decision_callback=decision_callback)
+                         case_sensitive=case_sensitive,
+                         decision_callback=decision_callback,
+                         additional_rules=additional_rules)
 
     def get(self, name=None, default=None):
         """
