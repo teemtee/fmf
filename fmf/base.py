@@ -23,6 +23,7 @@ from fmf.utils import dict_to_yaml, log
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
+ADJUST_CONTROL_KEYS = ['because', 'continue', 'when']
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -373,7 +374,7 @@ class Tree:
 
         # Adjust rules should be a dictionary or a list of dictionaries
         try:
-            rules = copy.deepcopy(self.data[key])
+            rules = self.data[key]
             log.debug("Applying adjust rules for '{}'.".format(self))
             log.data(rules)
             if isinstance(rules, dict):
@@ -395,42 +396,43 @@ class Tree:
             if not isinstance(rule, dict):
                 raise utils.FormatError("Adjust rule should be a dictionary.")
 
-            original_rule = rule.copy()
-
             # Missing 'when' means always enabled rule
             try:
-                condition = rule.pop('when')
+                condition = rule['when']
             except KeyError:
                 condition = True
 
             # The optional 'continue' key should be a bool
-            continue_ = rule.pop('continue', True)
+            continue_ = rule.get('continue', True)
             if not isinstance(continue_, bool):
                 raise utils.FormatError(
                     "The 'continue' value should be bool, "
                     "got '{}'.".format(continue_))
 
-            # The 'because' key is reserved for optional comments (ignored)
-            rule.pop('because', None)
-
             # Apply remaining rule attributes if context matches
             try:
                 if context.matches(condition):
                     if decision_callback:
-                        decision_callback(self, original_rule, True)
+                        decision_callback(self, rule, True)
 
-                    self._merge_special(self.data, rule)
+                    # Remove special keys (when, because...) from the rule
+                    apply_rule = {
+                        key: value
+                        for key, value in rule.items()
+                        if key not in ADJUST_CONTROL_KEYS
+                        }
+                    self._merge_special(self.data, apply_rule)
 
                     # First matching rule wins, skip the rest unless continue
                     if not continue_:
                         break
                 else:
                     if decision_callback:
-                        decision_callback(self, original_rule, False)
+                        decision_callback(self, rule, False)
             # Handle undecided rules as requested
             except fmf.context.CannotDecide:
                 if decision_callback:
-                    decision_callback(self, original_rule, None)
+                    decision_callback(self, rule, None)
 
                 if undecided == 'skip':
                     continue

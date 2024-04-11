@@ -10,7 +10,8 @@ from ruamel.yaml import YAML
 
 import fmf.cli
 import fmf.utils as utils
-from fmf.base import Tree
+from fmf.base import ADJUST_CONTROL_KEYS, Tree
+from fmf.context import Context
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -106,6 +107,32 @@ class TestTree:
         """ Handle None keys """
         with pytest.raises(utils.FormatError):
             Tree({None: "weird key"})
+
+    def test_control_keys(self):
+        """ No special handling outside adjust """
+        child_data = {k: str(v) for v, k in enumerate(ADJUST_CONTROL_KEYS)}
+        tree = Tree({
+            'key': 'value',
+            '/child': child_data
+            })
+        expected = {'key': 'value'}
+        expected.update(child_data)
+        assert tree.find('/child').data == expected
+
+    def test_adjust_strips_control_keys(self):
+        """ They are not merged during adjust """
+        tree = Tree({'adjust': [
+            {
+                'because': 'reasons',
+                'foo': 'bar'
+                }
+            ],
+            '/child': {}
+            })
+        tree.adjust(context=Context())
+        child = tree.find('/child')
+        assert 'because' not in child.data
+        assert 'foo' in child.data
 
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
