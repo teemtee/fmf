@@ -16,6 +16,7 @@ from ruamel.yaml.error import YAMLError
 import fmf.context
 import fmf.utils as utils
 from fmf.utils import dict_to_yaml, log
+from fmf.profile import Profile
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -837,3 +838,7 @@ class Tree:
             return self.children[key[1:]]
         else:
             return self.data[key]
+
+    def apply_profile(self, profile: Profile) -> None:
+        profile.apply_rule(self)
+
