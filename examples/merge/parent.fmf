@@ -36,3 +36,18 @@ very:
                 x+: 1
                 y-: 1
                 z: 0
+
+# Regexp used to change values - note that the second tag regexp cannot be applied
+# as Tier2 is already modified into 't2'
+/regexp:
+    description~: "/.en(.*) .*/gen\\1/"
+    tags~:
+    - '/Tier(.)/t\1/'
+    - /Tier2/t3/
+
+/minus-regexp:
+    description-~: '.*'
+    tags-~:
+    - '.ier1'
+    vars-~:
+    - 'y'

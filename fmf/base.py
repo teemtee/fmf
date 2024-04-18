@@ -191,6 +191,49 @@ class Tree:
                 "MergeError: Key '{0}' in {1} ({2}).".format(
                     key, self.name, str(error)))
 
+    def _merge_regexp(self, data, key, value):
+        """ Handle substitution of current values """
+        if isinstance(value, str):
+            value = [value]
+        for pattern, replacement in [utils.split_pattern_replacement(v) for v in value]:
+            if isinstance(data[key], list):
+                try:
+                    data[key] = [re.sub(pattern, replacement, original) for original in data[key]]
+                except TypeError:
+                    raise utils.MergeError(
+                        "MergeError: Key '{0}' in {1} (not a string).".format(
+                            key, self.name))
+            elif isinstance(data[key], str):
+                data[key] = re.sub(pattern, replacement, data[key])
+            else:
+                raise utils.MergeError(
+                    "MergeError: Key '{0}' in {1} (wrong type).".format(
+                        key, self.name))
+
+    def _merge_minus_regexp(self, data, key, value):
+        """ Handle removing current values if they match regexp """
+        # A bit faster but essentially `any`
+        def lazy_any_search(item, patterns):
+            for p in patterns:
+                if re.search(p, str(item)):
+                    return True
+            return False
+        if isinstance(value, str):
+            value = [value]
+        if isinstance(data[key], list):
+            data[key] = [item for item in data[key] if not lazy_any_search(item, value)]
+        elif isinstance(data[key], str):
+            if lazy_any_search(data[key], value):
+                data[key] = ''
+        elif isinstance(data[key], dict):
+            for k in list(data[key].keys()):
+                if lazy_any_search(k, value):
+                    data[key].pop(k)
+        else:
+            raise utils.MergeError(
+                "MergeError: Key '{0}' in {1} (wrong type).".format(
+                    key, self.name))
+
     def _merge_minus(self, data, key, value):
         """ Handle reducing attributes using the '-' suffix """
         # Cannot reduce attribute if key is not present in parent
@@ -225,8 +268,12 @@ class Tree:
                 self._merge_plus(data, key.rstrip('+'), value)
             elif key.endswith('+<'):
                 self._merge_plus(data, key.rstrip('+<'), value, prepend=True)
+            elif key.endswith('-~'):
+                self._merge_minus_regexp(data, key.rstrip('-~'), value)
             elif key.endswith('-'):
                 self._merge_minus(data, key.rstrip('-'), value)
+            elif key.endswith('~'):
+                self._merge_regexp(data, key.rstrip('~'), value)
             # Otherwise just update the value
             else:
                 data[key] = value

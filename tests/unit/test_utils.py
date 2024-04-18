@@ -483,3 +483,25 @@ class TestDictToYaml:
         data = dict(y=2, x=1)
         assert fmf.utils.dict_to_yaml(data) == "y: 2\nx: 1\n"
         assert fmf.utils.dict_to_yaml(data, sort=True) == "x: 1\ny: 2\n"
+
+
+class TestSplitPatternReplacement:
+    @pytest.mark.parametrize("src", [
+        "",  # Empty input
+        "/",  # Not long enough input
+        ";/;",  # Not long enough - missing 'REPL;'
+        ";;;",  # PATTERN and REPL parts empty
+        "/a/b/c",  # Input after trailing deliminer
+        "/a/b/c/d/",  # More than 3 delimiters
+        "/x;y/",  # No REPL part as delimiter is /
+        "/a/a;"  # No trailing delimiter
+        ])
+    def test_invalid(self, src):
+        with pytest.raises(utils.FormatError):
+            utils.split_pattern_replacement(src)
+
+    def test_simple(self):
+        assert utils.split_pattern_replacement(
+            '/a/b/') == utils.PatternReplacement('a', 'b')
+        assert utils.split_pattern_replacement(
+            ';ac/dc;rose;') == utils.PatternReplacement('ac/dc', 'rose')

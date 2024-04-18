@@ -178,6 +178,21 @@ class TestTree:
             child.data["time-"] = "bad"
             child.inherit()
 
+    def test_merge_regexp(self):
+        """ Do re.sub during the merge """
+        child = self.merge.find('/parent/regexp')
+        assert 'general' == child.data['description']
+        # First rule changes the Tier2 into t2,
+        # thus /Tier2/t3/ no longer matches.
+        assert ['t1', 't2'] == child.data['tags']
+
+    def test_merge_minus_regexp(self):
+        """ Merging with '-~' operation """
+        child = self.merge.find('/parent/minus-regexp')
+        assert '' == child.data['description']
+        assert ['Tier2'] == child.data['tags']
+        assert {'x': 1} == child.data['vars']
+
     def test_merge_deep(self):
         """ Merging a deeply nested dictionary """
         child = self.merge.find('/parent/buried')

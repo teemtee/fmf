@@ -948,3 +948,37 @@ def validate_data(data, schema, schema_store=None):
             jsonschema.exceptions.UnknownType
             ) as error:
         raise JsonSchemaError(f'Errors found in provided schema: {error}')
+
+
+class PatternReplacement(NamedTuple):
+    pattern: str
+    replacement: str
+
+
+def split_pattern_replacement(source):
+    """
+    Splits pattern/replacement string input into parts
+
+    Format of the input:
+        <delimiter><PATTERN><delimiter><REPLACEMENT><delimiter>
+
+    Delimiter set by the first character of the input and this character
+    cannot be used in the PATTERN or REPLACEMENT text. Escaping is not
+    supported.
+    """
+
+    try:
+        delimiter = source[0]
+        if source[-1] != delimiter:
+            raise FormatError("'{0}' has to end with '{1}'.".format(source, delimiter))
+    except IndexError:
+        raise FormatError("'{0}' has to start and end with the same delimiter.".format(source))
+
+    try:
+        pattern, replacement = source[1:-1].split(delimiter)
+    except ValueError:
+        raise FormatError("'{0}' can't be split in two parts".format(source))
+
+    if not pattern:
+        raise FormatError("Pattern cannot be empty: '{0}'.".format(source))
+    return PatternReplacement(pattern=pattern, replacement=replacement)

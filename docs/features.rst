@@ -121,6 +121,41 @@ attribute, matching regular expressions are replaced by an empty
 string. For dictionaries it's possible to provide list of keys
 which should be removed.
 
+Substitution of current values can be done by appending a ``~``
+suffix to the key name. The pattern and replacement parameters
+need to be provided as values in the form of
+``<d>PATTERN<d>REPLACEMENT<d>``, where ``<d>`` is delimiter which
+can be any character however such character cannot be then used
+within PATTERN and REPLACEMENT text as escaping isn't supported.
+This input can be either a string or list of strings.
+
+The `re.sub`__ is used to do the substitution thus all features of
+``re.Pattern`` can be used (named groups, back referencing...).
+
+In the fmf file it is better to use single quotes ``'`` as they do
+not need such intensive escaping::
+
+    require~: ';^foo;foo-ng;'
+    recommend~:
+      - '/python2-/python3-/'
+
+__ https://docs.python.org/3/library/re.html#re.sub
+
+Remove parent value only if it matches regular expression is done
+using  the ``-~`` suffix. If value matches any of provided
+`regular expressions`__ it is removed. If the parent value is a
+list, the matching item is removed from this list. If the parent
+value is a string, the value is set to an empty string. If the
+parent value is a dictionary, the matching key is removed. These
+regular expressions can be just a single item or a list of
+strings::
+
+    description-~: '.*'
+    require-~:
+      - 'python2.*'
+
+__ https://docs.python.org/3/library/re.html#regular-expression-syntax
+
 
 Elasticity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
