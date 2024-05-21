@@ -103,3 +103,10 @@ markers = [
 testpaths = [
     'tests',
 ]
+
+[tool.autopep8]
+max_line_length = 99
+in-place = true
+recursive = true
+hang-closing = true
+aggressive = 2
