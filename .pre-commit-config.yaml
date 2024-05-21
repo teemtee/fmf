@@ -13,24 +13,13 @@ repos:
           - --hang-closing
           - --max-line-length=99
 
-  - repo: https://github.com/PyCQA/isort
-    rev: "5.13.2"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
     hooks:
-      - id: isort
-
-  - repo: https://github.com/pycqa/flake8
-    rev: "7.1.1"
-    hooks:
-      - id: flake8
+      - id: ruff
         args:
-          - --max-line-length=99
-        files: >
-          (?x)^(
-            bin/.*|
-            examples/.*|
-            fmf/.*|
-            tests/.*
-          )$
+          - '--fix'
+          - '--show-fixes'
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: "v5.0.0"
