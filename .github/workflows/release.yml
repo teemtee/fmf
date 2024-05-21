@@ -1,4 +1,4 @@
-name: release
+name: 🚀 Release
 
 on:
   release:
@@ -11,18 +11,21 @@ on:
 
 jobs:
   release:
+    name: 🚀 Release
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/fmf
+    permissions:
+      id-token: write  # For pypi-publish
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         if: ${{ github.event_name == 'release' }}
-      - uses: actions/checkout@v2
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
-      - name: Create dist
-        run: make wheel
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: Build package
+        run: pipx run build
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
