@@ -6,24 +6,13 @@ repos:
     hooks:
       - id: autopep8
 
-  - repo: https://github.com/PyCQA/isort
-    rev: "5.12.0"
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.4.4
     hooks:
-      - id: isort
-
-  - repo: https://github.com/pycqa/flake8
-    rev: "6.0.0"
-    hooks:
-      - id: flake8
+      - id: ruff
         args:
-          - --max-line-length=99
-        files: >
-          (?x)^(
-            bin/.*|
-            examples/.*|
-            fmf/.*|
-            tests/.*
-          )$
+          - '--fix'
+          - '--show-fixes'
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: "v4.6.0"
