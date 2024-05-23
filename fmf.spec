@@ -13,7 +13,11 @@ Source:        %{pypi_source fmf}
 BuildRequires: python3-devel
 BuildRequires: python3dist(docutils)
 BuildRequires: git-core
-Requires:      python3-fmf == %{version}-%{release}
+Requires:      git-core
+
+# fmf and python3-fmf packages were merged in 1.5.0
+Obsoletes:     python3-fmf < 1.5.0
+%py_provides   python3-fmf
 
 %description
 The fmf Python module and command line tool implement a flexible
@@ -22,19 +26,6 @@ stored close to the source code. Thanks to hierarchical structure
 with support for inheritance and elasticity it provides an
 efficient way to organize data into well-sized text documents.
 This package contains the command line tool.
-
-
-%package -n     python3-fmf
-Summary:        %{summary}
-Requires:       git-core
-
-%description -n python3-fmf
-The fmf Python module and command line tool implement a flexible
-format for defining metadata in plain text files which can be
-stored close to the source code. Thanks to hierarchical structure
-with support for inheritance and elasticity it provides an
-efficient way to organize data into well-sized text documents.
-This package contains the Python 3 module.
 
 
 %prep
@@ -64,18 +55,14 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 %pytest -vv -m 'not web'
 
 
-%files
+%files -f %{pyproject_files}
 %{_mandir}/man1/*
 %{_bindir}/%{name}
 %doc README.rst examples
-%license LICENSE
-
-%files -n python3-fmf -f %{pyproject_files}
 # Epel9 does not tag the license file in pyproject_files as a license. Manually install it in this case
 %if 0%{?el9}
 %license LICENSE
 %endif
-%doc README.rst
 
 
 %changelog
