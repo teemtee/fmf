@@ -132,6 +132,19 @@ class TestAdjust:
         mini.adjust(centos, additional_rules={'enabled': True})
         assert mini.get('enabled') is True
 
+    def test_adjusted_additional_after_continue(self, full, centos):
+        """ Additional rule is evaluated even if 'node' rule has continue:false """
+        full.adjust(centos,
+                    additional_rules=[{'tag': 'foo'},
+                                      {'require': 'bar',
+                                       'continue': False,
+                                       'when': 'distro == centos'},
+                                      {'recommend': 'baz'}])
+        assert full.get('enabled') is False
+        assert full.get('tag') == 'foo'
+        assert full.get('require') == 'bar'
+        assert full.get('recommend', []) == []
+
     def test_keep_original_adjust_rules(self, mini, centos):
         original_adjust = copy.deepcopy(mini.get('adjust'))
         mini.adjust(centos)
