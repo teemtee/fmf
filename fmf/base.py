@@ -368,9 +368,9 @@ class Tree:
         adjust rule, and whether it was applied or not.
 
         Optional 'additional_rules' parameter can be used to specify rules
-        which should be applied in addition to those defined in the node itself.
-        These additional rules are processed even when the applied
-        rule defined in the data has ``continue: false`` set.
+        that should be applied after those from the node itself.
+        These additional rules are processed even when an applied
+        rule defined in the node has ``continue: false`` set.
         """
 
         # Check context sanity
