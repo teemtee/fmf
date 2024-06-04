@@ -343,7 +343,8 @@ class Tree:
         log.data(pretty(self.data))
 
     def adjust(self, context, key='adjust', undecided='skip',
-               case_sensitive=True, decision_callback=None):
+               case_sensitive=True, decision_callback=None,
+               additional_rules=None):
         """
         Adjust tree data based on provided context and rules
 
@@ -365,6 +366,11 @@ class Tree:
         Optional 'decision_callback' callback would be called for every adjust
         rule inspected, with three arguments: current fmf node, current
         adjust rule, and whether it was applied or not.
+
+        Optional 'additional_rules' parameter can be used to specify rules
+        that should be applied after those from the node itself.
+        These additional rules are processed even when an applied
+        rule defined in the node has ``continue: false`` set.
         """
 
         # Check context sanity
@@ -387,66 +393,75 @@ class Tree:
         except KeyError:
             rules = []
 
+        # Accept same type as rules from data
+        if additional_rules is None:
+            additional_rules = []
+        elif isinstance(additional_rules, dict):
+            additional_rules = [additional_rules]
+
         context.case_sensitive = case_sensitive
 
-        # Check and apply each rule
-        for rule in rules:
+        # 'continue' has to affect only its rule_set
+        for rule_set in rules, additional_rules:
+            # Check and apply each rule
+            for rule in rule_set:
+                # Rule must be a dictionary
+                if not isinstance(rule, dict):
+                    raise utils.FormatError("Adjust rule should be a dictionary.")
 
-            # Rule must be a dictionary
-            if not isinstance(rule, dict):
-                raise utils.FormatError("Adjust rule should be a dictionary.")
+                # Missing 'when' means always enabled rule
+                try:
+                    condition = rule['when']
+                except KeyError:
+                    condition = True
 
-            # Missing 'when' means always enabled rule
-            try:
-                condition = rule['when']
-            except KeyError:
-                condition = True
+                # The optional 'continue' key should be a bool
+                continue_ = rule.get('continue', True)
+                if not isinstance(continue_, bool):
+                    raise utils.FormatError(
+                        "The 'continue' value should be bool, "
+                        "got '{}'.".format(continue_))
 
-            # The optional 'continue' key should be a bool
-            continue_ = rule.get('continue', True)
-            if not isinstance(continue_, bool):
-                raise utils.FormatError(
-                    "The 'continue' value should be bool, "
-                    "got '{}'.".format(continue_))
+                # Apply remaining rule attributes if context matches
+                try:
+                    if context.matches(condition):
+                        if decision_callback:
+                            decision_callback(self, rule, True)
 
-            # Apply remaining rule attributes if context matches
-            try:
-                if context.matches(condition):
+                        # Remove special keys (when, because...) from the rule
+                        apply_rule = {
+                            key: value
+                            for key, value in rule.items()
+                            if key not in ADJUST_CONTROL_KEYS
+                            }
+                        self._merge_special(self.data, apply_rule)
+
+                        # First matching rule wins, skip the rest of this set unless continue
+                        if not continue_:
+                            break
+                    else:
+                        if decision_callback:
+                            decision_callback(self, rule, False)
+                # Handle undecided rules as requested
+                except fmf.context.CannotDecide:
                     if decision_callback:
-                        decision_callback(self, rule, True)
+                        decision_callback(self, rule, None)
 
-                    # Remove special keys (when, because...) from the rule
-                    apply_rule = {
-                        key: value
-                        for key, value in rule.items()
-                        if key not in ADJUST_CONTROL_KEYS
-                        }
-                    self._merge_special(self.data, apply_rule)
-
-                    # First matching rule wins, skip the rest unless continue
-                    if not continue_:
-                        break
-                else:
-                    if decision_callback:
-                        decision_callback(self, rule, False)
-            # Handle undecided rules as requested
-            except fmf.context.CannotDecide:
-                if decision_callback:
-                    decision_callback(self, rule, None)
-
-                if undecided == 'skip':
-                    continue
-                elif undecided == 'raise':
-                    raise
-                else:
-                    raise utils.GeneralError(
-                        "Invalid value for the 'undecided' parameter. Should "
-                        "be 'skip' or 'raise', got '{}'.".format(undecided))
+                    if undecided == 'skip':
+                        continue
+                    elif undecided == 'raise':
+                        raise
+                    else:
+                        raise utils.GeneralError(
+                            "Invalid value for the 'undecided' parameter. Should "
+                            "be 'skip' or 'raise', got '{}'.".format(undecided))
 
         # Adjust all child nodes as well
         for child in self.children.values():
             child.adjust(context, key, undecided,
-                         case_sensitive=case_sensitive, decision_callback=decision_callback)
+                         case_sensitive=case_sensitive,
+                         decision_callback=decision_callback,
+                         additional_rules=additional_rules)
 
     def get(self, name=None, default=None):
         """
