@@ -7,6 +7,13 @@
 fmf-1.4
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+New :ref:`merging<merging>` suffixes ``~`` and ``-~`` can be used
+to **modify or remove data based on regular expressions**. For
+example, renaming all required packages can be done easily in this
+way::
+
+    require~: /python2-/python3-/
+
 The :py:func:`fmf.filter()` function now supports **searching by
 node name**. Just specify the desired name instead of the ``key:
 value`` pair. For example, to search for all tests with the name

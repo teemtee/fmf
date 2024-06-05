@@ -195,7 +195,7 @@ Authors
 Petr Šplíchal, Miro Hrončok, Jakub Krysl, Jan Ščotka, Alois
 Mahdal, Cleber Rosa, Miroslav Vadkerti, Lukáš Zachar, František
 Nečas, Evgeny Fedin, Pablo Martin, Zhaojuan Guo, Laura Barcziová,
-Petr Matyáš, Filip Vágner and Cristian Le.
+Petr Matyáš, Filip Vágner, Cristian Le and Ondrej Moriš.
 
 
 Copyright
