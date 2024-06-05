@@ -229,6 +229,8 @@ The key content attributes are not supposed to be hard-coded in
 the Flexible Metadata Format but freely configurable. Multiple key
 content attributes (e.g. script & backend) could be used as well.
 
+.. _select:
+
 Select
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

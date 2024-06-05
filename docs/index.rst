@@ -23,6 +23,7 @@ Table of Contents
     Examples <examples>
     Modules <modules>
     Contribute <contribute>
+    Releases <releases>
 
 Indices and Tables
 ==================
