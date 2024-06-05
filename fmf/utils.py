@@ -215,12 +215,20 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
     """
     Apply advanced filter on the provided data dictionary
 
-    Filter supports disjunctive normal form with '|' used for OR, '&'
-    for AND and '-' for negation. Individual values are prefixed with
-    'value:', leading/trailing white-space is stripped. For example::
+    Filter supports disjunctive normal form (DNF) with ``|`` used for
+    OR, ``&`` for AND and ``-`` for negation. Individual values are
+    prefixed with ``key:``, leading/trailing white-space is stripped.
+    For example::
 
         tag: Tier1 | tag: Tier2 | tag: Tier3
         category: Sanity, Security & tag: -destructive
+
+    Grouping boolean expressions using parentheses is not supported but
+    the correct DNF order of precedence of operators is respected
+    (negation first, AND next and then OR). For example, to express
+    ``(tag: A | tag: B) & tag: C`` use the following filter::
+
+        tag: A & tag: C | tag: B & tag: C
 
     Use the back slash character ``\\`` to escape the boolean
     operators if you need to specify them as part of the filter
