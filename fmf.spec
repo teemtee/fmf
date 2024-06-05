@@ -1,5 +1,5 @@
 Name: fmf
-Version: 1.3.0
+Version: 1.4.0
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -77,6 +77,22 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %changelog
+* Wed Jun 05 2024 Petr Šplíchal <psplicha@redhat.com> - 1.4.0-1
+- Introduce a new page for release notes
+- Extend the `filter()` documentation slightly
+- Implement the '~' merge operation
+- Support escaping `|` and `&` in `utils.filter()`
+- Accept additional rules in the `adjust()` call (#230)
+- Avoid `copy()` calls in `adjust()`
+- Directive `select` to control node selection
+- Allow filtering based on the node name
+- Drop epel-8
+- Fix github action
+- Remove travis.yaml
+- Turn schema validation method into a stand-alone function
+- Limit number of tests run for integration with tmt (#225)
+- Add a `Toolbelt Catalog` entry for `fmf`
+
 * Fri Sep 29 2023 Petr Šplíchal <psplicha@redhat.com> - 1.3.0-1
 - Allow case-insensitive context matching
 - Move the copr repository to the `teemtee` group
