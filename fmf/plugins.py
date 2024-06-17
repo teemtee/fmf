@@ -6,11 +6,14 @@ from __future__ import annotations
 
 import importlib
 import os
-from importlib.metadata import entry_points
+from importlib.metadata import PackageNotFoundError, distribution, entry_points
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from packaging.requirements import Requirement
+
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from importlib.metadata import EntryPoint
     from types import ModuleType
     from typing import ClassVar, Final
@@ -129,6 +132,63 @@ class FMFPlugin:
 
     def __init_subclass__(cls) -> None:
         cls.load_plugins()
+
+
+class PluginsRequirements:
+    """
+    Plugins requirements specification file.
+
+    Equivalent with pip's ``requirements.txt``.
+    """
+    file: Path
+    """Path to the plugins requirements file."""
+    _specs: list[Requirement] | None = None
+    """Cached requirement specs."""
+
+    @staticmethod
+    def _check_plugin(spec: Requirement) -> bool:
+        """Check if plugin package is satisfied."""
+        # If the requirement has markers that are not satisfied, plugin specification is satisfied
+        if spec.marker and not spec.marker.evaluate():
+            return True
+        try:
+            dist = distribution(spec.name)
+        except PackageNotFoundError:
+            return False
+        if not spec.specifier.contains(dist.version):
+            return False
+        if spec.extras:
+            # TODO: Parse the extras
+            pass
+        # If all checks passed, the requirement is satisfied
+        return True
+
+    @property
+    def plugin_specs(self) -> Iterator[Requirement]:
+        if self._specs is not None:
+            return self._specs
+        self._specs = []
+        if not self.file:
+            return
+        with self.file.open("r") as f:
+            requirement = Requirement(f.readline())
+            self._specs.append(requirement)
+            yield requirement
+
+    @property
+    def missing_plugin_specs(self) -> Iterator[Requirement]:
+        for spec in self.plugin_specs:
+            if not self._check_plugin(spec):
+                yield spec
+
+    @property
+    def satisfied_plugin_specs(self) -> Iterator[Requirement]:
+        for spec in self.plugin_specs:
+            if self._check_plugin(spec):
+                yield spec
+
+    def satisfied(self) -> bool:
+        return not any(self.missing_plugin_specs)
 
 
 # Load all FMF plugins recursively
