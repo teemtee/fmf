@@ -1,5 +1,5 @@
 Name: fmf
-Version: 1.4.0
+Version: 1.4.1
 Release: 1%{?dist}
 
 Summary: Flexible Metadata Format
@@ -77,6 +77,9 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %changelog
+* Mon Jun 17 2024 Lukáš Zachar <lzachar@redhat.com> - 1.4.1-1
+- Use local dict instead of modifying `locals()`
+
 * Wed Jun 05 2024 Petr Šplíchal <psplicha@redhat.com> - 1.4.0-1
 - Introduce a new page for release notes
 - Extend the `filter()` documentation slightly
