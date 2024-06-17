@@ -202,9 +202,9 @@ def evaluate(expression, data, _node=None):
     Expects data dictionary which will be used to populate local
     namespace. Used to provide flexible conditions for filtering.
     """
-    locals().update(data)
+    namespace = dict(data)
     try:
-        return eval(expression)
+        return eval(expression, namespace)
     except NameError as error:
         raise FilterError("Key is not defined in data: {}".format(error))
     except KeyError as error:
