@@ -2,38 +2,20 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
   - repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: 'v2.0.2'
+    rev: 'v2.0.4'
     hooks:
       - id: autopep8
-        args:
-          - --recursive
-          - --in-place
-          - --aggressive
-          - --aggressive
-          - --hang-closing
-          - --max-line-length=99
 
-  - repo: https://github.com/PyCQA/isort
-    rev: "5.12.0"
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.4.4
     hooks:
-      - id: isort
-
-  - repo: https://github.com/pycqa/flake8
-    rev: "6.0.0"
-    hooks:
-      - id: flake8
+      - id: ruff
         args:
-          - --max-line-length=99
-        files: >
-          (?x)^(
-            bin/.*|
-            examples/.*|
-            fmf/.*|
-            tests/.*
-          )$
+          - '--fix'
+          - '--show-fixes'
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v4.4.0"
+    rev: "v4.6.0"
     hooks:
       - id: end-of-file-fixer
       - id: mixed-line-ending
