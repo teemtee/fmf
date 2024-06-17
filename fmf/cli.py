@@ -16,196 +16,189 @@ Check also help message of individual commands for the full list
 of available options.
 """
 
-import argparse
-import os
-import os.path
-import shlex
-import sys
+import functools
+from pathlib import Path
+
+import click
+from click_option_group import optgroup
 
 import fmf
 import fmf.utils as utils
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  Parser
+#  Common option groups
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-class Parser:
-    """ Command line options parser """
+def _select_options(func):
+    """Select group options"""
 
-    def __init__(self, arguments=None, path=None):
-        """ Prepare the parser. """
-        # Change current working directory (used for testing)
-        if path is not None:
-            os.chdir(path)
-        # Split command line if given as a string (used for testing)
-        if isinstance(arguments, str):
-            self.arguments = shlex.split(arguments)
-        # Otherwise use sys.argv
-        if arguments is None:
-            self.arguments = sys.argv
-        # Enable debugging output if requested
-        if "--debug" in self.arguments:
-            utils.log.setLevel(utils.LOG_DEBUG)
-        # Show current version and exit
-        if "--version" in self.arguments:
-            self.output = f"{fmf.__version__}"
-            print(self.output)
-            return
+    @optgroup.group("Select")
+    @optgroup.option("--key", "keys", metavar="KEY", default=[], multiple=True,
+                     help="Key content definition (required attributes)")
+    @optgroup.option("--name", "names", metavar="NAME", default=[], multiple=True,
+                     help="List objects with name matching regular expression")
+    @optgroup.option("--source", "sources", metavar="SOURCE", default=[], multiple=True,
+                     help="List objects defined in specified source files")
+    @optgroup.option("--filter", "filters", metavar="FILTER", default=[], multiple=True,
+                     help="Apply advanced filter (see 'pydoc fmf.filter')")
+    @optgroup.option("--condition", "conditions", metavar="EXPR", default=[], multiple=True,
+                     help="Use arbitrary Python expression for filtering")
+    @optgroup.option("--whole", is_flag=True, default=False,
+                     help="Consider the whole tree (leaves only by default)")
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Hack to group the options into one variable
+        select = {
+            opt: kwargs.pop(opt)
+            for opt in ("keys", "names", "sources", "filters", "conditions", "whole")
+            }
+        return func(*args, select=select, **kwargs)
 
-        # Handle subcommands (mapped to format_* methods)
-        self.parser = argparse.ArgumentParser(
-            usage="fmf command [options]\n" + __doc__)
-        self.parser.add_argument(
-            "--version", action="store_true",
-            help="print fmf version with commit hash and exit")
-        self.parser.add_argument('command', help='Command to run')
-        self.command = self.parser.parse_args(self.arguments[1:2]).command
-        if not hasattr(self, "command_" + self.command):
-            self.parser.print_help()
-            raise utils.GeneralError(
-                "Unrecognized command: '{0}'".format(self.command))
-        # Initialize the rest and run the subcommand
-        self.output = ""
-        getattr(self, "command_" + self.command)()
+    return wrapper
 
-    def options_select(self):
-        """ Select by name, filter """
-        group = self.parser.add_argument_group("Select")
-        group.add_argument(
-            "--key", dest="keys", action="append", default=[],
-            help="Key content definition (required attributes)")
-        group.add_argument(
-            "--name", dest="names", action="append", default=[],
-            help="List objects with name matching regular expression")
-        group.add_argument(
-            "--source", dest="sources", action="append", default=[],
-            help="List objects defined in specified source files")
-        group.add_argument(
-            "--filter", dest="filters", action="append", default=[],
-            help="Apply advanced filter (see 'pydoc fmf.filter')")
-        group.add_argument(
-            "--condition", dest="conditions", action="append", default=[],
-            metavar="EXPR",
-            help="Use arbitrary Python expression for filtering")
-        group.add_argument(
-            "--whole", dest="whole", action="store_true",
-            help="Consider the whole tree (leaves only by default)")
 
-    def options_formatting(self):
-        """ Formating options """
-        group = self.parser.add_argument_group("Format")
-        group.add_argument(
-            "--format", dest="formatting", default=None,
-            help="Custom output format using the {} expansion")
-        group.add_argument(
-            "--value", dest="values", action="append", default=[],
-            help="Values for the custom formatting string")
+def _format_options(func):
+    """Formating group options"""
 
-    def options_utils(self):
-        """ Utilities """
-        group = self.parser.add_argument_group("Utils")
-        group.add_argument(
-            "--path", action="append", dest="paths",
-            help="Path to the metadata tree (default: current directory)")
-        group.add_argument(
-            "--verbose", action="store_true",
-            help="Print information about parsed files to stderr")
-        group.add_argument(
-            "--debug", action="store_true",
-            help="Turn on debugging output, do not catch exceptions")
+    @optgroup.group("Format")
+    @optgroup.option("--format", "formatting", metavar="FORMAT", default=None,
+                     help="Custom output format using the {} expansion")
+    @optgroup.option("--value", "values", metavar="VALUE", default=[], multiple=True,
+                     help="Values for the custom formatting string")
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Hack to group the options into one variable
+        format = {
+            opt: kwargs.pop(opt)
+            for opt in ("formatting", "values")
+            }
+        return func(*args, format=format, **kwargs)
 
-    def command_ls(self):
-        """ List names """
-        self.parser = argparse.ArgumentParser(
-            description="List names of available objects")
-        self.options_select()
-        self.options_utils()
-        self.options = self.parser.parse_args(self.arguments[2:])
-        self.show(brief=True)
+    return wrapper
 
-    def command_clean(self):
-        """ Clean cache """
-        self.parser = argparse.ArgumentParser(
-            description="Remove cache directory and its content")
-        self.clean()
 
-    def command_show(self):
-        """ Show metadata """
-        self.parser = argparse.ArgumentParser(
-            description="Show metadata of available objects")
-        self.options_select()
-        self.options_formatting()
-        self.options_utils()
-        self.options = self.parser.parse_args(self.arguments[2:])
-        self.show(brief=False)
+def _utils_options(func):
+    """Utilities group options"""
 
-    def command_init(self):
-        """ Initialize tree """
-        self.parser = argparse.ArgumentParser(
-            description="Initialize a new metadata tree")
-        self.options_utils()
-        self.options = self.parser.parse_args(self.arguments[2:])
-        # For each path create an .fmf directory and version file
-        for path in self.options.paths or ["."]:
-            root = fmf.Tree.init(path)
-            print("Metadata tree '{0}' successfully initialized.".format(root))
+    @optgroup.group("Utils")
+    @optgroup.option("--path", "paths", metavar="PATH", multiple=True,
+                     type=Path, default=["."],
+                     show_default="current directory",
+                     help="Path to the metadata tree")
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
 
-    def show(self, brief=False):
-        """ Show metadata for each path given """
-        output = []
-        for path in self.options.paths or ["."]:
-            if self.options.verbose:
-                utils.info("Checking {0} for metadata.".format(path))
-            tree = fmf.Tree(path)
-            for node in tree.prune(
-                    self.options.whole,
-                    self.options.keys,
-                    self.options.names,
-                    self.options.filters,
-                    self.options.conditions,
-                    self.options.sources):
-                if brief:
-                    show = node.show(brief=True)
-                else:
-                    show = node.show(
-                        brief=False,
-                        formatting=self.options.formatting,
-                        values=self.options.values)
-                # List source files when in debug mode
-                if self.options.debug:
-                    for source in node.sources:
-                        show += utils.color("{0}\n".format(source), "blue")
-                if show is not None:
-                    output.append(show)
-
-        # Print output and summary
-        if brief or self.options.formatting:
-            joined = "".join(output)
-        else:
-            joined = "\n".join(output)
-        print(joined, end="")
-        if self.options.verbose:
-            utils.info("Found {0}.".format(
-                utils.listed(len(output), "object")))
-        self.output = joined
-
-    def clean(self):
-        """ Remove cache directory """
-        try:
-            cache = utils.get_cache_directory(create=False)
-            utils.clean_cache_directory()
-            print("Cache directory '{0}' has been removed.".format(cache))
-        except Exception as error:  # pragma: no cover
-            utils.log.error(
-                "Unable to remove cache, exception was: {0}".format(error))
+    return wrapper
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class CatchAllExceptions(click.Group):
+    def __call__(self, *args, **kwargs):
+        # TODO: This actually has no effect
+        try:
+            return self.main(*args, **kwargs)
+        except fmf.utils.GeneralError as error:
+            # TODO: Better handling of --debug
+            if "--debug" not in kwargs:
+                fmf.utils.log.error(error)
+            raise
 
-def main(arguments=None, path=None):
-    """ Parse options, do what is requested """
-    parser = Parser(arguments, path)
-    return parser.output
+
+@click.group("fmf", cls=CatchAllExceptions)
+@click.version_option(fmf.__version__, message="%(version)s")
+@click.option("--verbose", is_flag=True, default=False, type=bool,
+              help="Print information about parsed files to stderr")
+@click.option("--debug", "-d", count=True, default=0, type=int,
+              help="Provide debugging information. Repeat to see more details.")
+@click.pass_context
+def main(ctx, debug, verbose) -> None:
+    """This is command line interface for the Flexible Metadata Format."""
+    ctx.ensure_object(dict)
+    if debug:
+        utils.log.setLevel(debug)
+    ctx.obj["verbose"] = verbose
+    ctx.obj["debug"] = debug
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  Sub-commands
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+@main.command("ls")
+@_select_options
+@_utils_options
+@click.pass_context
+def ls(ctx, paths, select) -> None:
+    """List names of available objects"""
+    _show(ctx, paths, select, brief=True)
+
+
+@main.command("clean")
+def clean() -> None:
+    """Remove cache directory and its content"""
+    _clean()
+
+
+@main.command("show")
+@_select_options
+@_format_options
+@_utils_options
+@click.pass_context
+def show(ctx, paths, select, format) -> None:
+    """Show metadata of available objects"""
+    _show(ctx, paths, select, format_opts=format, brief=False)
+
+
+@main.command("init")
+@_utils_options
+def init(paths) -> None:
+    """Initialize a new metadata tree"""
+    # For each path create an .fmf directory and version file
+    for path in paths:
+        root = fmf.Tree.init(path)
+        click.echo("Metadata tree '{0}' successfully initialized.".format(root))
+
+
+def _show(ctx, paths, select_opts, format_opts=None, brief=False):
+    """ Show metadata for each path given """
+    output = []
+    for path in paths:
+        if ctx.obj["verbose"]:
+            utils.info("Checking {0} for metadata.".format(path))
+        tree = fmf.Tree(path)
+        for node in tree.prune(**select_opts):
+            if brief:
+                show = node.show(brief=True)
+            else:
+                assert format_opts is not None
+                show = node.show(brief=False, **format_opts)
+            # List source files when in debug mode
+            if ctx.obj["debug"]:
+                for source in node.sources:
+                    show += utils.color("{0}\n".format(source), "blue")
+            if show is not None:
+                output.append(show)
+
+    # Print output and summary
+    if brief or format_opts and format_opts["formatting"]:
+        joined = "".join(output)
+    else:
+        joined = "\n".join(output)
+    click.echo(joined, nl=False)
+    if ctx.obj["verbose"]:
+        utils.info("Found {0}.".format(
+            utils.listed(len(output), "object")))
+
+
+def _clean():
+    """Remove cache directory"""
+    try:
+        cache = utils.get_cache_directory(create=False)
+        utils.clean_cache_directory()
+        click.echo("Cache directory '{0}' has been removed.".format(cache))
+    except Exception as error:  # pragma: no cover
+        utils.log.error(
+            "Unable to remove cache, exception was: {0}".format(error))

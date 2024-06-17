@@ -1,6 +1,9 @@
 import os
 
-import fmf.cli
+from click.testing import CliRunner
+
+import fmf.utils as utils
+from fmf.cli import main
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
@@ -12,9 +15,11 @@ class TestSmoke:
 
     def test_smoke(self):
         """ Smoke test """
-        fmf.cli.main("fmf ls", WGET)
+        with utils.cd(WGET):
+            CliRunner().invoke(main, ['ls'])
 
     def test_output(self):
         """ There is some output """
-        output = fmf.cli.main("fmf ls", WGET)
-        assert "download" in output
+        with utils.cd(WGET):
+            result = CliRunner().invoke(main, ['ls'])
+            assert "download" in result.output
