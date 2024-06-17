@@ -1,6 +1,5 @@
 import os
 import sys
-import tempfile
 
 import pytest
 
@@ -17,15 +16,17 @@ class TestCommandLine:
 
     def test_smoke(self):
         """ Smoke test """
-        fmf.cli.main("fmf show", WGET)
-        fmf.cli.main("fmf show --debug", WGET)
-        fmf.cli.main("fmf show --verbose", WGET)
+        with utils.cd(WGET):
+            fmf.cli.main("fmf show")
+            fmf.cli.main("fmf show --debug")
+            fmf.cli.main("fmf show --verbose")
         fmf.cli.main("fmf --version")
 
     def test_missing_root(self):
         """ Missing root """
-        with pytest.raises(utils.FileError):
-            fmf.cli.main("fmf show", "/")
+        with utils.cd("/"):
+            with pytest.raises(utils.FileError):
+                fmf.cli.main("fmf show")
 
     def test_invalid_path(self):
         """ Missing root """
@@ -39,17 +40,20 @@ class TestCommandLine:
 
     def test_output(self):
         """ There is some output """
-        output = fmf.cli.main("fmf show", WGET)
+        with utils.cd(WGET):
+            output = fmf.cli.main("fmf show")
         assert "download" in output
 
     def test_recursion(self):
         """ Recursion """
-        output = fmf.cli.main("fmf show --name recursion/deep", WGET)
+        with utils.cd(WGET):
+            output = fmf.cli.main("fmf show --name recursion/deep")
         assert "1000" in output
 
     def test_inheritance(self):
         """ Inheritance """
-        output = fmf.cli.main("fmf show --name protocols/https", WGET)
+        with utils.cd(WGET):
+            output = fmf.cli.main("fmf show --name protocols/https")
         assert "psplicha" in output
 
     def test_sys_argv(self):
@@ -62,30 +66,34 @@ class TestCommandLine:
 
     def test_missing_attribute(self):
         """ Missing attribute """
-        output = fmf.cli.main("fmf show --filter x:y", WGET)
+        with utils.cd(WGET):
+            output = fmf.cli.main("fmf show --filter x:y")
         assert "wget" not in output
 
     def test_filtering_by_source(self):
         """ By source """
-        output = fmf.cli.main("fmf show --source protocols/ftp/main.fmf", WGET)
+        with utils.cd(WGET):
+            output = fmf.cli.main("fmf show --source protocols/ftp/main.fmf")
         assert "/protocols/ftp" in output
 
     def test_filtering(self):
         """ Filtering """
-        output = fmf.cli.main(
-            "fmf show --filter tags:Tier1 --filter tags:TierSecurity", WGET)
-        assert "/download/test" in output
-        output = fmf.cli.main(
-            "fmf show --filter tags:Tier1 --filter tags:Wrong", WGET)
-        assert "wget" not in output
-        output = fmf.cli.main(
-            " fmf show --filter 'tags: Tier[A-Z].*'", WGET)
-        assert "/download/test" in output
-        assert "/recursion" not in output
+        with utils.cd(WGET):
+            output = fmf.cli.main(
+                "fmf show --filter tags:Tier1 --filter tags:TierSecurity")
+            assert "/download/test" in output
+            output = fmf.cli.main(
+                "fmf show --filter tags:Tier1 --filter tags:Wrong")
+            assert "wget" not in output
+            output = fmf.cli.main(
+                " fmf show --filter 'tags: Tier[A-Z].*'")
+            assert "/download/test" in output
+            assert "/recursion" not in output
 
     def test_key_content(self):
         """ Key content """
-        output = fmf.cli.main("fmf show --key depth")
+        with utils.cd(WGET):
+            output = fmf.cli.main("fmf show --key depth")
         assert "/recursion/deep" in output
         assert "/download/test" not in output
 
@@ -97,63 +105,64 @@ class TestCommandLine:
 
     def test_format_key(self):
         """ Custom format (find by key, check the name) """
-        output = fmf.cli.main(
-            "fmf show --key depth --format {0} --value name", WGET)
+        with utils.cd(WGET):
+            output = fmf.cli.main(
+                "fmf show --key depth --format {0} --value name")
         assert "/recursion/deep" in output
 
     def test_format_functions(self):
         """ Custom format (using python functions) """
-        output = fmf.cli.main(
-            "fmf show --key depth --format {0} --value os.path.basename(name)",
-            WGET)
+        with utils.cd(WGET):
+            output = fmf.cli.main(
+                "fmf show --key depth --format {0} --value os.path.basename(name)")
         assert "deep" in output
         assert "/recursion" not in output
 
     @pytest.mark.skipif(os.geteuid() == 0, reason="Running as root")
-    def test_init(self):
+    def test_init(self, tmp_path):
         """ Initialize metadata tree """
-        path = tempfile.mkdtemp()
-        fmf.cli.main("fmf init", path)
-        fmf.cli.main("fmf show", path)
-        # Already exists
-        with pytest.raises(utils.FileError):
-            fmf.cli.main("fmf init", path)
-        version_path = os.path.join(path, ".fmf", "version")
-        with open(version_path) as version:
-            assert "1" in version.read()
-        # Permission denied
-        secret_path = os.path.join(path, 'denied')
-        os.makedirs(secret_path)
-        os.chmod(secret_path, 0o666)
-        with pytest.raises(utils.FileError):
-            fmf.cli.main('fmf init --path {}'.format(secret_path), path)
-        os.chmod(secret_path, 0o777)
-        # Invalid version
-        with open(version_path, "w") as version:
-            version.write("bad")
-        with pytest.raises(utils.FormatError):
-            fmf.cli.main("fmf ls", path)
-        # Missing version
-        os.remove(version_path)
-        with pytest.raises(utils.FormatError):
-            fmf.cli.main("fmf ls", path)
+        with utils.cd(tmp_path):
+            fmf.cli.main("fmf init")
+            fmf.cli.main("fmf show")
+            # Already exists
+            with pytest.raises(utils.FileError):
+                fmf.cli.main("fmf init")
+            version_path = tmp_path / ".fmf" / "version"
+            with version_path.open() as version:
+                assert "1" in version.read()
+            # Permission denied
+            secret_path = tmp_path / "denied"
+            secret_path.mkdir(0o666)
+            with pytest.raises(utils.FileError):
+                fmf.cli.main('fmf init --path {}'.format(secret_path))
+            secret_path.chmod(0o777)
+            # Invalid version
+            with version_path.open("w") as version:
+                version.write("bad")
+            with pytest.raises(utils.FormatError):
+                fmf.cli.main("fmf ls")
+            # Missing version
+            version_path.unlink()
+            with pytest.raises(utils.FormatError):
+                fmf.cli.main("fmf ls")
 
     def test_conditions(self):
         """ Advanced filters via conditions """
         path = PATH + "/../../examples/conditions"
         # Compare numbers
-        output = fmf.cli.main("fmf ls --condition 'float(release) >= 7'", path)
-        assert len(output.splitlines()) == 3
-        output = fmf.cli.main("fmf ls --condition 'float(release) > 7'", path)
-        assert len(output.splitlines()) == 2
-        # Access a dictionary key
-        output = fmf.cli.main(
-            "fmf ls --condition \"execute['how'] == 'dependency'\"", path)
-        assert output.strip() == "/top/rhel7"
-        # Wrong key means unsatisfied condition
-        output = fmf.cli.main(
-            "fmf ls --condition \"execute['wrong key'] == 0\"", path)
-        assert output == ''
+        with utils.cd(path):
+            output = fmf.cli.main("fmf ls --condition 'float(release) >= 7'")
+            assert len(output.splitlines()) == 3
+            output = fmf.cli.main("fmf ls --condition 'float(release) > 7'")
+            assert len(output.splitlines()) == 2
+            # Access a dictionary key
+            output = fmf.cli.main(
+                "fmf ls --condition \"execute['how'] == 'dependency'\"")
+            assert output.strip() == "/top/rhel7"
+            # Wrong key means unsatisfied condition
+            output = fmf.cli.main(
+                "fmf ls --condition \"execute['wrong key'] == 0\"")
+            assert output == ''
 
     def test_clean(self, tmpdir, monkeypatch):
         """ Cache cleanup """

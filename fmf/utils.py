@@ -1,5 +1,6 @@
 """ Logging, config, constants & utilities """
 
+import contextlib
 import copy
 import logging
 import os
@@ -189,6 +190,24 @@ def split(values, separator=re.compile("[ ,]+")):
 def info(message, newline=True):
     """ Log provided info message to the standard error output """
     sys.stderr.write(message + ("\n" if newline else ""))
+
+
+@contextlib.contextmanager
+def cd(target):
+    """
+    Manage cd in a pushd/popd fashion.
+
+    Usage:
+
+        with cd(tmpdir):
+          do something in tmpdir
+    """
+    curdir = os.getcwd()
+    os.chdir(target)
+    try:
+        yield
+    finally:
+        os.chdir(curdir)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
