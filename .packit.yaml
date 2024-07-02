@@ -21,12 +21,14 @@ jobs:
     targets:
     - fedora-all
     - epel-9
+    - centos-stream-10
 
   - job: tests
     trigger: pull_request
     targets:
     - fedora-all
     - epel-9
+    - centos-stream-10
 
   - job: copr_build
     trigger: commit
@@ -34,6 +36,7 @@ jobs:
     targets:
     - fedora-all
     - epel-9
+    - centos-stream-10
     list_on_homepage: True
     preserve_project: True
     owner: "@teemtee"
