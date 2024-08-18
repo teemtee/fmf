@@ -3,11 +3,6 @@ name: 🚀 Release
 on:
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      ref:
-        description: 'Tag to release'
-        required: true
 
 jobs:
   release:
@@ -20,11 +15,6 @@ jobs:
       id-token: write  # For pypi-publish
     steps:
       - uses: actions/checkout@v4
-        if: ${{ github.event_name == 'release' }}
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref }}
-        if: ${{ github.event_name == 'workflow_dispatch' }}
       - name: Build package
         run: pipx hatch build
       - name: Publish to PyPI
