@@ -61,7 +61,7 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 
 
 %check
-%pytest -vv -m 'not web'
+%pyproject_check_import
 
 
 %files
