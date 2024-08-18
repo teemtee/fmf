@@ -56,10 +56,6 @@ install -pm 644 fmf.1* %{buildroot}%{_mandir}/man1
 %{_mandir}/man1/*
 %{_bindir}/%{name}
 %doc README.rst examples
-# Epel9 does not tag the license file in pyproject_files as a license. Manually install it in this case
-%if 0%{?el9}
-%license LICENSE
-%endif
 
 
 %changelog
