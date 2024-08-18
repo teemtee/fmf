@@ -235,3 +235,13 @@ comparison works for some special cases::
     centos-8.4.0 < centos-9 ---> True
     centos-8.4.0 ~< centos-9 ---> True (no minor comparison requested)
     centos-8.4.0 ~< centos-9.2 ---> cannot (minor comparison requested)
+
+If you want to aim for CentOS Stream you can specify the desired version like e.g. ``centos-stream-9``.
+Real-life example of the use-case can be the following::
+
+    adjust:
+      - enabled: false
+        when: distro >= rhel-8 or distro == centos-stream-8
+        continue: false
+
+This example is disabling the test for RHEL-8+ and for CentOS Stream 8.
