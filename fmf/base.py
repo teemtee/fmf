@@ -173,7 +173,7 @@ class Tree:
     def _merge_plus(self, data, key, value, prepend=False):
         """ Handle extending attributes using the '+' suffix """
 
-        # Nothing to do if key not in parent
+        # Set the value if key is not present
         if key not in data:
             data[key] = value
             return
@@ -222,6 +222,9 @@ class Tree:
 
     def _merge_regexp(self, data, key, value):
         """ Handle substitution of current values """
+        # Nothing to substitute if the key is not present in parent
+        if key not in data:
+            return
         if isinstance(value, str):
             value = [value]
         for pattern, replacement in [utils.split_pattern_replacement(v) for v in value]:
@@ -247,6 +250,9 @@ class Tree:
                 if re.search(p, str(item)):
                     return True
             return False
+        # Nothing to remove if the key is not present in parent
+        if key not in data:
+            return
         if isinstance(value, str):
             value = [value]
         if isinstance(data[key], list):
@@ -267,10 +273,7 @@ class Tree:
         """ Handle reducing attributes using the '-' suffix """
         # Cannot reduce attribute if key is not present in parent
         if key not in data:
-            data[key] = value
-            raise utils.MergeError(
-                "MergeError: Key '{0}' in {1} (not inherited).".format(
-                    key, self.name))
+            return
         # Subtract numbers
         if type(data[key]) == type(value) in [int, float]:
             data[key] = data[key] - value
