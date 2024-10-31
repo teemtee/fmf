@@ -45,7 +45,7 @@ supported operators consult the following grammar outline::
     expression ::= dimension binary_operator values
     expression ::= dimension unary_operator
     expression ::= 'true' | 'false'
-    dimension ::= [[:alnum:]]+
+    dimension ::= [[:alnum:-]]+
     binary_operator ::= '==' | '!=' | '<' | '<=' | '>' | '>=' |
         '~=' | '~!=' | '~<' | '~<=' | '~>' | '~>=' | '~' | '!~'
     unary_operator ::= 'is defined' | 'is not defined'

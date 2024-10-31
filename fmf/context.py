@@ -397,7 +397,7 @@ class Context:
     # Triple expression: dimension operator values
     # [^=].* is necessary as .+ matches '= something'
     re_expression_triple = re.compile(
-        r"(\w+)"
+        r"([\w-]+)"
         + r"\s*("
         + r"|".join(
             [key for key in operator_map if key not in ["is defined", "is not defined"]])
@@ -405,7 +405,7 @@ class Context:
         + r"([^=].*)")
     # Double expression: dimension operator
     re_expression_double = re.compile(
-        r"(\w+)" + r"\s*(" + r"|".join(["is defined", "is not defined"]) + r")"
+        r"([\w-]+)" + r"\s*(" + r"|".join(["is defined", "is not defined"]) + r")"
         )
 
     # Simple boolean value

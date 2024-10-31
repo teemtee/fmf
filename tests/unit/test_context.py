@@ -535,6 +535,10 @@ class TestParser:
         assert Context.split_expression("dim < value , second") == (
             "dim", "<", ["value", "second"])
         assert Context.split_expression("true") == (None, True, None)
+        assert Context.split_expression("provision-method == local") == (
+            "provision-method", "==", ["local"])
+        assert Context.split_expression("provision-method is defined") == (
+            "provision-method", "is defined", None)
 
     def test_parse_rule(self):
         """ Rule parsing """
