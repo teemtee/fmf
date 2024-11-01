@@ -10,7 +10,7 @@ import sys
 import time
 import warnings
 from io import StringIO
-from typing import Any, List, NamedTuple
+from typing import Any, NamedTuple, Optional
 
 import jsonschema
 from filelock import FileLock, Timeout
@@ -18,6 +18,7 @@ from ruamel.yaml import YAML, scalarstring
 from ruamel.yaml.comments import CommentedMap
 
 import fmf.base
+from fmf._compat.jsonschema import get_validator
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -419,7 +420,7 @@ class Logging:
     _level = LOG_WARN
 
     # Already initialized loggers by their name
-    _loggers = dict()
+    _loggers: dict[str, logging.Logger] = dict()
 
     def __init__(self, name='fmf'):
         # Use existing logger if already initialized
@@ -912,34 +913,22 @@ def dict_to_yaml(data, width=None, sort=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class JsonSchemaValidationResult(NamedTuple):
-    """ Represents JSON Schema validation result """
-
+    """Represents JSON Schema validation result."""
     result: bool
-    errors: List[Any]
+    errors: list[Any]
 
 
-def validate_data(data, schema, schema_store=None):
+def validate_data(
+        data: Any,
+        schema: Any,
+        schema_store: Optional[dict[str, Any]] = None
+        ) -> JsonSchemaValidationResult:
+    """Validate data against a JSON Schema.
+
+    Validates the given data using the specified JSON Schema and optional
+    schema references.
     """
-    Validate data with given JSON Schema and schema references.
-
-    schema_store is a dict of schema references and their content.
-
-    Return a named tuple utils.JsonSchemaValidationResult
-    with the following two items:
-
-        result ... boolean representing the validation result
-        errors ... A list of validation errors
-
-    Raises utils.JsonSchemaError if the supplied schema was invalid.
-    """
-    schema_store = schema_store or {}
-    try:
-        resolver = jsonschema.RefResolver.from_schema(
-            schema, store=schema_store)
-    except AttributeError as error:
-        raise JsonSchemaError(f'Provided schema cannot be loaded: {error}')
-
-    validator = jsonschema.Draft4Validator(schema, resolver=resolver)
+    validator = get_validator(schema, schema_store)
 
     try:
         validator.validate(data)
@@ -955,6 +944,7 @@ def validate_data(data, schema, schema_store=None):
             jsonschema.exceptions.RefResolutionError,
             jsonschema.exceptions.UnknownType
             ) as error:
+        from fmf.utils import JsonSchemaError
         raise JsonSchemaError(f'Errors found in provided schema: {error}')
 
 

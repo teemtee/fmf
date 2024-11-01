@@ -9,7 +9,6 @@ repos:
           - --recursive
           - --in-place
           - --aggressive
-          - --aggressive
           - --hang-closing
           - --max-line-length=99
 
