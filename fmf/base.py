@@ -172,10 +172,31 @@ class Tree:
 
     def _merge_plus(self, data, key, value, prepend=False):
         """ Handle extending attributes using the '+' suffix """
+
         # Nothing to do if key not in parent
         if key not in data:
             data[key] = value
             return
+
+        # Special handling for merging lists with dictionary
+        if isinstance(data[key], list) and isinstance(value, dict):
+            for list_item in data[key]:
+                if not isinstance(list_item, dict):
+                    raise utils.MergeError(
+                        "MergeError: Item '{0}' in {1} must be a dictionary.".format(
+                            list_item, self.name))
+                self._merge_special(list_item, value)
+            return
+        if isinstance(data[key], dict) and isinstance(value, list):
+            for list_item in value:
+                if not isinstance(list_item, dict):
+                    raise utils.MergeError(
+                        "MergeError: Item '{0}' in {1} must be a dictionary.".format(
+                            list_item, self.name))
+                self._merge_special(list_item, data[key])
+            data[key] = value
+            return
+
         # Use the special merge for merging dictionaries
         if type(data[key]) == type(value) == dict:
             self._merge_special(data[key], value)
