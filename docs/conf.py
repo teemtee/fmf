@@ -207,6 +207,7 @@ html_static_path = ['_static']
 htmlhelp_basename = 'fmfdoc'
 
 autosectionlabel_maxdepth = 2
+autosectionlabel_prefix_document = True
 
 # -- Options for manual page output ---------------------------------------
 
