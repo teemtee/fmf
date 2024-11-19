@@ -160,6 +160,22 @@ class TestTree:
         with pytest.raises(utils.MergeError):
             child.data["time+"] = "string"
             child.inherit()
+        child = self.merge.find('/parent_dict/path')
+        assert len(child.data['discover']) == 2
+        assert child.data['discover'][0]['how'] == 'fmf'
+        assert child.data['discover'][0]['name'] == 'upstream'
+        assert child.data['discover'][0]['url'] == 'https://some.url'
+        assert child.data['discover'][1]['how'] == 'fmf'
+        assert child.data['discover'][1]['name'] == 'downstream'
+        assert child.data['discover'][1]['url'] == 'https://other.url'
+        for i in [1, 2]:
+            child = self.merge.find(f'/parent_list/tier{i}')
+            assert child.data['summary'] == 'basic tests' if i == 1 else 'detailed tests'
+            assert len(child.data['discover']) == 2
+            assert child.data['discover'][0]['filter'] == f'tier: {i}'
+            assert child.data['discover'][0]['url'] == 'https://github.com/project1'
+            assert child.data['discover'][1]['filter'] == f'tier: {i}'
+            assert child.data['discover'][1]['url'] == 'https://github.com/project2'
 
     def test_merge_minus(self):
         """ Reducing attributes using the '-' suffix """
