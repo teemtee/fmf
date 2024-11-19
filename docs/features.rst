@@ -92,10 +92,71 @@ Append a ``+`` sign to the attribute name to add given value::
     /download:
         time+: 3
 
-This operation is possible only for attributes of the same type.
-Exception ``MergeError`` is raised if types are different. When
+This operation is possible only for attributes of the same type
+or when merging a dictionary with a list.
+Exception ``MergeError`` is raised if types are not compatible. When
 the ``+`` suffix is applied on dictionaries ``update()`` method is
 used to merge content of given dictionary instead of replacing it.
+
+Example: Merging dictionary with a list::
+
+    discover:
+        how: fmf
+        filter: "tier:1"
+
+    /path:
+      discover+:
+        - name: upstream
+          url: https://some.url
+        - name: downstream
+          url: https://other.url
+
+results in::
+
+    /path:
+      discover:
+        - name: upstream
+          url: https://some.url
+          how: fmf
+          filter: "tier:1"
+        - name: downstream
+          url: https://other.url
+          how: fmf
+          filter: "tier:1"
+
+Example: Merging list with a dictionary::
+
+    discover:
+      - how: fmf
+        url: https://github.com/project1
+      - how: fmf
+        url: https://github.com/project2
+
+    /tier1:
+        discover+:
+            filter: "tier:1"
+    /tier2:
+        discover+:
+            filter: "tier:2"
+
+results in::
+
+    /tier1:
+        discover:
+          - how: fmf
+            url: https://github.com/project1
+            filter: "tier:1"
+          - how: fmf
+            url: https://github.com/project2
+            filter: "tier:1"
+    /tier2:
+        discover:
+          - how: fmf
+            url: https://github.com/project1
+            filter: "tier:2"
+          - how: fmf
+            url: https://github.com/project2
+            filter: "tier:2"
 
 The special suffix ``+<`` can be used to prepend values instead of
 appending them. This might be handy when adjusting lists::
