@@ -205,7 +205,7 @@ class Tree:
             return
 
         # Use the special merge for merging dictionaries
-        if type(data[key]) == type(value) == dict:
+        if isinstance(data[key], dict) and isinstance(value, dict):
             self._merge_special(data[key], value)
             return
 
@@ -275,13 +275,13 @@ class Tree:
         if key not in data:
             return
         # Subtract numbers
-        if type(data[key]) == type(value) in [int, float]:
+        if isinstance(data[key], (int, float)) and isinstance(value, (int, float)):
             data[key] = data[key] - value
         # Replace matching regular expression with empty string
-        elif type(data[key]) == type(value) == type(""):
+        elif isinstance(data[key], str) and isinstance(value, str):
             data[key] = re.sub(value, '', data[key])
         # Remove given values from the parent list
-        elif type(data[key]) == type(value) == list:
+        elif isinstance(data[key], list) and isinstance(value, list):
             data[key] = [item for item in data[key] if item not in value]
         # Remove given key from the parent dictionary
         elif isinstance(data[key], dict) and isinstance(value, list):
@@ -750,10 +750,10 @@ class Tree:
         # List available attributes
         for key, value in sorted(self.data.items()):
             output += "\n{0}: ".format(utils.color(key, 'green'))
-            if isinstance(value, type("")):
+            if isinstance(value, str):
                 output += value.rstrip("\n")
             elif isinstance(value, list) and all(
-                    [isinstance(item, type("")) for item in value]):
+                    [isinstance(item, str) for item in value]):
                 output += utils.listed(value)
             else:
                 output += pretty(value)
