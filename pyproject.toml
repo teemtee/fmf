@@ -35,11 +35,11 @@ dependencies = [
 dynamic = ['version']
 
 [project.urls]
-Homepage = 'https://github.com/teemtee/fmf'
-Documentation = 'https://fmf.readthedocs.io'
+homepage = 'https://github.com/teemtee/fmf'
+documentation = 'https://fmf.readthedocs.io'
 
 [project.optional-dependencies]
-# Needed for tests inside rpm build. Not being pacakged in rpm
+# Needed for tests inside rpm build. Not being packaged in rpm
 tests = [
     'pytest',
 ]
