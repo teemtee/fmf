@@ -1,0 +1,19 @@
+discover:
+  - how: fmf
+    url: https://github.com/project1
+    summary: project1.
+  - how: fmf
+    url: https://github.com/project2
+    summary: project2.
+
+/tier1:
+    summary: basic tests
+    discover+:
+        filter: "tier: 1"
+        summary+: tier1
+
+/tier2:
+    summary: detailed tests
+    discover+:
+        filter: "tier: 2"
+        summary+: tier2

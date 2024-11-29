@@ -172,14 +172,43 @@ class Tree:
 
     def _merge_plus(self, data, key, value, prepend=False):
         """ Handle extending attributes using the '+' suffix """
+
         # Nothing to do if key not in parent
         if key not in data:
             data[key] = value
             return
+
+        # Parent is a list of dict and child is a dict
+        # (just update every parent list item using the special merge)
+        if isinstance(data[key], list) and isinstance(value, dict):
+            for list_item in data[key]:
+                if not isinstance(list_item, dict):
+                    raise utils.MergeError(
+                        "MergeError: Item '{0}' in {1} must be a dictionary.".format(
+                            list_item, self.name))
+                self._merge_special(list_item, value)
+            return
+
+        # Parent is a dict and child is a list of dict
+        # (replace parent dict with the list of its special-merged copies)
+        if isinstance(data[key], dict) and isinstance(value, list):
+            result_list = []
+            for list_item in value:
+                if not isinstance(list_item, dict):
+                    raise utils.MergeError(
+                        "MergeError: Item '{0}' in {1} must be a dictionary.".format(
+                            list_item, self.name))
+                result_dict = copy.deepcopy(data[key])
+                self._merge_special(result_dict, list_item)
+                result_list.append(result_dict)
+            data[key] = result_list
+            return
+
         # Use the special merge for merging dictionaries
         if type(data[key]) == type(value) == dict:
             self._merge_special(data[key], value)
             return
+
         # Attempt to apply the plus operator
         try:
             if prepend:

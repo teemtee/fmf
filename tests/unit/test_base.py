@@ -161,6 +161,32 @@ class TestTree:
             child.data["time+"] = "string"
             child.inherit()
 
+    def test_merge_plus_parent_dict(self):
+        """ Merging parent dict with child list """
+        child = self.merge.find('/parent-dict/path')
+        assert len(child.data['discover']) == 2
+        assert child.data['discover'][0]['how'] == 'fmf'
+        assert child.data['discover'][0]['name'] == 'upstream'
+        assert child.data['discover'][0]['url'] == 'https://some.url'
+        assert child.data['discover'][0]['summary'] == 'test.upstream'
+        assert child.data['discover'][1]['how'] == 'fmf'
+        assert child.data['discover'][1]['name'] == 'downstream'
+        assert child.data['discover'][1]['url'] == 'https://other.url'
+        assert child.data['discover'][1]['summary'] == 'test.downstream'
+
+    def test_merge_plus_parent_list(self):
+        """ Merging parent list with child dict """
+        for i in [1, 2]:
+            child = self.merge.find(f'/parent-list/tier{i}')
+            assert child.data['summary'] == 'basic tests' if i == 1 else 'detailed tests'
+            assert len(child.data['discover']) == 2
+            assert child.data['discover'][0]['filter'] == f'tier: {i}'
+            assert child.data['discover'][0]['url'] == 'https://github.com/project1'
+            assert child.data['discover'][0]['summary'] == f'project1.tier{i}'
+            assert child.data['discover'][1]['filter'] == f'tier: {i}'
+            assert child.data['discover'][1]['url'] == 'https://github.com/project2'
+            assert child.data['discover'][1]['summary'] == f'project2.tier{i}'
+
     def test_merge_minus(self):
         """ Reducing attributes using the '-' suffix """
         child = self.merge.find('/parent/reduced')

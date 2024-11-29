@@ -1,0 +1,12 @@
+discover:
+    how: fmf
+    summary: test.
+
+/path:
+    discover+:
+      - name: upstream
+        url: https://some.url
+        summary+: upstream
+      - name: downstream
+        url: https://other.url
+        summary+: downstream
