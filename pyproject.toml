@@ -1,0 +1,105 @@
+[build-system]
+requires = ['hatchling', 'hatch-vcs']
+build-backend = 'hatchling.build'
+
+[project]
+name = 'fmf'
+authors = [
+    { name = 'Petr Splichal', email = 'psplicha@redhat.com' },
+]
+maintainers = [
+    { name = 'Petr Splichal', email = 'psplicha@redhat.com' },
+]
+description = 'Flexible Metadata Format'
+readme = 'README.rst'
+license = 'GPL-2.0-or-later'
+license-files = { paths = ['LICENSE'] }
+requires-python = '>=3.9'
+classifiers = [
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Topic :: Utilities',
+]
+keywords = [
+    'metadata',
+    'testing',
+]
+dependencies = [
+    'ruamel.yaml',
+    'filelock',
+    'jsonschema',
+]
+dynamic = ['version']
+
+[project.urls]
+homepage = 'https://github.com/teemtee/fmf'
+documentation = 'https://fmf.readthedocs.io'
+
+[project.optional-dependencies]
+# Needed for tests inside rpm build. Not being packaged in rpm
+tests = [
+    'pytest',
+]
+# Needed for readthedocs and man page build. Not being packaged in rpm.
+docs = [
+    'sphinx',
+    'sphinx_rtd_theme',
+]
+
+[project.scripts]
+fmf = 'fmf.cli:cli_entry'
+
+[tool.hatch]
+version.source = 'vcs'
+
+[tool.hatch.envs.default]
+platforms = ["linux"]
+
+[tool.hatch.envs.dev]
+description = "Development environment"
+dependencies = [
+    "pytest-cov"
+]
+features = ["tests"]
+
+[tool.hatch.envs.dev.scripts]
+type = ["mypy {args:tmt}"]
+check = ["lint", "type"]
+
+unit = "pytest -vvv -ra --showlocals tests/unit"
+smoke = "pytest -vvv -ra --showlocals tests/unit/test_cli.py"
+
+cov = [
+    "coverage run --source=fmf -m pytest -vvv -ra --showlocals tests",
+    "coverage report",
+    "coverage annotate",
+    ]
+
+[tool.hatch.envs.dev-not-editable]
+template = "dev"
+description = "Same as 'dev', but not using editable install"
+dev-mode = false
+
+[tool.hatch.envs.test]
+template = "dev"
+description = "Run scripts with multiple Python versions"
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.9", "3.11", "3.12"]
+
+[tool.hatch.envs.docs]
+features = ["docs"]
+
+[tool.hatch.envs.docs.scripts]
+html = "sphinx-build -b html {root}/docs {root}/docs/_build {args}"
+
+[tool.pytest.ini_options]
+markers = [
+    "web: tests which need to access the web",
+]
+testpaths = [
+    'tests',
+]

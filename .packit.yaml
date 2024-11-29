@@ -5,15 +5,15 @@ synced_files:
 upstream_package_name: fmf
 downstream_package_name: fmf
 
+# Epel9 fails to build because of too old version of setuptools_scm
+# Need to create archive with PKG-INFO
 actions:
   create-archive:
-  - make tarball
-  get-current-version:
-  - make version
+    - "hatch build -t sdist"
+    - "sh -c 'echo dist/fmf-*.tar.gz'"
 
 srpm_build_deps:
-  - make
-  - python3-docutils
+  - hatch
 
 jobs:
   - job: copr_build
