@@ -231,9 +231,9 @@ class TestTree:
 
     def test_show(self):
         """ Show metadata """
-        assert isinstance(self.wget.show(brief=True), type(""))
+        assert isinstance(self.wget.show(brief=True), str)
         assert self.wget.show(brief=True).endswith("\n")
-        assert isinstance(self.wget.show(), type(""))
+        assert isinstance(self.wget.show(), str)
         assert self.wget.show().endswith("\n")
         assert 'tester' in self.wget.show()
 
