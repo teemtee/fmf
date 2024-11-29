@@ -1,8 +1,8 @@
 discover:
-    - how: fmf
-      url: https://github.com/project1
-    - how: fmf
-      url: https://github.com/project2
+  - how: fmf
+    url: https://github.com/project1
+  - how: fmf
+    url: https://github.com/project2
 
 /tier1:
     summary: basic tests

@@ -1,9 +1,0 @@
-discover:
-    how: fmf
-
-/path:
-  discover+:
-    - name: upstream
-      url: https://some.url
-    - name: downstream
-      url: https://other.url
