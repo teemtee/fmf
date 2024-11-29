@@ -196,10 +196,10 @@ class TestTree:
         assert child.data['time'] == 5
         assert child.data['vars'] == dict(x=1)
         assert 'time+' not in child.data
-        with pytest.raises(utils.MergeError):
-            child.data["disabled-"] = True
-            child.inherit()
-        child.data.pop('disabled-')
+        # Do not raise MergeError if key is missing
+        child.data["pkgs-"] = 'foo'
+        child.inherit()
+        assert 'pkgs-' not in child.data
         with pytest.raises(utils.MergeError):
             child.data["time-"] = "bad"
             child.inherit()
