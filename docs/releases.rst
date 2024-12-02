@@ -12,6 +12,51 @@ The fmf :ref:`trees` can now be built from hidden files and
 directories as well. Use a simple :ref:`config` file to specify
 names which should be included in the search.
 
+The ``+`` operator now can be used for merging ``list`` of
+dictionaries with a single ``dict``. This can be for example
+useful when extending the ``discover`` step config which defines
+several phases:
+
+.. code-block:: yaml
+
+    discover:
+      - how: fmf
+        url: https://github.com/project/one
+      - how: fmf
+        url: https://github.com/project/two
+
+    /tier1:
+        summary: Run tier one tests
+        discover+:
+            filter: "tier:1"
+
+    /tier2:
+        summary: Run tier two tests
+        discover+:
+            filter: "tier:2"
+
+See the :ref:`merging<merging>` section for more details and
+examples.
+
+The ``-`` operator no more raises exception when the parent node
+does not define the key. This allows reducing values even for
+cases when user does not have write permissions for the parent
+data. For example, in order to make sure that the ``mysql``
+package is not included in the list of required or recommended
+packages you can now safely use this:
+
+.. code-block:: yaml
+
+    discover:
+        how: fmf
+        adjust-tests:
+          - require-: [mysql]
+          - recommend-: [mysql]
+
+When merging inherited values from parent, merge operations are
+now performed in the exact order in which user specified them, the
+keys are no more sorted before the merging step.
+
 
 fmf-1.4.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
