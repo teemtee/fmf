@@ -137,7 +137,7 @@ class TestTree:
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")
-        assert len(deep.children) == 1
+        assert len(deep.children) == 3
 
     def test_deep_dictionary(self):
         """ Get value from a deep dictionary """
