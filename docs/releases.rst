@@ -38,12 +38,12 @@ several phases:
 See the :ref:`merging<merging>` section for more details and
 examples.
 
-The ``-`` operator no more raises exception when the parent node
-does not define the key. This allows reducing values even for
-cases when user does not have write permissions for the parent
+The ``-`` operator no longer raises exception when the key is not
+defined by the parent node. This allows reducing values even for
+cases where user does not have write permissions for the parent
 data. For example, in order to make sure that the ``mysql``
 package is not included in the list of required or recommended
-packages you can now safely use this:
+packages, you can now safely use this:
 
 .. code-block:: yaml
 
@@ -55,7 +55,7 @@ packages you can now safely use this:
 
 When merging inherited values from parent, merge operations are
 now performed in the exact order in which user specified them, the
-keys are no more sorted before the merging step.
+keys are no longer sorted before the merging step.
 
 
 fmf-1.4.0
