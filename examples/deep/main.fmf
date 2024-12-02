@@ -19,3 +19,22 @@ hardware:
         size: 8
     network:
         model: e1000
+
+# A deep dictionary extending non-existent values
+/single:
+    undefined+:
+        deeper+:
+            key: value
+
+# And a child with a similar deep dictionary
+/parent:
+    one: 1
+    two: 2
+
+    /child:
+        one+: 1
+        two+: 2
+        three+: 3
+        undefined+:
+            deeper+:
+                key: value

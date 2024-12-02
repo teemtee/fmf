@@ -137,7 +137,7 @@ class TestTree:
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")
-        assert len(deep.children) == 1
+        assert len(deep.children) == 3
 
     def test_deep_dictionary(self):
         """ Get value from a deep dictionary """
@@ -146,6 +146,17 @@ class TestTree:
         assert deep.get(['hardware', 'memory', 'size']) == 8
         assert deep.get(['hardware', 'bad', 'size'], 12) == 12
         assert deep.get('nonexistent', default=3) == 3
+
+    def test_deep_dictionary_undefined_keys(self):
+        """ Extending undefined keys using '+' should work """
+        deep = Tree(EXAMPLES + "deep")
+        single = deep.find("/single")
+        assert single.get(["undefined", "deeper", "key"]) == "value"
+        child = deep.find("/parent/child")
+        assert child.get("one") == 2
+        assert child.get("two") == 4
+        assert child.get("three") == 3
+        assert child.get(["undefined", "deeper", "key"]) == "value"
 
     def test_merge_plus(self):
         """ Extending attributes using the '+' suffix """
