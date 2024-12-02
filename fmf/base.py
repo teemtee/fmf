@@ -671,7 +671,7 @@ class Tree:
         """ Climb through the tree (iterate leaf/all nodes) """
         if whole or self.select:
             yield self
-        for name, child in self.children.items():
+        for name, child in sorted(self.children.items()):
             for node in child.climb(whole):
                 yield node
 
