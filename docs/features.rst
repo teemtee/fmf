@@ -218,6 +218,21 @@ strings::
 
 __ https://docs.python.org/3/library/re.html#regular-expression-syntax
 
+.. note::
+
+    When multiple merge operations are performed on a single key,
+    they are applied in the order in which they are defined. For
+    example, the following two definitions will have a different
+    result::
+
+        /remove-first:
+            tag-: [two, three]
+            tag+: [three, four]
+
+        /append-first:
+            tag+: [three, four]
+            tag-: [two, three]
+
 
 Elasticity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

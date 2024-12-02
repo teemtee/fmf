@@ -51,3 +51,15 @@ very:
     - '.ier1'
     vars-~:
     - 'y'
+
+# Inheritance should be applied in the given order
+/order:
+    tag: [one, two]
+
+    /add-first:
+        tag+: [three, four]
+        tag-: [two, three]
+
+    /remove-first:
+        tag-: [two, three]
+        tag+: [three, four]

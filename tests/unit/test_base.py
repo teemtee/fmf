@@ -224,6 +224,13 @@ class TestTree:
         child = self.merge.find('/parent/buried')
         assert child.data['very']['deep']['dict'] == dict(x=2, y=1, z=0)
 
+    def test_merge_order(self):
+        """ Inheritance should be applied in the given order """
+        child = self.merge.find('/parent/order/add-first')
+        assert child.data['tag'] == ['one', 'four']
+        child = self.merge.find('/parent/order/remove-first')
+        assert child.data['tag'] == ['one', 'three', 'four']
+
     def test_get(self):
         """ Get attributes """
         assert isinstance(self.wget.get(), dict)

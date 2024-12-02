@@ -294,7 +294,7 @@ class Tree:
 
     def _merge_special(self, data, source):
         """ Merge source dict into data, handle special suffixes """
-        for key, value in sorted(source.items()):
+        for key, value in source.items():
             # Handle special attribute merging
             if key.endswith('+'):
                 self._merge_plus(data, key.rstrip('+'), value)
@@ -400,7 +400,7 @@ class Tree:
             pass
 
         # Process the metadata
-        for key, value in sorted(data.items()):
+        for key, value in data.items():
             # Ensure there are no 'None' keys
             if key is None:
                 raise utils.FormatError("Invalid key 'None'.")
