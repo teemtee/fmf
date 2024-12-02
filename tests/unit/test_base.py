@@ -147,6 +147,17 @@ class TestTree:
         assert deep.get(['hardware', 'bad', 'size'], 12) == 12
         assert deep.get('nonexistent', default=3) == 3
 
+    def test_deep_dictionary_undefined_keys(self):
+        """ Extending undefined keys using '+' should work """
+        deep = Tree(EXAMPLES + "deep")
+        single = deep.find("/single")
+        assert single.get(["undefined", "deeper", "key"]) == "value"
+        child = deep.find("/parent/child")
+        assert child.get("one") == 2
+        assert child.get("two") == 4
+        assert child.get("three") == 3
+        assert child.get(["undefined", "deeper", "key"]) == "value"
+
     def test_merge_plus(self):
         """ Extending attributes using the '+' suffix """
         child = self.merge.find('/parent/extended')
