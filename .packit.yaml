@@ -1,6 +1,5 @@
 specfile_path: fmf.spec
-synced_files:
-    - fmf.spec
+files_to_sync: [fmf.spec]
 
 upstream_package_name: fmf
 downstream_package_name: fmf
@@ -12,32 +11,65 @@ actions:
     - "hatch build -t sdist"
     - "sh -c 'echo dist/fmf-*.tar.gz'"
 
+# Common definitions
+_:
+  # Copr setup
+  - &copr
+    list_on_homepage: True
+    preserve_project: True
+    owner: "@teemtee"
+
+  # Supported targets
+  - targets: &targets
+      - fedora-all
+      - epel-9
+      - epel-10
+
 srpm_build_deps:
   - hatch
 
 jobs:
+  # Build pull requests
   - job: copr_build
     trigger: pull_request
-    targets:
-    - fedora-all
-    - epel-9
-    - epel-10
+    targets: *targets
 
+  # Test pull requests
   - job: tests
     trigger: pull_request
-    targets:
-    - fedora-all
-    - epel-9
-    - epel-10
+    targets: *targets
 
+  # Build commits merged to main (copr latest)
   - job: copr_build
     trigger: commit
     branch: main
-    targets:
-    - fedora-all
-    - epel-9
-    - epel-10
-    list_on_homepage: True
-    preserve_project: True
-    owner: "@teemtee"
-    project: fmf
+    targets: *targets
+    <<: *copr
+    project: latest
+
+  # Build release (copr stable)
+  - job: copr_build
+    trigger: release
+    targets: *targets
+    <<: *copr
+    project: stable
+
+  # Propose downstream pull requests
+  - job: propose_downstream
+    trigger: release
+    dist_git_branches: *targets
+
+  # Build in Koji
+  - job: koji_build
+    trigger: commit
+    allowed_pr_authors: ["packit", "all_committers"]
+    allowed_committers: ["packit", "all_committers"]
+    dist_git_branches: *targets
+
+  # Create bodhi updates
+  - job: bodhi_update
+    trigger: commit
+    dist_git_branches:
+      - fedora-branched
+      - epel-9
+      - epel-10
