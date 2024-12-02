@@ -913,7 +913,7 @@ def dict_to_yaml(data, width=None, sort=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class JsonSchemaValidationResult(NamedTuple):
-    """Represents JSON Schema validation result."""
+    """ Represents JSON Schema validation result """
     result: bool
     errors: list[Any]
 
@@ -944,7 +944,6 @@ def validate_data(
             jsonschema.exceptions.RefResolutionError,
             jsonschema.exceptions.UnknownType
             ) as error:
-        from fmf.utils import JsonSchemaError
         raise JsonSchemaError(f'Errors found in provided schema: {error}')
 
 
