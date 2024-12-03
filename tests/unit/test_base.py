@@ -48,6 +48,9 @@ class TestTree:
     def test_hidden(self):
         """ Hidden files and directories """
         assert ".hidden" not in self.wget.children
+        hidden = Tree(EXAMPLES + "hidden")
+        plan = hidden.find("/.plans/basic")
+        assert plan.get("discover") == {"how": "fmf"}
 
     def test_inheritance(self):
         """ Inheritance and data types """

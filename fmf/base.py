@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 from io import open
+from pathlib import Path
 from pprint import pformat as pretty
 from typing import Any, Dict, Optional, Protocol
 
@@ -71,6 +72,7 @@ class Tree:
         self.data = dict()
         self.sources = list()
         self.root = None
+        self.config = {}
         self.version = utils.VERSION
         self.original_data = dict()
         self._commit = None
@@ -98,6 +100,7 @@ class Tree:
         # Handle child node creation
         else:
             self.root = self.parent.root
+            self.config = self.parent.config
             self.name = os.path.join(self.parent.name, name)
 
         # Update data from a dictionary (handle empty nodes)
@@ -145,7 +148,8 @@ class Tree:
         return self.name
 
     def _initialize(self, path):
-        """ Find metadata tree root, detect format version """
+        """ Find metadata tree root, detect format version, check for config """
+
         # Find the tree root
         root = os.path.abspath(path)
         try:
@@ -159,6 +163,7 @@ class Tree:
             raise utils.FileError("Invalid directory path: {0}".format(root))
         log.info("Root directory found: {0}".format(root))
         self.root = root
+
         # Detect format version
         try:
             with open(os.path.join(self.root, ".fmf", "version")) as version:
@@ -169,6 +174,16 @@ class Tree:
                 "Unable to detect format version: {0}".format(error))
         except ValueError:
             raise utils.FormatError("Invalid version format")
+
+        # Check for the config file
+        config_file_path = Path(self.root) / ".fmf/config"
+        try:
+            self.config = YAML(typ="safe").load(config_file_path.read_text())
+            log.debug(f"Config file '{config_file_path}' loaded.")
+        except FileNotFoundError:
+            log.debug("Config file not found.")
+        except YAMLError as error:
+            raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
 
     def _merge_plus(self, data, key, value, prepend=False):
         """ Handle extending attributes using the '+' suffix """
@@ -593,6 +608,21 @@ class Tree:
             self.children[name].sources.append(source)
             self.children[name]._raw_data = copy.deepcopy(data)
 
+    @property
+    def explore_include(self):
+        """ Additional filenames to be explored """
+        try:
+            explore_include = self.config["explore"]["include"]
+            if not isinstance(explore_include, list):
+                raise utils.GeneralError(
+                    f"The 'include' config section should be a list, found '{explore_include}'.")
+            if ".fmf" in explore_include:
+                raise utils.GeneralError(
+                    "The '.fmf' directory cannot be used for storing fmf metadata.")
+        except KeyError:
+            explore_include = []
+        return explore_include
+
     def grow(self, path):
         """
         Grow the metadata tree for the given directory path
@@ -613,6 +643,7 @@ class Tree:
         except StopIteration:
             log.debug("Skipping '{0}' (not accessible).".format(path))
             return
+
         # Investigate main.fmf as the first file (for correct inheritance)
         filenames = sorted(
             [filename for filename in filenames if filename.endswith(SUFFIX)])
@@ -620,9 +651,10 @@ class Tree:
             filenames.insert(0, filenames.pop(filenames.index(MAIN)))
         except ValueError:
             pass
+
         # Check every metadata file and load data (ignore hidden)
         for filename in filenames:
-            if filename.startswith("."):
+            if filename.startswith(".") and filename not in self.explore_include:
                 continue
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
             log.info("Checking file {0}".format(fullpath))
@@ -643,9 +675,10 @@ class Tree:
             # Handle other *.fmf files as children
             else:
                 self.child(os.path.splitext(filename)[0], data, fullpath)
+
         # Explore every child directory (ignore hidden dirs and subtrees)
         for dirname in sorted(dirnames):
-            if dirname.startswith("."):
+            if dirname.startswith(".") and dirname not in self.explore_include:
                 continue
             fulldir = os.path.join(dirpath, dirname)
             if os.path.islink(fulldir):
@@ -665,6 +698,7 @@ class Tree:
                 log.debug("Ignoring metadata tree '{0}'.".format(dirname))
                 continue
             self.child(dirname, os.path.join(path, dirname))
+
         # Ignore directories with no metadata (remove all child nodes which
         # do not have children and their data haven't been updated)
         for name in list(self.children.keys()):
