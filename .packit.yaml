@@ -10,6 +10,8 @@ actions:
   create-archive:
     - "hatch build -t sdist"
     - "sh -c 'echo dist/fmf-*.tar.gz'"
+  get-current-version:
+    - hatch version
 
 # Common definitions
 _:
@@ -46,6 +48,7 @@ jobs:
     targets: *targets
     <<: *copr
     project: latest
+    release_suffix: "{PACKIT_PROJECT_BRANCH}"
 
   # Build release (copr stable)
   - job: copr_build
