@@ -4,7 +4,16 @@
     Releases
 ======================
 
-fmf-1.4
+
+fmf-1.5.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The fmf :ref:`trees` can now be built from hidden files and
+directories as well. Use a simple :ref:`config` file to specify
+names which should be included in the search.
+
+
+fmf-1.4.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 New :ref:`merging<merging>` suffixes ``~`` and ``-~`` can be used
