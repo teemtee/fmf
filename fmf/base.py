@@ -72,6 +72,7 @@ class Tree:
         self.data = dict()
         self.sources = list()
         self.root = None
+        self.config = {}
         self.version = utils.VERSION
         self.original_data = dict()
         self._commit = None
@@ -175,13 +176,12 @@ class Tree:
             raise utils.FormatError("Invalid version format")
 
         # Check for the config file
-        config_file_path = Path(self.root) / ".fmf" / "config"
+        config_file_path = Path(self.root) / ".fmf/config"
         try:
             self.config = YAML(typ="safe").load(config_file_path.read_text())
             log.debug(f"Config file '{config_file_path}' loaded.")
         except FileNotFoundError:
             log.debug("Config file not found.")
-            self.config = {}
         except YAMLError as error:
             raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
 
