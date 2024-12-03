@@ -48,6 +48,7 @@ jobs:
     targets: *targets
     <<: *copr
     project: latest
+    release_suffix: "{PACKIT_PROJECT_BRANCH}"
 
   # Build release (copr stable)
   - job: copr_build
