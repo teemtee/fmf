@@ -8,7 +8,7 @@
 fmf-1.5.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now it is possible to store metadata in hidden files and
+The fmf :ref:`trees` can now be built from hidden files and
 directories as well. Use a simple :ref:`config` file to specify
 names which should be included in the search.
 

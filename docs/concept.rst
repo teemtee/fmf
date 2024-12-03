@@ -89,6 +89,8 @@ collisions between similar attributes. For example:
 * test_description, requirement_description
 
 
+.. _trees:
+
 Trees
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -97,6 +99,28 @@ is defined by an ``.fmf`` directory (similarly as ``.git``
 identifies top of the git repository). The ``.fmf`` directory
 contains at least a ``version`` file with a single integer number
 defining version of the format.
+
+
+.. _config:
+
+Config
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, all hidden files are ignored when exploring metadata
+on the disk. If a specific file or directory should be included in
+the search, create a simple config file ``.fmf/config`` with the
+following format:
+
+.. code-block:: yaml
+
+    explore:
+        include:
+          - .plans
+          - .tests
+
+In the example above files or directories named ``.plans`` or
+``.tests`` will be included in the discovered metadata. Note that
+the ``.fmf`` directory cannot be used for storing metadata.
 
 
 Names

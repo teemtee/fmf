@@ -80,27 +80,6 @@ directive::
         inherit: false
 
 
-.. _config:
-
-Config
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-By default, all hidden files are ignored when exploring metadata
-on the disk. If a specific file or directory should be included in
-the search, create a simple config file ``.fmf/config`` with the
-following format:
-
-.. code-block:: yaml
-
-    explore:
-        include:
-          - .plans
-          - .tests
-
-In the example above files or directories named ``.plans`` or
-``.tests`` will be included in the discovered metadata.
-
-
 .. _merging:
 
 Merging

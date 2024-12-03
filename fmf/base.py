@@ -616,6 +616,9 @@ class Tree:
             if not isinstance(explore_include, list):
                 raise utils.GeneralError(
                     f"The 'include' config section should be a list, found '{explore_include}'.")
+            if ".fmf" in explore_include:
+                raise utils.GeneralError(
+                    "The '.fmf' directory cannot be used for storing fmf metadata.")
         except KeyError:
             explore_include = []
         return explore_include
