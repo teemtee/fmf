@@ -15,6 +15,7 @@ BuildRequires: python3dist(docutils)
 BuildRequires: git-core
 Requires:      git-core
 
+Obsoletes:     python3-fmf < %{version}-%{release}
 %py_provides   python3-fmf
 
 %description
