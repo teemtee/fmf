@@ -1,5 +1,7 @@
 specfile_path: fmf.spec
-files_to_sync: [fmf.spec]
+files_to_sync:
+  - fmf.spec
+  - .packit.yaml
 
 upstream_package_name: fmf
 downstream_package_name: fmf
