@@ -1,4 +1,4 @@
-Pull Request Checklist
+## Checklist
 
 * [ ] implement the feature
 * [ ] write the documentation
