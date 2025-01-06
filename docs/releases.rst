@@ -5,6 +5,14 @@
 ======================
 
 
+fmf-1.6.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to search :ref:`context` dimension values using regular
+expressions, it is now possible to use operator ``~`` for matching
+patterns and operator ``!~`` for non matching patterns.
+
+
 fmf-1.5.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

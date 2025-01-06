@@ -47,7 +47,7 @@ supported operators consult the following grammar outline::
     expression ::= 'true' | 'false'
     dimension ::= [[:alnum:]]+
     binary_operator ::= '==' | '!=' | '<' | '<=' | '>' | '>=' |
-        '~=' | '~!=' | '~<' | '~<=' | '~>' | '~>='
+        '~=' | '~!=' | '~<' | '~<=' | '~>' | '~>=' | '~' | '!~'
     unary_operator ::= 'is defined' | 'is not defined'
     values ::= value (',' value)*
     value ::= [[:alnum:]]+
@@ -64,6 +64,12 @@ Let's demonstrate the syntax on a couple of real-life examples::
 
     # check whether a dimension is defined
     collection is not defined
+
+    # search dimension value for a regular expression
+    initiator ~ .*-ci
+
+    # make sure that the value does not match given regular expression
+    arch !~ ppc64.*
 
     # disable adjust rule (e.g. during debugging / experimenting)
     false and <original rule>

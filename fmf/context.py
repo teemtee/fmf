@@ -44,6 +44,9 @@ class ContextValue:
         else:
             self._to_compare = self._split_to_version(origin)
 
+        # Store the original string for regexp processing
+        self.origin = origin
+
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self._to_compare == other._to_compare
@@ -238,6 +241,22 @@ class Context:
 
         return self._op_core(dimension_name, values, comparator)
 
+    def _op_match(self, dimension_name, values):
+        """ '~' operator, regular expression matches """
+
+        def comparator(dimension_value, it_val):
+            return re.search(it_val.origin, dimension_value.origin) is not None
+
+        return self._op_core(dimension_name, values, comparator)
+
+    def _op_not_match(self, dimension_name, values):
+        """ '~' operator, regular expression does not match """
+
+        def comparator(dimension_value, it_val):
+            return re.search(it_val.origin, dimension_value.origin) is None
+
+        return self._op_core(dimension_name, values, comparator)
+
     def _op_minor_eq(self, dimension_name, values):
         """ '~=' operator """
 
@@ -365,8 +384,10 @@ class Context:
         "~<=": _op_minor_less_or_eq,
         "==": _op_eq,
         "~=": _op_minor_eq,
+        "~": _op_match,
         "!=": _op_not_eq,
         "~!=": _op_minor_not_eq,
+        "!~": _op_not_match,
         ">=": _op_greater_or_equal,
         "~>=": _op_minor_greater_or_equal,
         ">": _op_greater,
