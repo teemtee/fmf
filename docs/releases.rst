@@ -12,6 +12,12 @@ In order to search :ref:`context` dimension values using regular
 expressions, it is now possible to use operator ``~`` for matching
 patterns and operator ``!~`` for non matching patterns.
 
+When exploring trees using the :py:meth:`fmf.Tree.climb()` and
+:py:meth:`fmf.Tree.prune()` methods, optional parameter ``sort``
+can be used to preserve the original order in which child nodes
+where inserted into the tree. See the :ref:`sort` section for more
+details.
+
 
 fmf-1.5.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
