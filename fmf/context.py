@@ -384,14 +384,14 @@ class Context:
         "~<=": _op_minor_less_or_eq,
         "==": _op_eq,
         "~=": _op_minor_eq,
-        "~": _op_match,
         "!=": _op_not_eq,
         "~!=": _op_minor_not_eq,
-        "!~": _op_not_match,
         ">=": _op_greater_or_equal,
         "~>=": _op_minor_greater_or_equal,
         ">": _op_greater,
         "~>": _op_minor_greater,
+        "~": _op_match,
+        "!~": _op_not_match,
         }
 
     # Triple expression: dimension operator values
@@ -400,7 +400,7 @@ class Context:
         r"(\w+)"
         + r"\s*("
         + r"|".join(
-            set(operator_map.keys()) - {"is defined", "is not defined"})
+            [key for key in operator_map if key not in ["is defined", "is not defined"]])
         + r")\s*"
         + r"([^=].*)")
     # Double expression: dimension operator
