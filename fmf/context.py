@@ -34,18 +34,18 @@ class InvalidContext(Exception):
 class ContextValue:
     """ Value for dimension """
 
-    def __init__(self, origin):
+    def __init__(self, raw):
         """
         ContextValue("foo-1.2.3")
         ContextValue(["foo", "1", "2", "3"])
         """
-        if isinstance(origin, (tuple, list)):
-            self._to_compare = tuple(origin)
+        if isinstance(raw, (tuple, list)):
+            self._to_compare = tuple(raw)
         else:
-            self._to_compare = self._split_to_version(origin)
+            self._to_compare = self._split_to_version(raw)
 
         # Store the original string for regexp processing
-        self.origin = origin
+        self.raw = raw
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -245,7 +245,7 @@ class Context:
         """ '~' operator, regular expression matches """
 
         def comparator(dimension_value, it_val):
-            return re.search(it_val.origin, dimension_value.origin) is not None
+            return re.search(it_val.raw, dimension_value.raw) is not None
 
         return self._op_core(dimension_name, values, comparator)
 
@@ -253,7 +253,7 @@ class Context:
         """ '~' operator, regular expression does not match """
 
         def comparator(dimension_value, it_val):
-            return re.search(it_val.origin, dimension_value.origin) is None
+            return re.search(it_val.raw, dimension_value.raw) is None
 
         return self._op_core(dimension_name, values, comparator)
 
