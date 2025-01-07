@@ -282,6 +282,31 @@ class TestExample:
         assert python.matches("component > python3-3.7")
         assert python.matches("component < PYTHON3-3.9")
 
+    def test_regular_expression_matching(self):
+        """ Matching regular expressions """
+
+        assert Context(distro="fedora-42").matches("distro ~ ^fedora-42$")
+        assert Context(distro="fedora-42").matches("distro ~ fedora")
+        assert Context(distro="fedora-42").matches("distro ~ fedora|rhel")
+        assert Context(distro="fedora-42").matches("distro ~ fedora-4.*")
+        assert not Context(distro="fedora-42").matches("distro ~ fedora-3.*")
+        assert not Context(distro="fedora-42").matches("distro ~ ubuntu")
+
+        assert Context(arch="ppc64").matches("arch ~ ppc64.*")
+        assert Context(arch="ppc64le").matches("arch ~ ppc64.*")
+        assert not Context(arch="ppc64le").matches("arch ~ ppc64$")
+
+        assert not Context(distro="fedora-42").matches("distro !~ ^fedora-42$")
+        assert not Context(distro="fedora-42").matches("distro !~ fedora")
+        assert not Context(distro="fedora-42").matches("distro !~ fedora|rhel")
+        assert not Context(distro="fedora-42").matches("distro !~ fedora-4.*")
+        assert Context(distro="fedora-42").matches("distro !~ fedora-3.*")
+        assert Context(distro="fedora-42").matches("distro !~ ubuntu")
+
+        assert not Context(arch="ppc64").matches("arch !~ ppc64.*")
+        assert not Context(arch="ppc64le").matches("arch !~ ppc64.*")
+        assert Context(arch="ppc64le").matches("arch !~ ppc64$")
+
 
 class TestContextValue:
     impossible_split = ["x86_64", "ppc64", "fips", "errata"]
