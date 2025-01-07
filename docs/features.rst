@@ -324,26 +324,6 @@ instead of deleting it completely. To do so, one can set the directive::
 By default all leaves have it set to ``true`` (such node is selected)
 and branches have set it to ``false`` (such node is not selected).
 
-.. _sort:
-
-Sort
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-By default, when exploring test metadata in the tree, child nodes
-are sorted alphabetically by node name. This applies to command
-line usage such as ``fmf ls`` or ``fmf show`` as well as for the
-:py:meth:`fmf.Tree.climb()` and :py:meth:`fmf.Tree.prune()`
-methods.
-
-If the tree content is not created from files on disk but created
-manually using the :py:meth:`fmf.Tree.child()` method, the child
-order can be preserved by providing the ``sort=False`` parameter
-to the :py:meth:`fmf.Tree.climb()` and :py:meth:`fmf.Tree.prune()`
-methods.
-
-.. versionadded:: 1.6
-
-
 .. _virtual:
 
 Virtual
