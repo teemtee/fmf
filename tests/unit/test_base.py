@@ -80,6 +80,27 @@ class TestTree:
         child = Tree(EXAMPLES + "child")
         assert child.find("/nobody") is None
 
+    def test_insert_child(self):
+        """ Manual child creation """
+
+        # Prepare a simple tree by manually inserting child nodes
+        tree = Tree(data={"key": "value"})
+        tree.child(name="child2", data={"key": "value"})
+        tree.child(name="child3", data={"key": "value"})
+        tree.child(name="child1", data={"key": "value"})
+
+        # By default, node names should be sorted when climbing & prunning
+        expected = ['/child1', '/child2', '/child3']
+        assert [node.name for node in tree.climb()] == expected
+        assert [node.name for node in tree.prune()] == expected
+        assert [node.name for node in tree.climb(sort=True)] == expected
+        assert [node.name for node in tree.prune(sort=True)] == expected
+
+        # Original order should be kept if requested
+        expected = ['/child2', '/child3', '/child1']
+        assert [node.name for node in tree.climb(sort=False)] == expected
+        assert [node.name for node in tree.prune(sort=False)] == expected
+
     def test_prune_sources(self):
         """ Pruning by sources """
         original_directory = os.getcwd()

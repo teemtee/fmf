@@ -707,12 +707,33 @@ class Tree:
                 del self.children[name]
                 log.debug("Empty tree '{0}' removed.".format(child.name))
 
-    def climb(self, whole=False):
-        """ Climb through the tree (iterate leaf/all nodes) """
+    def climb(self, whole: bool = False, sort: bool = True):
+        """
+        Climb through the tree (iterate over nodes)
+
+        :param whole: By default only leaf nodes are considered. When
+            set to ``True`` all nodes are iterated, including parent
+            branches.
+
+        :param sort: When iterating, child nodes are sorted by name by
+            default. Set to ``False`` if you prefer to keep the order in
+            which the child nodes were inserted into the tree.
+        """
+
+        # Include branches when `whole` is enabled or the `select`
+        # directive has been used to pick this node.
         if whole or self.select:
             yield self
-        for name, child in sorted(self.children.items()):
-            for node in child.climb(whole):
+
+        # Sort child nodes by name only if requested
+        if sort:
+            children = [child for _, child in sorted(self.children.items())]
+        else:
+            children = self.children.values()
+
+        # Iterate through each child node
+        for child in children:
+            for node in child.climb(whole=whole, sort=sort):
                 yield node
 
     @property
@@ -730,9 +751,36 @@ class Tree:
                 return node
         return None
 
-    def prune(self, whole=False, keys=None, names=None, filters=None,
-              conditions=None, sources=None):
-        """ Filter tree nodes based on given criteria """
+    def prune(
+            self,
+            whole: bool = False,
+            keys: Optional[list[str]] = None,
+            names: Optional[list[str]] = None,
+            filters: Optional[list[str]] = None,
+            conditions: Optional[list[str]] = None,
+            sources: Optional[list[str]] = None,
+            sort: bool = True):
+        """
+        Filter tree nodes based on given criteria
+
+        :param whole: By default only leaf nodes are considered. When
+            set to ``True`` all nodes are iterated, including parent
+            branches.
+
+        :param keys: Include only nodes containing given keys.
+
+        :param names: Include only nodes matching provided names.
+
+        :param filters: Include only nodes matching given filters.
+
+        :param conditions: Include only nodes satisfying the conditions.
+
+        :param sources: Filter by source fmf file names on disk.
+
+        :param sort: When iterating, child nodes are sorted by name by
+            default. Set to ``False`` if you prefer to keep the order in
+            which the child nodes were inserted into the tree.
+        """
         keys = keys or []
         names = names or []
         filters = filters or []
@@ -742,7 +790,7 @@ class Tree:
         if sources:
             sources = {os.path.abspath(src) for src in sources}
 
-        for node in self.climb(whole):
+        for node in self.climb(whole, sort=sort):
             # Select only nodes with key content
             if not all([key in node.data for key in keys]):
                 continue
