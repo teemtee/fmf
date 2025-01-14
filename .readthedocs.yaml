@@ -1,9 +1,14 @@
 # Config for building https://fmf.readthedocs.io/
 version: 2
+
+sphinx:
+    configuration: docs/conf.py
+
 build:
     os: ubuntu-22.04
     tools:
         python: "3"
+
 python:
     install:
       - method: pip
