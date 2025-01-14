@@ -98,6 +98,9 @@ or when merging a dictionary with a list.
 Exception ``MergeError`` is raised if types are not compatible. When
 the ``+`` suffix is applied on dictionaries ``update()`` method is
 used to merge content of given dictionary instead of replacing it.
+When such parent dictionary doesn't exist, but the suffix ``+`` is used
+at the top level, the dictionary is created and named without the suffix.
+However, for dictionaries at deeper levels, the suffix remains in their name.
 
 Example: Merging dictionary with a list::
 
@@ -158,6 +161,25 @@ results in::
           - how: fmf
             url: https://github.com/project2
             filter: "tier:2"
+
+Example: Merging with not yet defined dictionaries::
+
+    environment+:
+        CLEAR: "1"
+    adjust+:
+        when: distro == fedora
+        environment+:
+            FEDORA: "1"
+
+results in (no ``+`` suffix in ``adjust`` and top ``environment`` keys)::
+
+    adjust:
+        when: distro == fedora
+        environment+:
+            FEDORA: "1"
+    environment:
+        CLEAR: "1"
+
 
 The special suffix ``+<`` can be used to prepend values instead of
 appending them. This might be handy when adjusting lists::

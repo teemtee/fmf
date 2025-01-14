@@ -4,6 +4,7 @@ import tempfile
 import threading
 import time
 from shutil import rmtree
+from textwrap import dedent
 
 import pytest
 from ruamel.yaml import YAML
@@ -158,6 +159,21 @@ class TestTree:
         assert 'because' not in child.data
         assert 'foo' in child.data
 
+    def test_adjust_can_extend(self):
+        """ It is possible to extend dictionary with adjust """
+        tree = Tree(YAML(typ='safe').load(dedent("""
+        /a:
+         environment+:
+          FOO: bar
+         adjust+:
+          environment+:
+            BAR: baz
+        """)))
+        tree.adjust(context=Context())
+        child = tree.find('/a')
+        assert child.data['environment']['FOO'] == "bar"
+        assert child.data['environment']['BAR'] == "baz"
+
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")
@@ -175,12 +191,12 @@ class TestTree:
         """ Extending undefined keys using '+' should work """
         deep = Tree(EXAMPLES + "deep")
         single = deep.find("/single")
-        assert single.get(["undefined", "deeper", "key"]) == "value"
+        assert single.get(["undefined", "deeper+", "key"]) == "value"
         child = deep.find("/parent/child")
         assert child.get("one") == 2
         assert child.get("two") == 4
         assert child.get("three") == 3
-        assert child.get(["undefined", "deeper", "key"]) == "value"
+        assert child.get(["undefined", "deeper+", "key"]) == "value"
 
     def test_merge_plus(self):
         """ Extending attributes using the '+' suffix """

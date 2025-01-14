@@ -4,6 +4,14 @@
     Releases
 ======================
 
+fmf-1.6.1
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to allow adjust rules to merge dictionaries, nested
+dictionaries need to keep the suffix in their name. This behavior
+reverts to fmf-1.4.0 and is now documented in :ref:`merging<merging>`
+section.
+
 
 fmf-1.6.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

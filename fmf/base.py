@@ -190,13 +190,7 @@ class Tree:
 
         # Set the value if key is not present
         if key not in data:
-            # Special handling for dictionaries as their keys might
-            # contain suffixes which should be removed
-            if isinstance(value, dict):
-                data[key] = {}
-                self._merge_special(data[key], value)
-            else:
-                data[key] = value
+            data[key] = value
             return
 
         # Parent is a list of dict and child is a dict

@@ -21,6 +21,7 @@ hardware:
         model: e1000
 
 # A deep dictionary extending non-existent values
+# should keep '+' (important for adjust)
 /single:
     undefined+:
         deeper+:
