@@ -372,17 +372,15 @@ class Tree:
 
     def merge(self, parent=None):
         """ Merge parent data """
-        # Check parent, append source files
+        # Check parent
         if parent is None:
             parent = self.parent
-        if parent is None:
-            return
-        # Do not inherit when disabled
-        if self._directives.get("inherit") is False:
-            return
-        self.sources = parent.sources + self.sources
-        # Merge child data with parent data
-        data = copy.deepcopy(parent.data)
+        if self._directives.get("inherit") is False or parent is None:
+            # Nothing to inherit
+            data = {}
+        else:
+            self.sources = parent.sources + self.sources
+            data = copy.deepcopy(parent.data)
         self._merge_special(data, self.data)
         self.data = data
 

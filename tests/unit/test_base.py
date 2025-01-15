@@ -174,6 +174,14 @@ class TestTree:
         assert child.data['environment']['FOO'] == "bar"
         assert child.data['environment']['BAR'] == "baz"
 
+    def test_node_without_parent_strips_merge_suffix(self):
+        """ Merge suffix is stripped in the top node as well """
+        tree = Tree(EXAMPLES + 'merge')
+        stray_child = tree.find('/stray')
+        assert 'environment' in stray_child.data
+        child = tree.find('/parent/reduced')
+        assert 'environment' in child.data
+
     def test_deep_hierarchy(self):
         """ Deep hierarchy on one line """
         deep = Tree(EXAMPLES + "deep")
