@@ -37,10 +37,10 @@ man: tmp
 # RPM packaging
 tarball: man
 	hatch build -t sdist
-rpm: tarball
-	rpmbuild --define '_topdir $(TMP)' -bb fmf.spec
-srpm: tarball
-	rpmbuild --define '_topdir $(TMP)' -bs fmf.spec
+rpm:
+	packit build in-mock --resuldir mock-rpm
+srpm:
+	packit srpm
 packages: rpm srpm
 
 
