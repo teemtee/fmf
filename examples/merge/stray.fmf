@@ -1,0 +1,6 @@
+/:
+  inherit: false
+
+# Merge suffix will be stripped
+environment+:
+    NOTHING: here

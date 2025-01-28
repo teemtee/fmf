@@ -1,0 +1,3 @@
+# Merge suffix can be used and will be stripped
+environment+:
+    SOME: value
