@@ -50,6 +50,22 @@ class AdjustCallback(Protocol):
         pass
 
 
+class ApplyRulesCallback(Protocol):
+    """
+    A callback to decide if rules should be processed in Tree.adjust()
+
+    Function to be called for every node before ``additional_rules``
+    are processed. It is called with fmf tree as the parameter.
+    It should return ``True`` when additional_rules should be processed
+    or ``False`` when they should be ignored.
+    """
+
+    def __call__(
+            self,
+            node: 'Tree') -> bool:
+        return True
+
+
 class Tree:
     """ Metadata Tree """
 
@@ -436,7 +452,8 @@ class Tree:
 
     def adjust(self, context, key='adjust', undecided='skip',
                case_sensitive=True, decision_callback=None,
-               additional_rules=None, additional_rules_callback=None):
+               additional_rules=None,
+               additional_rules_callback: Optional[ApplyRulesCallback] = None):
         """
         Adjust tree data based on provided context and rules
 
