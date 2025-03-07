@@ -132,6 +132,32 @@ class TestAdjust:
         mini.adjust(centos, additional_rules={'enabled': True})
         assert mini.get('enabled') is True
 
+    def test_additional_rules_callback(self, fedora):
+        """ Additional rules might be ignored """
+        data = """
+        /is_test:
+            test: echo
+        /is_plan:
+            execute:
+                how: tmt
+        """
+        yaml = YAML(typ="safe")
+        tree = fmf.Tree(yaml.load(data))
+
+        def additional_rules_callback(tree_node):
+            return 'test' in tree_node.data
+        tree.adjust(
+            context=fedora,
+            additional_rules=[
+                {'test': 'magic'}
+                ],
+            additional_rules_callback=additional_rules_callback
+            )
+        # 'is_test' node was adjusted
+        assert tree.find('/is_test').data == {'test': 'magic'}
+        # 'is_plan' node was not adjusted
+        assert tree.find('/is_plan').data == {'execute': {'how': 'tmt'}}
+
     def test_adjusted_additional_after_continue(self, full, centos):
         """ Additional rule is evaluated even if 'node' rule has continue:false """
         full.adjust(centos,

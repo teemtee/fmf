@@ -50,6 +50,22 @@ class AdjustCallback(Protocol):
         pass
 
 
+class ApplyRulesCallback(Protocol):
+    """
+    A callback to decide if rules should be processed in Tree.adjust()
+
+    Function to be called for every node before ``additional_rules``
+    are processed. It is called with fmf tree as the parameter.
+    It should return ``True`` when additional_rules should be processed
+    or ``False`` when they should be ignored.
+    """
+
+    def __call__(
+            self,
+            node: 'Tree') -> bool:
+        return True
+
+
 class Tree:
     """ Metadata Tree """
 
@@ -436,7 +452,8 @@ class Tree:
 
     def adjust(self, context, key='adjust', undecided='skip',
                case_sensitive=True, decision_callback=None,
-               additional_rules=None):
+               additional_rules=None,
+               additional_rules_callback: Optional[ApplyRulesCallback] = None):
         """
         Adjust tree data based on provided context and rules
 
@@ -463,6 +480,12 @@ class Tree:
         that should be applied after those from the node itself.
         These additional rules are processed even when an applied
         rule defined in the node has ``continue: false`` set.
+
+        Optional 'additional_rules_callback' callback could be set to
+        limit nodes for which 'additional_rules' are processed. This
+        callback is called with the current fmf node as an argument and
+        should return 'True' to process 'additional_rules' or 'False' to
+        skip them.
         """
 
         # Check context sanity
@@ -493,9 +516,8 @@ class Tree:
 
         context.case_sensitive = case_sensitive
 
-        # 'continue' has to affect only its rule_set
-        for rule_set in rules, additional_rules:
-            # Check and apply each rule
+        def apply_rules(rule_set):
+            # 'continue' has to affect only its rule_set
             for rule in rule_set:
                 # Rule must be a dictionary
                 if not isinstance(rule, dict):
@@ -548,12 +570,19 @@ class Tree:
                             "Invalid value for the 'undecided' parameter. Should "
                             "be 'skip' or 'raise', got '{}'.".format(undecided))
 
+        # Always process rules from 'key' (adjust)
+        apply_rules(rules)
+        # Additional rules might be skipped depending on the callback
+        if additional_rules_callback is None or additional_rules_callback(self):
+            apply_rules(additional_rules)
+
         # Adjust all child nodes as well
         for child in self.children.values():
             child.adjust(context, key, undecided,
                          case_sensitive=case_sensitive,
                          decision_callback=decision_callback,
-                         additional_rules=additional_rules)
+                         additional_rules=additional_rules,
+                         additional_rules_callback=additional_rules_callback)
 
     def get(self, name=None, default=None):
         """
