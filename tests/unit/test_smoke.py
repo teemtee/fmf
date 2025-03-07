@@ -8,13 +8,21 @@ WGET = PATH + "/../../examples/wget"
 
 
 class TestSmoke:
-    """ Smoke Test """
+    """
+    Smoke Test
+    """
 
     def test_smoke(self):
-        """ Smoke test """
+        """
+        Smoke test
+        """
+
         fmf.cli.main("fmf ls", WGET)
 
     def test_output(self):
-        """ There is some output """
+        """
+        There is some output
+        """
+
         output = fmf.cli.main("fmf ls", WGET)
         assert "download" in output

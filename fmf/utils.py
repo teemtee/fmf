@@ -1,4 +1,6 @@
-""" Logging, config, constants & utilities """
+"""
+Logging, config, constants & utilities
+"""
 
 import copy
 import logging
@@ -62,43 +64,61 @@ LOCK_SUFFIX_FETCH = '.fetch.lock'
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class GeneralError(Exception):
-    """ General error """
+    """
+    General error
+    """
 
 
 class FormatError(GeneralError):
-    """ Metadata format error """
+    """
+    Metadata format error
+    """
 
 
 class FileError(GeneralError):
-    """ File reading error """
+    """
+    File reading error
+    """
 
 
 class RootError(FileError):
-    """ Metadata tree root missing """
+    """
+    Metadata tree root missing
+    """
 
 
 class FilterError(GeneralError):
-    """ Missing data when filtering """
+    """
+    Missing data when filtering
+    """
 
 
 class MergeError(GeneralError):
-    """ Unable to merge data between parent and child """
+    """
+    Unable to merge data between parent and child
+    """
 
 
 class ReferenceError(GeneralError):
-    """ Referenced tree node cannot be found """
+    """
+    Referenced tree node cannot be found
+    """
 
 
 class FetchError(GeneralError):
-    """ Fatal error in helper command while fetching """
-    # Keep previously used format of the message
+    """
+    Fatal error in helper command while fetching
+    """
 
+    # Keep previously used format of the message
     def __str__(self):
         return self.args[0] if self.args else ''
 
 
 class JsonSchemaError(GeneralError):
-    """ Invalid JSON Schema """
+    """
+    Invalid JSON Schema
+    """
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -106,7 +126,10 @@ class JsonSchemaError(GeneralError):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def pluralize(singular=None):
-    """ Naively pluralize words """
+    """
+    Naively pluralize words
+    """
+
     if singular.endswith("y") and not singular.endswith("ay"):
         plural = singular[:-1] + "ies"
     elif singular.endswith("s"):
@@ -182,13 +205,17 @@ def split(values, separator=re.compile("[ ,]+")):
     Accepts both string and list. By default space and comma are used as
     value separators. Use any regular expression for custom separator.
     """
+
     if not isinstance(values, list):
         values = [values]
     return sum([separator.split(value) for value in values], [])
 
 
 def info(message, newline=True):
-    """ Log provided info message to the standard error output """
+    """
+    Log provided info message to the standard error output
+    """
+
     sys.stderr.write(message + ("\n" if newline else ""))
 
 
@@ -203,6 +230,7 @@ def evaluate(expression, data, _node=None):
     Expects data dictionary which will be used to populate local
     namespace. Used to provide flexible conditions for filtering.
     """
+
     namespace = dict(data)
     try:
         return eval(expression, namespace)
@@ -271,18 +299,23 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
 
     :returns: True if the filter matches given dictionary of values and
         the node name (if provided).
-
     """
 
     def match_value(pattern, text):
-        """ Match value against data (simple or regexp) """
+        """
+        Match value against data (simple or regexp)
+        """
+
         if regexp:
             return re.match("^{0}$".format(pattern), text)
         else:
             return pattern == text
 
     def check_value(dimension, value):
-        """ Check whether the value matches data """
+        """
+        Check whether the value matches data
+        """
+
         # E.g. value = 'A, B' or value = "C" or value = "-D"
         # If there are multiple values, at least one must match
         for atom in re.split(r"\s*,\s*", value):
@@ -307,7 +340,10 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
         return False
 
     def check_dimension(dimension, values):
-        """ Check whether all values for given dimension match data """
+        """
+        Check whether all values for given dimension match data
+        """
+
         # E.g. dimension = 'tag', values = ['A, B', 'C', '-D']
         # Raise exception upon unknown dimension
         if dimension not in data:
@@ -322,6 +358,7 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
         Search for regular expression pattern if `regexp` is turned on,
         simply compare strings otherwise.
         """
+
         # Node name has to be provided if name search requested
         if name is None:
             raise FilterError(
@@ -334,7 +371,10 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
             return pattern == name
 
     def check_clause(clause):
-        """ Split into literals and check whether all match """
+        """
+        Split into literals and check whether all match
+        """
+
         # E.g. clause = 'tag: A, B & tag: C & tag: -D'
         # Split into individual literals by dimension
         literals = dict()
@@ -393,7 +433,9 @@ def filter(filter, data, sensitive=True, regexp=False, name=None):
 
 
 class Logging:
-    """ Logging Configuration """
+    """
+    Logging Configuration
+    """
 
     # Color mapping
     COLORS = {
@@ -433,7 +475,9 @@ class Logging:
             self.set()
 
     class ColoredFormatter(logging.Formatter):
-        """ Custom color formatter for logging """
+        """
+        Custom color formatter for logging
+        """
 
         def format(self, record):
             # Handle custom log level names
@@ -459,7 +503,10 @@ class Logging:
 
     @staticmethod
     def _create_logger(name='fmf', level=None):
-        """ Create fmf logger """
+        """
+        Create fmf logger
+        """
+
         # Create logger, handler and formatter
         logger = logging.getLogger(name)
         handler = logging.StreamHandler()
@@ -491,6 +538,7 @@ class Logging:
             DEBUG=4 ... LOG_DATA
             DEBUG=5 ... LOG_ALL (log all messages)
         """
+
         # If level specified, use given
         if level is not None:
             Logging._level = level
@@ -503,7 +551,10 @@ class Logging:
         self.logger.setLevel(Logging._level)
 
     def get(self):
-        """ Get the current log level """
+        """
+        Get the current log level
+        """
+
         return self.logger.level
 
 
@@ -518,6 +569,7 @@ def color(text, color=None, background=None, light=False, enabled="auto"):
     Available colors: black red green yellow blue magenta cyan white.
     Alternatively color can be prefixed with "light", e.g. lightgreen.
     """
+
     colors = {"black": 30, "red": 31, "green": 32, "yellow": 33,
               "blue": 34, "magenta": 35, "cyan": 36, "white": 37}
     # Nothing do do if coloring disabled
@@ -539,7 +591,9 @@ def color(text, color=None, background=None, light=False, enabled="auto"):
 
 
 class Coloring:
-    """ Coloring configuration """
+    """
+    Coloring configuration
+    """
 
     # Default color mode is auto-detected from the terminal presence
     _mode = None
@@ -548,13 +602,19 @@ class Coloring:
     _instance = None
 
     def __new__(cls, *args, **kwargs):
-        """ Make sure we create a single instance only """
+        """
+        Make sure we create a single instance only
+        """
+
         if not cls._instance:
             cls._instance = super(Coloring, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
     def __init__(self, mode=None):
-        """ Initialize the coloring mode """
+        """
+        Initialize the coloring mode
+        """
+
         # Nothing to do if already initialized
         if self._mode is not None:
             return
@@ -576,6 +636,7 @@ class Coloring:
         Environment variable COLOR can be used to set up the coloring to the
         desired mode without modifying code.
         """
+
         # Detect from the environment if no mode given (only once)
         if mode is None:
             # Nothing to do if already detected
@@ -595,11 +656,17 @@ class Coloring:
                 self.MODES[self._mode]))
 
     def get(self):
-        """ Get the current color mode """
+        """
+        Get the current color mode
+        """
+
         return self._mode
 
     def enabled(self):
-        """ True if coloring is currently enabled """
+        """
+        True if coloring is currently enabled
+        """
+
         # In auto-detection mode color enabled when terminal attached
         if self._mode == COLOR_AUTO:
             return sys.stdout.isatty()
@@ -622,6 +689,7 @@ def get_cache_directory(create=True):
 
     Raise GeneralError if it is not possible to create it.
     """
+
     cache = (
         os.environ.get('FMF_CACHE_DIRECTORY', _CACHE_DIRECTORY)
         or os.path.join(
@@ -639,26 +707,38 @@ def get_cache_directory(create=True):
 
 
 def set_cache_directory(cache_directory):
-    """ Set preferred cache directory """
+    """
+    Set preferred cache directory
+    """
+
     global _CACHE_DIRECTORY
     _CACHE_DIRECTORY = cache_directory
 
 
 def set_cache_expiration(seconds):
-    """ Seconds until cache expires """
+    """
+    Seconds until cache expires
+    """
+
     global CACHE_EXPIRATION
     CACHE_EXPIRATION = int(seconds)
 
 
 def clean_cache_directory():
-    """ Delete used cache directory if it exists """
+    """
+    Delete used cache directory if it exists
+    """
+
     cache = get_cache_directory(create=False)
     if os.path.isdir(cache):
         shutil.rmtree(cache)
 
 
 def invalidate_cache():
-    """ Force fetch next time cache is used regardless its age """
+    """
+    Force fetch next time cache is used regardless its age
+    """
+
     # Missing FETCH_HEAD means `git fetch` will happen
     cache = get_cache_directory(create=False)
     # Cache not exists, nothing to do
@@ -704,6 +784,7 @@ def fetch_tree(url, ref=None, path='.'):
 
     Raises GeneralError when lock couldn't be acquired.
     """
+
     # Create lock path to fetch/read git from URL to the cache
     cache_dir = get_cache_directory()
     # Use LOCK_SUFFIX_READ suffix (different from the inner fetch lock)
@@ -728,7 +809,10 @@ def fetch_tree(url, ref=None, path='.'):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def fetch(url, ref=None, destination=None, env=None):
-    """ Deprecated: Use :func:`fetch_repo` instead """
+    """
+    Deprecated: Use :func:`fetch_repo` instead
+    """
+
     # DeprecationWarning is hidden by default (unless -Wall or -Wonce option)
     # so using FutureWarning to have this visible by default
     warnings.warn(
@@ -743,7 +827,10 @@ def fetch(url, ref=None, destination=None, env=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def default_branch(repository, remote="origin"):
-    """ Detect default branch from given local git repository """
+    """
+    Detect default branch from given local git repository
+    """
+
     head = os.path.join(repository, f".git/refs/remotes/{remote}/HEAD")
     # Make sure the HEAD reference is available
     if not os.path.exists(head):
@@ -853,6 +940,7 @@ def run(command, cwd=None, check_exit_code=True, env=None):
     :check_exit_code raise CalledProcessError if exit code is non-zero
     :env dictionary of the environment variables for the command
     """
+
     log.debug("Running command: '{0}'.".format(' '.join(command)))
 
     process = subprocess.Popen(
@@ -882,7 +970,10 @@ log = Logging('fmf').logger
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def dict_to_yaml(data, width=None, sort=False):
-    """ Convert dictionary into yaml """
+    """
+    Convert dictionary into yaml
+    """
+
     output = StringIO()
 
     # Set formatting options
@@ -913,7 +1004,10 @@ def dict_to_yaml(data, width=None, sort=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class JsonSchemaValidationResult(NamedTuple):
-    """ Represents JSON Schema validation result """
+    """
+    Represents JSON Schema validation result
+    """
+
     result: bool
     errors: list[Any]
 
@@ -923,11 +1017,13 @@ def validate_data(
         schema: Any,
         schema_store: Optional[dict[str, Any]] = None
         ) -> JsonSchemaValidationResult:
-    """Validate data against a JSON Schema.
+    """
+    Validate data against a JSON Schema.
 
     Validates the given data using the specified JSON Schema and optional
     schema references.
     """
+
     validator = get_validator(schema, schema_store)
 
     try:

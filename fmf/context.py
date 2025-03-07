@@ -32,7 +32,9 @@ class InvalidContext(Exception):
 
 
 class ContextValue:
-    """ Value for dimension """
+    """
+    Value for dimension
+    """
 
     def __init__(self, raw):
         """
@@ -148,7 +150,9 @@ class ContextValue:
 
     @staticmethod
     def compare(first, second, case_sensitive=True):
-        """ compare two version parts """
+        """
+        Compare two version parts
+        """
         # Ideally use `from packaging import version` but we need older
         # python support too so very rough
         try:
@@ -212,19 +216,27 @@ class ContextValue:
 
 
 class Context:
-    """ Represents https://fmf.readthedocs.io/en/latest/context.html """
+    """
+    Represents https://fmf.readthedocs.io/en/latest/context.html
+    """
     # Operators' definitions
 
     def _op_defined(self, dimension_name, values):
-        """ 'is defined' operator """
+        """
+        'is defined' operator
+        """
         return dimension_name in self._dimensions
 
     def _op_not_defined(self, dimension_name, values):
-        """ 'is not defined' operator """
+        """
+        'is not defined' operator
+        """
         return dimension_name not in self._dimensions
 
     def _op_eq(self, dimension_name, values):
-        """ '=' operator """
+        """
+        '=' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -233,7 +245,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_not_eq(self, dimension_name, values):
-        """ '!=' operator """
+        """
+        '!=' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -242,7 +256,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_match(self, dimension_name, values):
-        """ '~' operator, regular expression matches """
+        """
+        '~' operator, regular expression matches
+        """
 
         def comparator(dimension_value, it_val):
             return re.search(it_val.raw, dimension_value.raw) is not None
@@ -250,7 +266,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_not_match(self, dimension_name, values):
-        """ '~' operator, regular expression does not match """
+        """
+        '~' operator, regular expression does not match
+        """
 
         def comparator(dimension_value, it_val):
             return re.search(it_val.raw, dimension_value.raw) is None
@@ -258,7 +276,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_eq(self, dimension_name, values):
-        """ '~=' operator """
+        """
+        '~=' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -267,7 +287,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_not_eq(self, dimension_name, values):
-        """ '~!=' operator """
+        """
+        '~!=' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -276,7 +298,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_less_or_eq(self, dimension_name, values):
-        """ '~<=' operator """
+        """
+        '~<=' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -285,7 +309,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_less(self, dimension_name, values):
-        """ '~<' operator """
+        """
+        '~<' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -294,7 +320,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_less(self, dimension_name, values):
-        """ '<' operator """
+        """
+        '<' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -303,7 +331,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_less_or_equal(self, dimension_name, values):
-        """ '<=' operator """
+        """
+        '<=' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -312,7 +342,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_greater_or_equal(self, dimension_name, values):
-        """ '>=' operator """
+        """
+        '>=' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -321,7 +353,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_greater_or_equal(self, dimension_name, values):
-        """ '~>=' operator """
+        """
+        '~>=' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -330,7 +364,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_greater(self, dimension_name, values):
-        """ '>' operator """
+        """
+        '>' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -339,7 +375,9 @@ class Context:
         return self._op_core(dimension_name, values, comparator)
 
     def _op_minor_greater(self, dimension_name, values):
-        """ '~>' operator """
+        """
+        '~>' operator
+        """
 
         def comparator(dimension_value, it_val):
             return dimension_value.version_cmp(
@@ -501,7 +539,9 @@ class Context:
 
     @staticmethod
     def parse_value(value):
-        """ Single place to convert to ContextValue """
+        """
+        Single place to convert to ContextValue
+        """
         return ContextValue(str(value))
 
     @staticmethod
