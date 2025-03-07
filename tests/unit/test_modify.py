@@ -17,7 +17,9 @@ EXAMPLES = PATH + "/../../examples/"
 
 
 class TestModify(unittest.TestCase):
-    """ Verify storing modifed data to disk """
+    """
+    Verify storing modifed data to disk
+    """
 
     def setUp(self):
         self.wget_path = EXAMPLES + "wget"
@@ -29,7 +31,10 @@ class TestModify(unittest.TestCase):
         rmtree(self.tempdir)
 
     def test_inheritance(self):
-        """ Inheritance and data types """
+        """
+        Inheritance and data types
+        """
+
         item = self.wget.find('/recursion/deep')
         # Modify data and store to disk
         with item as data:
@@ -50,7 +55,10 @@ class TestModify(unittest.TestCase):
             self.assertTrue(re.search('two\n +lines', file.read()))
 
     def test_deep_modify(self):
-        """ Deep structures """
+        """
+        Deep structures
+        """
+
         requirements = self.wget.find('/requirements')
         protocols = self.wget.find('/requirements/protocols')
         ftp = self.wget.find('/requirements/protocols/ftp')
@@ -80,7 +88,10 @@ class TestModify(unittest.TestCase):
         self.assertEqual(ftp.data['adjust'][0]['when'], "arch != x86_64")
 
     def test_deep_hierarchy(self):
-        """ Multiple virtual hierarchy levels shortcut """
+        """
+        Multiple virtual hierarchy levels shortcut
+        """
+
         with open(os.path.join(self.tempdir, 'deep.fmf'), 'w') as file:
             file.write('/one/two/three:\n x: 1\n')
         deep = Tree(self.tempdir).find('/deep/one/two/three')
@@ -91,7 +102,10 @@ class TestModify(unittest.TestCase):
         self.assertEqual(deep.get('y'), 2)
 
     def test_modify_empty(self):
-        """ Nodes with no content should be handled as an empty dict """
+        """
+        Nodes with no content should be handled as an empty dict
+        """
+
         with self.wget.find('/download/requirements/spider') as data:
             data['x'] = 1
         self.wget = Tree(self.tempdir)
@@ -99,7 +113,10 @@ class TestModify(unittest.TestCase):
         self.assertEqual(node.data['x'], 1)
 
     def test_modify_pop(self):
-        """ Pop elements from node data """
+        """
+        Pop elements from node data
+        """
+
         item = '/requirements/protocols/ftp'
         with self.wget.find(item) as data:
             data.pop('coverage')
@@ -111,7 +128,10 @@ class TestModify(unittest.TestCase):
         self.assertIn('requirement', node.data)
 
     def test_modify_clear(self):
-        """ Clear node data """
+        """
+        Clear node data
+        """
+
         item = '/requirements/protocols/ftp'
         with self.wget.find(item) as data:
             data.clear()
@@ -122,13 +142,19 @@ class TestModify(unittest.TestCase):
         self.assertNotIn('requirement', node.data)
 
     def test_modify_unsupported_method(self):
-        """ Raise error for trees initialized from a dict """
+        """
+        Raise error for trees initialized from a dict
+        """
+
         with pytest.raises(GeneralError, match='No raw data'):
             with Tree(dict(x=1)) as data:
                 data['y'] = 2
 
     def test_context_manager(self):
-        """ Use context manager to save node data """
+        """
+        Use context manager to save node data
+        """
+
         item = '/requirements/protocols/ftp'
         with self.wget.find(item) as data:
             data.pop("coverage")
@@ -142,7 +168,10 @@ class TestModify(unittest.TestCase):
         self.assertIn("server", node.data)
 
     def test_modify_unicode(self):
-        """ Ensure that unicode characters are properly handled """
+        """
+        Ensure that unicode characters are properly handled
+        """
+
         path = os.path.join(self.tempdir, 'unicode.fmf')
         with io.open(path, 'w', encoding='utf-8') as file:
             file.write('jméno: Leoš')
@@ -153,7 +182,10 @@ class TestModify(unittest.TestCase):
         assert reloaded.get('příjmení') == 'Janáček'
 
     def test_modify_after_adjust(self):
-        """ Preserve original data even when adjust is used """
+        """
+        Preserve original data even when adjust is used
+        """
+
         item = '/requirements/protocols/ftp'
         wget = Tree(self.tempdir)
         # Expects new attribute + original data

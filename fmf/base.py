@@ -1,4 +1,6 @@
-""" Base Metadata Classes """
+"""
+Base Metadata Classes
+"""
 
 import copy
 import os
@@ -67,7 +69,9 @@ class ApplyRulesCallback(Protocol):
 
 
 class Tree:
-    """ Metadata Tree """
+    """
+    Metadata Tree
+    """
 
     def __init__(self, data, name=None, parent=None):
         """
@@ -160,11 +164,16 @@ class Tree:
         return self._commit
 
     def __str__(self):
-        """ Use tree name as identifier """
+        """
+        Use tree name as identifier
+        """
+
         return self.name
 
     def _initialize(self, path):
-        """ Find metadata tree root, detect format version, check for config """
+        """
+        Find metadata tree root, detect format version, check for config
+        """
 
         # Find the tree root
         root = os.path.abspath(path)
@@ -202,7 +211,9 @@ class Tree:
             raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
 
     def _merge_plus(self, data, key, value, prepend=False):
-        """ Handle extending attributes using the '+' suffix """
+        """
+        Handle extending attributes using the '+' suffix
+        """
 
         # Set the value if key is not present
         if key not in data:
@@ -252,7 +263,10 @@ class Tree:
                     key, self.name, str(error)))
 
     def _merge_regexp(self, data, key, value):
-        """ Handle substitution of current values """
+        """
+        Handle substitution of current values
+        """
+
         # Nothing to substitute if the key is not present in parent
         if key not in data:
             return
@@ -274,7 +288,10 @@ class Tree:
                         key, self.name))
 
     def _merge_minus_regexp(self, data, key, value):
-        """ Handle removing current values if they match regexp """
+        """
+        Handle removing current values if they match regexp
+        """
+
         # A bit faster but essentially `any`
         def lazy_any_search(item, patterns):
             for p in patterns:
@@ -301,7 +318,10 @@ class Tree:
                     key, self.name))
 
     def _merge_minus(self, data, key, value):
-        """ Handle reducing attributes using the '-' suffix """
+        """
+        Handle reducing attributes using the '-' suffix
+        """
+
         # Cannot reduce attribute if key is not present in parent
         if key not in data:
             return
@@ -324,7 +344,10 @@ class Tree:
                     key, self.name))
 
     def _merge_special(self, data, source):
-        """ Merge source dict into data, handle special suffixes """
+        """
+        Merge source dict into data, handle special suffixes
+        """
+
         for key, value in source.items():
             # Handle special attribute merging
             if key.endswith('+'):
@@ -342,10 +365,15 @@ class Tree:
                 data[key] = value
 
     def _process_directives(self, directives):
-        """ Check and process special fmf directives """
+        """
+        Check and process special fmf directives
+        """
 
         def check(value, type_, name=None):
-            """ Check for correct type """
+            """
+            Check for correct type
+            """
+
             if not isinstance(value, type_):
                 name = f" '{name}'" if name else ""
                 raise fmf.utils.FormatError(
@@ -372,7 +400,10 @@ class Tree:
 
     @staticmethod
     def init(path):
-        """ Create metadata tree root under given path """
+        """
+        Create metadata tree root under given path
+        """
+
         root = os.path.abspath(os.path.join(path, ".fmf"))
         if os.path.exists(root):
             raise utils.FileError("{0} '{1}' already exists.".format(
@@ -387,7 +418,10 @@ class Tree:
         return root
 
     def merge(self, parent=None):
-        """ Merge parent data """
+        """
+        Merge parent data
+        """
+
         # Check parent
         if parent is None:
             parent = self.parent
@@ -401,7 +435,10 @@ class Tree:
         self.data = data
 
     def inherit(self):
-        """ Apply inheritance """
+        """
+        Apply inheritance
+        """
+
         # Preserve original data and merge parent
         # (original data needed for custom inheritance extensions)
         self.original_data = self.data
@@ -413,7 +450,10 @@ class Tree:
             child.inherit()
 
     def update(self, data):
-        """ Update metadata, handle virtual hierarchy """
+        """
+        Update metadata, handle virtual hierarchy
+        """
+
         # Make a note that the data dictionary has been updated
         # None is handled in the same way as an empty dictionary
         self._updated = True
@@ -605,6 +645,7 @@ class Tree:
         default value when any of the dictionary keys does not exist.
 
         """
+
         # Return the whole dictionary if no attribute specified
         if name is None:
             return self.data
@@ -619,7 +660,10 @@ class Tree:
         return data
 
     def child(self, name, data, source=None):
-        """ Create or update child with given data """
+        """
+        Create or update child with given data
+        """
+
         try:
             # Update data from a dictionary (handle empty nodes)
             if isinstance(data, dict) or data is None:
@@ -636,7 +680,10 @@ class Tree:
 
     @property
     def explore_include(self):
-        """ Additional filenames to be explored """
+        """
+        Additional filenames to be explored
+        """
+
         try:
             explore_include = self.config["explore"]["include"]
             if not isinstance(explore_include, list):
@@ -657,6 +704,7 @@ class Tree:
         from the same path multiple times with attribute adding using the "+"
         sign leads to adding the value more than once!
         """
+
         if path != '/':
             path = path.rstrip("/")
         if path in IGNORED_DIRECTORIES:  # pragma: no cover
@@ -764,14 +812,20 @@ class Tree:
 
     @property
     def select(self):
-        """ Respect directive, otherwise by being leaf/branch node"""
+        """
+        Respect directive, otherwise by being leaf/branch node
+        """
+
         try:
             return self._directives["select"]
         except KeyError:
             return not self.children
 
     def find(self, name):
-        """ Find node with given name """
+        """
+        Find node with given name
+        """
+
         for node in self.climb(whole=True):
             if node.name == name:
                 return node
@@ -807,6 +861,7 @@ class Tree:
             default. Set to ``False`` if you prefer to keep the order in
             which the child nodes were inserted into the tree.
         """
+
         keys = keys or []
         names = names or []
         filters = filters or []
@@ -842,7 +897,10 @@ class Tree:
             yield node
 
     def show(self, brief=False, formatting=None, values=None):
-        """ Show metadata """
+        """
+        Show metadata
+        """
+
         values = values or []
 
         # Custom formatting
@@ -919,6 +977,7 @@ class Tree:
         node and the rest of the tree attached to it is not copied
         in order to save memory.
         """
+
         original_parent = self.parent
         self.parent = None
         duplicate = copy.deepcopy(self)
@@ -939,6 +998,7 @@ class Tree:
 
         Raises utils.JsonSchemaError if the supplied schema was invalid.
         """
+
         return utils.validate_data(self.data, schema, schema_store=schema_store)
 
     def _locate_raw_data(self):
@@ -954,8 +1014,8 @@ class Tree:
         node_data ... dictionary containing raw data for the current node
         full_data ... full raw data from the closest parent node
         source ... file system path where the full raw data are stored
-
         """
+
         # List of node names in the virtual hierarchy
         hierarchy = list()
 
@@ -1011,10 +1071,14 @@ class Tree:
         export to yaml does not preserve this information. The feature
         is experimental and can be later modified, use at your own risk.
         """
+
         return self._locate_raw_data()[0]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """ Experimental: Store modified metadata to disk """
+        """
+        Experimental: Store modified metadata to disk
+        """
+
         _, full_data, source = self._locate_raw_data()
         with open(source, "w", encoding='utf-8') as file:
             file.write(dict_to_yaml(full_data))
@@ -1026,6 +1090,7 @@ class Tree:
         To get a child the key has to start with a '/'.
         as identification of child item string
         """
+
         if key.startswith("/"):
             return self.children[key[1:]]
         else:
