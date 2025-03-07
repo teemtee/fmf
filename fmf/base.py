@@ -482,9 +482,10 @@ class Tree:
         rule defined in the node has ``continue: false`` set.
 
         Optional 'additional_rules_callback' callback could be set to
-        limit nodes for which 'additional_rules' are processed.
-        This callback is called current fmf node as an argument and should
-        return 'True' to process 'additional_rules' or 'False' to skip them.
+        limit nodes for which 'additional_rules' are processed. This
+        callback is called with the current fmf node as an argument and
+        should return 'True' to process 'additional_rules' or 'False' to
+        skip them.
         """
 
         # Check context sanity
