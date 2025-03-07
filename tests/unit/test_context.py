@@ -14,10 +14,14 @@ def env_centos():
 
 
 class TestExample:
-    """ Examples of possible conditions """
+    """
+    Examples of possible conditions
+    """
 
     def test_simple_conditions(self, env_centos):
-        """ Rules with single condition """
+        """
+        Rules with single condition
+        """
 
         # "Version" comparison if possible
         assert env_centos.matches("distro == centos")
@@ -49,7 +53,10 @@ class TestExample:
         assert not env_centos.matches("component = csh, ksh")
 
     def test_multi_condition(self, env_centos):
-        """ Rules with multiple conditions """
+        """
+        Rules with multiple conditions
+        """
+
         assert env_centos.matches(
             "arch=x86_64 and distro != fedora")
         assert env_centos.matches(
@@ -60,7 +67,10 @@ class TestExample:
             "distro = rhel and component >= bash-4.9")
 
     def test_minor_comparison_mode(self):
-        """ How it minor comparison should work """
+        """
+        How it minor comparison should work
+        """
+
         centos = Context(distro="centos-7.3.0")
         centos6 = Context(distro="centos-6.9.0")
 
@@ -110,7 +120,10 @@ class TestExample:
                 )
 
     def test_true_false(self):
-        """ true/false can be used in rule """
+        """
+        true/false can be used in rule
+        """
+
         empty = Context()
         assert empty.matches('true')
         assert empty.matches(True)
@@ -125,7 +138,10 @@ class TestExample:
         assert fedora.matches('true or distro == centos-stream')
 
     def test_right_side_defines_precision(self):
-        """ Right side defines how many version parts need to match """
+        """
+        Right side defines how many version parts need to match
+        """
+
         bar_830 = Context(dimension="bar-8.3.0")
         bar_ = Context(dimension="bar")  # so essentially bar-0.0.0
 
@@ -171,7 +187,10 @@ class TestExample:
                 bar_.matches("dimension {0} {1}".format(op, value))
 
     def test_right_side_defines_precision_tilda(self):
-        """ Right side defines how many version parts need to match (~ operations) """
+        """
+        Right side defines how many version parts need to match (~ operations)
+        """
+
         bar_830 = Context(dimension="bar-8.3.0")
         bar_ = Context(dimension="bar")  # missing major
         bar_8 = Context(dimension="bar-8")  # so essentially bar-8.0.0
@@ -223,7 +242,10 @@ class TestExample:
                         bar_8.matches("dimension {0} {1}".format(op, value))
 
     def test_module_streams(self):
-        """ How you can use Context for modules """
+        """
+        How you can use Context for modules
+        """
+
         perl = Context("module = perl:5.28")
 
         assert perl.matches("module >= perl:5")
@@ -243,7 +265,10 @@ class TestExample:
             Context("module = perl:6.28").matches("module ~>= perl:5.28")
 
     def test_comma(self):
-        """ Comma is sugar for OR """
+        """
+        Comma is sugar for OR
+        """
+
         con = Context(single="foo", multi=["first", "second"])
         # First as longer line, then using comma
         assert con.matches("single == foo or single == bar")
@@ -270,7 +295,10 @@ class TestExample:
         assert not distro.matches("distro < fedora-34, centos-stream-8")
 
     def test_case_insensitive(self):
-        """ Test for case-insensitive matching """
+        """
+        Test for case-insensitive matching
+        """
+
         python = Context(component="python3-3.8.5-5.fc32")
         python.case_sensitive = False
 
@@ -283,7 +311,9 @@ class TestExample:
         assert python.matches("component < PYTHON3-3.9")
 
     def test_regular_expression_matching(self):
-        """ Matching regular expressions """
+        """
+        Matching regular expressions
+        """
 
         assert Context(distro="fedora-42").matches("distro ~ ^fedora-42$")
         assert Context(distro="fedora-42").matches("distro ~ fedora")
@@ -316,14 +346,20 @@ class TestContextValue:
         ]
 
     def test_simple_names(self):
-        """ Values with simple name """
+        """
+        Values with simple name
+        """
+
         for name in self.impossible_split:
             assert ContextValue(name)._to_compare == tuple([name])
         for name, _ in self.splittable:
             assert ContextValue([name])._to_compare == tuple([name])
 
     def test_split_to_version(self):
-        """ Possible/impossible splitting to version"""
+        """
+        Possible/impossible splitting to version
+        """
+
         for name in self.impossible_split:
             assert ContextValue._split_to_version(name) == tuple([name])
         for name, expected in self.splittable:
@@ -429,7 +465,10 @@ class TestContextValue:
         assert sixth != Context()
 
     def test_version_cmp_fedora(self):
-        """ Fedora comparison """
+        """
+        Fedora comparison
+        """
+
         f33 = ContextValue("fedora-33")
         frawhide = ContextValue("fedora-rawhide")
 
@@ -488,7 +527,10 @@ class TestParser:
         ]
 
     def test_split_rule_to_groups(self):
-        """ Split to lists """
+        """
+        Split to lists
+        """
+
         for invalid_rule in self.rule_groups_invalid:
             with pytest.raises(InvalidRule):
                 Context.split_rule_to_groups(invalid_rule)
@@ -516,7 +558,10 @@ class TestParser:
             ]
 
     def test_split_expression(self):
-        """ Split to dimension/operator/value tuple """
+        """
+        Split to dimension/operator/value tuple
+        """
+
         for invalid in self.invalid_expressions:
             with pytest.raises(InvalidRule):
                 Context.split_expression(invalid)
@@ -541,7 +586,10 @@ class TestParser:
             "provision-method", "is defined", None)
 
     def test_parse_rule(self):
-        """ Rule parsing """
+        """
+        Rule parsing
+        """
+
         for invalid in self.rule_groups_invalid + self.invalid_expressions:
             with pytest.raises(InvalidRule):
                 Context.parse_rule(invalid)
@@ -597,7 +645,10 @@ class TestContext:
         )
 
     def test_matches_groups(self):
-        """ and/or in rules with yes/no/cannotdecide outcome """
+        """
+        and/or in rules with yes/no/cannotdecide outcome
+        """
+
         context = Context(distro="centos-8.2.0")
 
         # Clear outcome
@@ -623,7 +674,9 @@ class TestContext:
                 context.matches(undecidable)
 
     def test_matches(self):
-        """ yes/no/skip test per operator for matches """
+        """
+        yes/no/skip test per operator for matches
+        """
 
         context = Context(
             distro="fedora-32",
@@ -742,7 +795,9 @@ class TestContext:
         assert not context.matches("distro ~> fedora")
 
     def test_known_troublemakers(self):
-        """ Do not regress on these expressions """
+        """
+        Do not regress on these expressions
+        """
 
         # From fmf/issues/89:
         # following is true (missing left values are treated as lower)
@@ -823,7 +878,9 @@ class TestContext:
 
 
 class TestOperators:
-    """ more thorough testing for operations """
+    """
+    more thorough testing for operations
+    """
 
     context = Context(
         # nvr like single

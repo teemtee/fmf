@@ -31,10 +31,15 @@ import fmf.utils as utils
 
 
 class Parser:
-    """ Command line options parser """
+    """
+    Command line options parser
+    """
 
     def __init__(self, arguments=None, path=None):
-        """ Prepare the parser. """
+        """
+        Prepare the parser.
+        """
+
         # Change current working directory (used for testing)
         if path is not None:
             os.chdir(path)
@@ -70,7 +75,10 @@ class Parser:
         getattr(self, "command_" + self.command)()
 
     def options_select(self):
-        """ Select by name, filter """
+        """
+        Select by name, filter
+        """
+
         group = self.parser.add_argument_group("Select")
         group.add_argument(
             "--key", dest="keys", action="append", default=[],
@@ -93,7 +101,10 @@ class Parser:
             help="Consider the whole tree (leaves only by default)")
 
     def options_formatting(self):
-        """ Formating options """
+        """
+        Formating options
+        """
+
         group = self.parser.add_argument_group("Format")
         group.add_argument(
             "--format", dest="formatting", default=None,
@@ -103,7 +114,10 @@ class Parser:
             help="Values for the custom formatting string")
 
     def options_utils(self):
-        """ Utilities """
+        """
+        Utilities
+        """
+
         group = self.parser.add_argument_group("Utils")
         group.add_argument(
             "--path", action="append", dest="paths",
@@ -116,7 +130,10 @@ class Parser:
             help="Turn on debugging output, do not catch exceptions")
 
     def command_ls(self):
-        """ List names """
+        """
+        List names
+        """
+
         self.parser = argparse.ArgumentParser(
             description="List names of available objects")
         self.options_select()
@@ -125,13 +142,19 @@ class Parser:
         self.show(brief=True)
 
     def command_clean(self):
-        """ Clean cache """
+        """
+        Clean cache
+        """
+
         self.parser = argparse.ArgumentParser(
             description="Remove cache directory and its content")
         self.clean()
 
     def command_show(self):
-        """ Show metadata """
+        """
+        Show metadata
+        """
+
         self.parser = argparse.ArgumentParser(
             description="Show metadata of available objects")
         self.options_select()
@@ -141,7 +164,10 @@ class Parser:
         self.show(brief=False)
 
     def command_init(self):
-        """ Initialize tree """
+        """
+        Initialize tree
+        """
+
         self.parser = argparse.ArgumentParser(
             description="Initialize a new metadata tree")
         self.options_utils()
@@ -152,7 +178,10 @@ class Parser:
             print("Metadata tree '{0}' successfully initialized.".format(root))
 
     def show(self, brief=False):
-        """ Show metadata for each path given """
+        """
+        Show metadata for each path given
+        """
+
         output = []
         for path in self.options.paths or ["."]:
             if self.options.verbose:
@@ -191,7 +220,10 @@ class Parser:
         self.output = joined
 
     def clean(self):
-        """ Remove cache directory """
+        """
+        Remove cache directory
+        """
+
         try:
             cache = utils.get_cache_directory(create=False)
             utils.clean_cache_directory()
@@ -206,7 +238,10 @@ class Parser:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def main(arguments=None, path=None):
-    """ Parse options, do what is requested """
+    """
+    Parse options, do what is requested
+    """
+
     parser = Parser(arguments, path)
     return parser.output
 

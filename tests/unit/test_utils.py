@@ -16,7 +16,9 @@ GIT_REPO_MASTER = 'https://github.com/teemtee/old'
 
 
 class TestFilter:
-    """ Function filter() """
+    """
+    Function filter()
+    """
 
     def setup_method(self, method):
         self.data = {
@@ -25,26 +27,38 @@ class TestFilter:
             }
 
     def test_invalid(self):
-        """ Invalid filter format """
+        """
+        Invalid filter format
+        """
+
         with pytest.raises(utils.FilterError):
             filter("status:proposed", self.data)
         with pytest.raises(utils.FilterError):
             filter("x: 1", None)
 
     def test_empty_filter(self):
-        """ Empty filter should return True """
+        """
+        Empty filter should return True
+        """
+
         assert filter(None, self.data) is True
         assert filter("", self.data) is True
 
     def test_name_missing(self):
-        """ Node name has to be provided when searching for names """
+        """
+        Node name has to be provided when searching for names
+        """
+
         with pytest.raises(utils.FilterError):
             filter("/tests/core", self.data)
         with pytest.raises(utils.FilterError):
             filter("/tests/one | /tests/two", self.data)
 
     def test_name_provided(self):
-        """ Searching by node names """
+        """
+        Searching by node names
+        """
+
         # Basic
         assert filter("/tests/one", self.data, name="/tests/one") is True
         assert filter("/tests/two", self.data, name="/tests/one") is False
@@ -61,7 +75,10 @@ class TestFilter:
         assert filter("/.*/one", self.data, name="/tests/one", regexp=True) is True
 
     def test_basic(self):
-        """ Basic stuff and negation """
+        """
+        Basic stuff and negation
+        """
+
         assert filter("tag: Tier1", self.data) is True
         assert filter("tag: mod:S", self.data) is True
         assert filter("tag: -Tier2", self.data) is True
@@ -74,7 +91,10 @@ class TestFilter:
         assert filter("category: -Sanity", self.data) is False
 
     def test_operators(self):
-        """ Operators """
+        """
+        Operators
+        """
+
         assert filter("tag: Tier1 | tag: Tier2", self.data) is True
         assert filter("tag: Tier1 | tag: mod:S", self.data) is True
         assert filter("tag: mod:X | tag: mod:S", self.data) is True
@@ -90,7 +110,10 @@ class TestFilter:
         assert filter("tag: Tier2 | category: Regression", self.data) is False
 
     def test_sugar(self):
-        """ Syntactic sugar """
+        """
+        Syntactic sugar
+        """
+
         assert filter("tag: Tier1, Tier2", self.data) is True
         assert filter("tag: Tier2, mod:S", self.data) is True
         assert filter("tag: Tier1, TIPpass", self.data) is True
@@ -100,7 +123,10 @@ class TestFilter:
         assert filter("tag: Tier2, Tier3", self.data) is False
 
     def test_regexp(self):
-        """ Regular expressions """
+        """
+        Regular expressions
+        """
+
         assert filter("tag: Tier.*", self.data, regexp=True) is True
         assert filter("tag: Tier[123]", self.data, regexp=True) is True
         assert filter("tag: mod:[XS]", self.data, regexp=True) is True
@@ -108,19 +134,27 @@ class TestFilter:
         assert filter("tag: -Tier.*", self.data, regexp=True) is False
 
     def test_case(self):
-        """ Case insensitive """
+        """
+        Case insensitive
+        """
+
         assert filter("tag: tier1", self.data, sensitive=False) is True
         assert filter("tag: tippass", self.data, sensitive=False) is True
 
     def test_unicode(self):
-        """ Unicode support """
+        """
+        Unicode support
+        """
+
         assert filter("tag: -ťip", self.data) is True
         assert filter("tag: ťip", self.data) is False
         assert filter("tag: ťip", {"tag": ["ťip"]}) is True
         assert filter("tag: -ťop", {"tag": ["ťip"]}) is True
 
     def test_escape_or(self):
-        """ Escaping the | operator """
+        """
+        Escaping the | operator
+        """
 
         # Escaped
         assert filter(r"category: (Sanity\|Security)", self.data, regexp=True) is True
@@ -133,7 +167,10 @@ class TestFilter:
             assert filter(r"tag: Tier(1|2)", self.data, regexp=True) is True
 
     def test_escape_and(self):
-        """ Escaping the & operator """
+        """
+        Escaping the & operator
+        """
+
         self.data["text"] = "Q&A"
 
         # Escaped
@@ -147,7 +184,9 @@ class TestFilter:
 
 
 class TestPluralize:
-    """ Function pluralize() """
+    """
+    Function pluralize()
+    """
 
     def test_basic(self):
         assert utils.pluralize("cloud") == "clouds"
@@ -156,7 +195,9 @@ class TestPluralize:
 
 
 class TestListed:
-    """ Function listed() """
+    """
+    Function listed()
+    """
 
     def test_basic(self):
         assert listed(range(1)) == '0'
@@ -176,7 +217,9 @@ class TestListed:
 
 
 class TestSplit:
-    """ Function split() """
+    """
+    Function split()
+    """
 
     def test_basic(self):
         assert utils.split('a b c') == ['a', 'b', 'c']
@@ -185,7 +228,9 @@ class TestSplit:
 
 
 class TestLogging:
-    """ Logging """
+    """
+    Logging
+    """
 
     def test_level(self):
         for level in [1, 4, 7, 10, 20, 30, 40]:
@@ -203,7 +248,9 @@ class TestLogging:
 
 
 class TestColoring:
-    """ Coloring """
+    """
+    Coloring
+    """
 
     def test_invalid(self):
         with pytest.raises(RuntimeError):
@@ -220,7 +267,9 @@ class TestColoring:
 
 
 class TestCache:
-    """ Local cache manipulation """
+    """
+    Local cache manipulation
+    """
 
     def test_clean_cache_directory(self, tmpdir):
         utils.set_cache_directory(str(tmpdir))
@@ -238,7 +287,9 @@ class TestCache:
 
 @pytest.mark.web
 class TestFetch:
-    """ Remote reference from fmf github """
+    """
+    Remote reference from fmf github
+    """
 
     def test_fetch_default_branch(self):
         # On GitHub 'main' is the default
@@ -360,7 +411,10 @@ class TestFetch:
 
     @pytest.mark.parametrize("ref", ["main", "0.10", "8566a39"])
     def test_out_of_sync_ref(self, ref):
-        """ Solve Your branch is behind ... """
+        """
+        Solve Your branch is behind ...
+        """
+
         repo = utils.fetch_repo(GIT_REPO, ref)
         out, err = run(["git", "rev-parse", "HEAD"], repo)
         old_ref = out
@@ -476,10 +530,15 @@ class TestFetch:
 
 
 class TestDictToYaml:
-    """ Verify dictionary to yaml format conversion """
+    """
+    Verify dictionary to yaml format conversion
+    """
 
     def test_sort(self):
-        """ Verify key sorting """
+        """
+        Verify key sorting
+        """
+
         data = dict(y=2, x=1)
         assert fmf.utils.dict_to_yaml(data) == "y: 2\nx: 1\n"
         assert fmf.utils.dict_to_yaml(data, sort=True) == "x: 1\ny: 2\n"

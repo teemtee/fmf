@@ -30,15 +30,23 @@ FMF_REPO = 'https://github.com/psss/fmf.git'
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 class TestTree:
-    """ Tree class """
+    """
+    Tree class
+    """
 
     def setup_method(self, method):
-        """ Load examples """
+        """
+        Load examples
+        """
+
         self.wget = Tree(EXAMPLES + "wget")
         self.merge = Tree(EXAMPLES + "merge")
 
     def test_basic(self):
-        """ No directory path given """
+        """
+        No directory path given
+        """
+
         with pytest.raises(utils.GeneralError):
             Tree("")
         with pytest.raises(utils.GeneralError):
@@ -47,21 +55,30 @@ class TestTree:
             Tree("/")
 
     def test_hidden(self):
-        """ Hidden files and directories """
+        """
+        Hidden files and directories
+        """
+
         assert ".hidden" not in self.wget.children
         hidden = Tree(EXAMPLES + "hidden")
         plan = hidden.find("/.plans/basic")
         assert plan.get("discover") == {"how": "fmf"}
 
     def test_inheritance(self):
-        """ Inheritance and data types """
+        """
+        Inheritance and data types
+        """
+
         deep = self.wget.find('/recursion/deep')
         assert deep.data['depth'] == 1000
         assert deep.data['description'] == 'Check recursive download options'
         assert deep.data['tags'] == ['Tier2']
 
     def test_scatter(self):
-        """ Scattered files """
+        """
+        Scattered files
+        """
+
         scatter = Tree(EXAMPLES + "scatter").find("/object")
         assert len(list(scatter.climb())) == 1
         assert scatter.data['one'] == 1
@@ -69,7 +86,10 @@ class TestTree:
         assert scatter.data['three'] == 3
 
     def test_scattered_inheritance(self):
-        """ Inheritance of scattered files """
+        """
+        Inheritance of scattered files
+        """
+
         grandson = Tree(EXAMPLES + "child").find("/son/grandson")
         assert grandson.data['name'] == 'Hugo'
         assert grandson.data['eyes'] == 'blue'
@@ -77,12 +97,17 @@ class TestTree:
         assert grandson.data['hair'] == 'fair'
 
     def test_subtrees(self):
-        """ Subtrees should be ignored """
+        """
+        Subtrees should be ignored
+        """
+
         child = Tree(EXAMPLES + "child")
         assert child.find("/nobody") is None
 
     def test_insert_child(self):
-        """ Manual child creation """
+        """
+        Manual child creation
+        """
 
         # Prepare a simple tree by manually inserting child nodes
         tree = Tree(data={"key": "value"})
@@ -103,7 +128,10 @@ class TestTree:
         assert [node.name for node in tree.prune(sort=False)] == expected
 
     def test_prune_sources(self):
-        """ Pruning by sources """
+        """
+        Pruning by sources
+        """
+
         original_directory = os.getcwd()
         # Change directory to make relative paths work
         os.chdir(SELECT_SOURCE)
@@ -123,18 +151,27 @@ class TestTree:
         os.chdir(original_directory)
 
     def test_empty(self):
-        """ Empty structures should be ignored """
+        """
+        Empty structures should be ignored
+        """
+
         child = Tree(EXAMPLES + "empty")
         assert child.find("/nothing") is None
         assert child.find("/zero") is not None
 
     def test_none_key(self):
-        """ Handle None keys """
+        """
+        Handle None keys
+        """
+
         with pytest.raises(utils.FormatError):
             Tree({None: "weird key"})
 
     def test_control_keys(self):
-        """ No special handling outside adjust """
+        """
+        No special handling outside adjust
+        """
+
         child_data = {k: str(v) for v, k in enumerate(ADJUST_CONTROL_KEYS)}
         tree = Tree({
             'key': 'value',
@@ -145,7 +182,10 @@ class TestTree:
         assert tree.find('/child').data == expected
 
     def test_adjust_strips_control_keys(self):
-        """ They are not merged during adjust """
+        """
+        They are not merged during adjust
+        """
+
         tree = Tree({'adjust': [
             {
                 'because': 'reasons',
@@ -160,7 +200,10 @@ class TestTree:
         assert 'foo' in child.data
 
     def test_adjust_can_extend(self):
-        """ It is possible to extend dictionary with adjust """
+        """
+        It is possible to extend dictionary with adjust
+        """
+
         tree = Tree(YAML(typ='safe').load(dedent("""
         /a:
          environment+:
@@ -175,7 +218,10 @@ class TestTree:
         assert child.data['environment']['BAR'] == "baz"
 
     def test_node_without_parent_strips_merge_suffix(self):
-        """ Merge suffix is stripped in the top node as well """
+        """
+        Merge suffix is stripped in the top node as well
+        """
+
         tree = Tree(EXAMPLES + 'merge')
         stray_child = tree.find('/stray')
         assert 'environment' in stray_child.data
@@ -183,12 +229,18 @@ class TestTree:
         assert 'environment' in child.data
 
     def test_deep_hierarchy(self):
-        """ Deep hierarchy on one line """
+        """
+        Deep hierarchy on one line
+        """
+
         deep = Tree(EXAMPLES + "deep")
         assert len(deep.children) == 3
 
     def test_deep_dictionary(self):
-        """ Get value from a deep dictionary """
+        """
+        Get value from a deep dictionary
+        """
+
         deep = Tree(EXAMPLES + "deep")
         assert deep.data['hardware']['memory']['size'] == 8
         assert deep.get(['hardware', 'memory', 'size']) == 8
@@ -196,7 +248,10 @@ class TestTree:
         assert deep.get('nonexistent', default=3) == 3
 
     def test_deep_dictionary_undefined_keys(self):
-        """ Extending undefined keys using '+' should work """
+        """
+        Extending undefined keys using '+' should work
+        """
+
         deep = Tree(EXAMPLES + "deep")
         single = deep.find("/single")
         assert single.get(["undefined", "deeper+", "key"]) == "value"
@@ -207,7 +262,10 @@ class TestTree:
         assert child.get(["undefined", "deeper+", "key"]) == "value"
 
     def test_merge_plus(self):
-        """ Extending attributes using the '+' suffix """
+        """
+        Extending attributes using the '+' suffix
+        """
+
         child = self.merge.find('/parent/extended')
         assert 'General' in child.data['description']
         assert 'Specific' in child.data['description']
@@ -221,7 +279,10 @@ class TestTree:
             child.inherit()
 
     def test_merge_plus_parent_dict(self):
-        """ Merging parent dict with child list """
+        """
+        Merging parent dict with child list
+        """
+
         child = self.merge.find('/parent-dict/path')
         assert len(child.data['discover']) == 2
         assert child.data['discover'][0]['how'] == 'fmf'
@@ -234,7 +295,10 @@ class TestTree:
         assert child.data['discover'][1]['summary'] == 'test.downstream'
 
     def test_merge_plus_parent_list(self):
-        """ Merging parent list with child dict """
+        """
+        Merging parent list with child dict
+        """
+
         for i in [1, 2]:
             child = self.merge.find(f'/parent-list/tier{i}')
             assert child.data['summary'] == 'basic tests' if i == 1 else 'detailed tests'
@@ -247,7 +311,10 @@ class TestTree:
             assert child.data['discover'][1]['summary'] == f'project2.tier{i}'
 
     def test_merge_minus(self):
-        """ Reducing attributes using the '-' suffix """
+        """
+        Reducing attributes using the '-' suffix
+        """
+
         child = self.merge.find('/parent/reduced')
         assert 'General' in child.data['description']
         assert 'description' not in child.data['description']
@@ -264,7 +331,10 @@ class TestTree:
             child.inherit()
 
     def test_merge_regexp(self):
-        """ Do re.sub during the merge """
+        """
+        Do re.sub during the merge
+        """
+
         child = self.merge.find('/parent/regexp')
         assert 'general' == child.data['description']
         # First rule changes the Tier2 into t2,
@@ -272,31 +342,46 @@ class TestTree:
         assert ['t1', 't2'] == child.data['tags']
 
     def test_merge_minus_regexp(self):
-        """ Merging with '-~' operation """
+        """
+        Merging with '-~' operation
+        """
+
         child = self.merge.find('/parent/minus-regexp')
         assert '' == child.data['description']
         assert ['Tier2'] == child.data['tags']
         assert {'x': 1} == child.data['vars']
 
     def test_merge_deep(self):
-        """ Merging a deeply nested dictionary """
+        """
+        Merging a deeply nested dictionary
+        """
+
         child = self.merge.find('/parent/buried')
         assert child.data['very']['deep']['dict'] == dict(x=2, y=1, z=0)
 
     def test_merge_order(self):
-        """ Inheritance should be applied in the given order """
+        """
+        Inheritance should be applied in the given order
+        """
+
         child = self.merge.find('/parent/order/add-first')
         assert child.data['tag'] == ['one', 'four']
         child = self.merge.find('/parent/order/remove-first')
         assert child.data['tag'] == ['one', 'three', 'four']
 
     def test_get(self):
-        """ Get attributes """
+        """
+        Get attributes
+        """
+
         assert isinstance(self.wget.get(), dict)
         assert 'Petr' in self.wget.get('tester')
 
     def test_show(self):
-        """ Show metadata """
+        """
+        Show metadata
+        """
+
         assert isinstance(self.wget.show(brief=True), str)
         assert self.wget.show(brief=True).endswith("\n")
         assert isinstance(self.wget.show(), str)
@@ -304,24 +389,36 @@ class TestTree:
         assert 'tester' in self.wget.show()
 
     def test_update(self):
-        """ Update data """
+        """
+        Update data
+        """
+
         data = self.wget.get()
         self.wget.update(None)
         assert self.wget.data == data
 
     def test_find_node(self):
-        """ Find node by name """
+        """
+        Find node by name
+        """
+
         assert self.wget.find("non-existent") is None
         protocols = self.wget.find('/protocols')
         assert isinstance(protocols, Tree)
 
     def test_find_root(self):
-        """ Find metadata tree root """
+        """
+        Find metadata tree root
+        """
+
         tree = Tree(os.path.join(EXAMPLES, "wget", "protocols"))
         assert tree.find("/download/test")
 
     def test_yaml_syntax_errors(self):
-        """ Handle YAML syntax errors """
+        """
+        Handle YAML syntax errors
+        """
+
         path = tempfile.mkdtemp()
         fmf.cli.main("fmf init", path)
         with open(os.path.join(path, "main.fmf"), "w") as main:
@@ -331,7 +428,10 @@ class TestTree:
         rmtree(path)
 
     def test_yaml_duplicate_keys(self):
-        """ Handle YAML duplicate keys """
+        """
+        Handle YAML duplicate keys
+        """
+
         path = tempfile.mkdtemp()
         fmf.cli.main("fmf init", path)
 
@@ -358,7 +458,10 @@ class TestTree:
         rmtree(path)
 
     def test_inaccessible_directories(self):
-        """ Inaccessible directories should be silently ignored """
+        """
+        Inaccessible directories should be silently ignored
+        """
+
         directory = tempfile.mkdtemp()
         accessible = os.path.join(directory, 'accessible')
         inaccessible = os.path.join(directory, 'inaccessible')
@@ -374,7 +477,10 @@ class TestTree:
         rmtree(directory)
 
     def test_node_copy_complete(self):
-        """ Create deep copy of the whole tree """
+        """
+        Create deep copy of the whole tree
+        """
+
         original = self.merge
         duplicate = original.copy()
         duplicate.data['x'] = 1
@@ -384,7 +490,10 @@ class TestTree:
         assert duplicate.get('x') == 1
 
     def test_node_copy_child(self):
-        """ Duplicate child changes do not affect original """
+        """
+        Duplicate child changes do not affect original
+        """
+
         original = self.merge
         duplicate = original.copy()
         original_child = original.find('/parent/extended')
@@ -397,7 +506,10 @@ class TestTree:
         assert duplicate_child.get('duplicate') is True
 
     def test_node_copy_subtree(self):
-        """ Create deep copy of a subtree """
+        """
+        Create deep copy of a subtree
+        """
+
         original = self.merge.find('/parent/extended')
         duplicate = original.copy()
         duplicate.data['x'] = 1
@@ -407,7 +519,10 @@ class TestTree:
         assert original.get('x') is None
 
     def test_validation(self):
-        """ Test JSON Schema validation """
+        """
+        Test JSON Schema validation
+        """
+
         test_schema_path = os.path.join(PATH, 'assets', 'schema_test.yaml')
         plan_schema_path = os.path.join(PATH, 'assets', 'schema_plan.yaml')
 
@@ -427,7 +542,9 @@ class TestTree:
         assert not test.validate(plan_schema).result
 
     def test_validation_with_store(self):
-        """ Test JSON Schema validation with schema store """
+        """
+        Test JSON Schema validation with schema store
+        """
 
         base_schema_path = os.path.join(PATH, 'assets', 'schema_base.yaml')
         test_schema_ref_path = os.path.join(
@@ -451,13 +568,18 @@ class TestTree:
             schema_store=schema_store) == expected
 
     def test_validation_invalid_schema(self):
-        """ Test invalid JSON Schema handling """
+        """
+        Test invalid JSON Schema handling
+        """
+
         with pytest.raises(fmf.utils.JsonSchemaError):
             self.wget.find('/recursion/deep').validate('invalid')
 
 
 class TestRemote:
-    """ Get tree node data using remote reference """
+    """
+    Get tree node data using remote reference
+    """
 
     @pytest.mark.web
     def test_tree_node_remote(self):
