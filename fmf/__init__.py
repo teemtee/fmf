@@ -1,4 +1,6 @@
-""" Flexible Metadata Format """
+"""
+Flexible Metadata Format
+"""
 
 from __future__ import annotations
 

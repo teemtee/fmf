@@ -11,19 +11,28 @@ from fmf.utils import FormatError, GeneralError
 
 @pytest.fixture
 def fedora():
-    """ Fedora 33 on x86_64 and ppc64 """
+    """
+    Fedora 33 on x86_64 and ppc64
+    """
+
     return Context(distro='fedora-33', arch=['x86_64', 'ppc64'])
 
 
 @pytest.fixture
 def centos():
-    """ CentOS 8.4 """
+    """
+    CentOS 8.4
+    """
+
     return Context(distro='centos-8.4')
 
 
 @pytest.fixture
 def mini():
-    """ Simple tree node with minimum set of attributes """
+    """
+    Simple tree node with minimum set of attributes
+    """
+
     data = """
         enabled: true
         adjust:
@@ -36,7 +45,10 @@ def mini():
 
 @pytest.fixture
 def full():
-    """ More complex metadata structure with inheritance """
+    """
+    More complex metadata structure with inheritance
+    """
+
     data = """
         duration: 5m
         enabled: true
@@ -73,7 +85,9 @@ def full():
 
 
 class TestInvalid:
-    """ Ensure that invalid input is correctly handled """
+    """
+    Ensure that invalid input is correctly handled
+    """
 
     def test_invalid_context(self, mini):
         with pytest.raises(GeneralError, match='Invalid adjust context'):
@@ -101,7 +115,9 @@ class TestInvalid:
 
 
 class TestSpecial:
-    """ Check various special cases """
+    """
+    Check various special cases
+    """
 
     def test_single_rule(self, mini, fedora):
         mini.adjust(fedora)
@@ -118,7 +134,9 @@ class TestSpecial:
 
 
 class TestAdjust:
-    """ Verify adjusting works as expected """
+    """
+    Verify adjusting works as expected
+    """
 
     def test_original(self, mini):
         assert mini.get('enabled') is True
@@ -128,12 +146,18 @@ class TestAdjust:
         assert mini.get('enabled') is False
 
     def test_adjusted_additional(self, mini, centos):
-        """ Additional rule is evaluated even if 'main' rule matched """
+        """
+        Additional rule is evaluated even if 'main' rule matched
+        """
+
         mini.adjust(centos, additional_rules={'enabled': True})
         assert mini.get('enabled') is True
 
     def test_additional_rules_callback(self, fedora):
-        """ Additional rules might be ignored """
+        """
+        Additional rules might be ignored
+        """
+
         data = """
         /is_test:
             test: echo
@@ -159,7 +183,10 @@ class TestAdjust:
         assert tree.find('/is_plan').data == {'execute': {'how': 'tmt'}}
 
     def test_adjusted_additional_after_continue(self, full, centos):
-        """ Additional rule is evaluated even if 'node' rule has continue:false """
+        """
+        Additional rule is evaluated even if 'node' rule has continue:false
+        """
+
         full.adjust(centos,
                     additional_rules=[{'tag': 'foo'},
                                       {'require': 'bar',
@@ -245,7 +272,10 @@ class TestAdjust:
         assert 'recommend' not in extend.get()
 
     def test_continue_default(self, full, fedora):
-        """ The continue key should default to True """
+        """
+        The continue key should default to True
+        """
+
         full.adjust(fedora)
         extend = full.find('/extend')
         assert extend.get('require') == ['one', 'two', 'three']
@@ -275,13 +305,19 @@ class TestAdjust:
         assert mock_callback.call_count == 2
 
     def test_case_sensitive(self, mini, centos):
-        """ Make sure the adjust rules are case-sensitive by default """
+        """
+        Make sure the adjust rules are case-sensitive by default
+        """
+
         mini.data['adjust'] = dict(when='distro = CentOS', enabled=False)
         mini.adjust(centos)
         assert mini.get('enabled') is True
 
     def test_case_insensitive(self, mini, centos):
-        """ Make sure the adjust rules are case-insensitive when requested """
+        """
+        Make sure the adjust rules are case-insensitive when requested
+        """
+
         mini.data['adjust'] = dict(when='distro = CentOS', enabled=False)
         mini.adjust(centos, case_sensitive=False)
         assert mini.get('enabled') is False

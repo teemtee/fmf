@@ -9,7 +9,9 @@ EXAMPLES = PATH + "/../../examples/"
 
 
 class TestGetItems(unittest.TestCase):
-    """ Verify getter of items """
+    """
+    Verify getter of items
+    """
 
     def setUp(self):
         self.wget_path = EXAMPLES + "wget"
