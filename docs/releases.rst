@@ -4,6 +4,23 @@
     Releases
 ======================
 
+
+fmf-1.7.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:ref:`context` dimension names can now contain dash characters as
+well so that users can use multi-word names such as
+``deployment-mode``.
+
+The merge suffix, for example ``+`` character from the
+``environment+`` key, is now correctly stripped from the nodes
+defined in the root of the tree as well.
+
+A new callback ``additional_rules_callback`` can now be provided
+to the :py:meth:`fmf.Tree.adjust` method and affect which nodes
+should be adjusted using the ``additional_rules``.
+
+
 fmf-1.6.1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
