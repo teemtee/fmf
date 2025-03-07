@@ -61,7 +61,8 @@ platforms = ["linux"]
 [tool.hatch.envs.dev]
 description = "Development environment"
 dependencies = [
-    "pytest-cov"
+    "pytest-cov",
+    "ruff",
 ]
 features = ["tests"]
 
@@ -108,47 +109,76 @@ testpaths = [
 line-length = 99
 src = ["fmf", "tests"]
 target-version = "py39"
-lint.select = [
+
+[tool.ruff.format]
+quote-style = "preserve"
+exclude = [
+    "tests/*",
+    ]
+
+[tool.ruff.lint]
+select = [
     "F",  # pyflakes
-    "E",  # pycodestyle
-    "W",  # pycodestyle
+    "E",  # pycodestyle error
+    "W",  # pycodestyle warning
     "I",  # isort
     "N",  # pep8-naming
     "D",    # pydocstyle
     "UP",  # pyupgrade
-    "B",  # flake8-bugbear
-    "C4",  # flake8-comprehensions
     "YTT",  # flake8-2020
-    "PT",  # flake8-pytest-style
-    "RET",  # flake8-return
-    "SIM",  # flake8-simplify
+    "ASYNC",  # flake8-async
+    "S",  # flake8-bandit
+    "B",  # flake8-bugbear
+    "A",  # flake8-builtins
     "COM",  # flake8-commas
+    "C4",  # flake8-comprehensions
     "DTZ",  # flake8-datetimez
     "T10",  # flake8-debugger
     "EXE",  # flake8-executable
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "LOG",  # flake8-logging
+    "G",  # flake8-logging-format
     "PIE",  # flake8-pie
+    "PYI",  # flake8-pyi
+    "PT",  # flake8-pytest-style
+    "Q003",  # avoidable-escaped-quote
+    "Q004",  # unnecessary-escaped-quote
     "RSE",  # flake8-raise
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "INT",  # flake8-gettext
     "PGH",  # pygrep-hooks
     "PLC",  # pylint-convention
     "PLE",  # pylint-error
-    "PLR01",  # pylint-refactor
-    "PLR02",
-    "PLR04",
-    "PLR1",
+    "PLR",  # pylint-refactor
+    "FLY",  # flynt
+    "FURB",  # refurb
     "RUF",  # ruff
     "D",    # pydocstyle
+    # Override docstring convention
+    "D213", # multi-line-summary-second-line
     ]
-lint.ignore = [
+ignore = [
     "B904",  # Within an `except` clause, raise exceptions with `raise ... from err` or `raise ...
     "COM812",  # Trailing comma missing
-    # tmt codebase uses `warn` by default - disabling the check, switching to
-    # `warning` can be done in an extra patch.
-    "G010",  # `warn` is deprecated in favor of `warning`
+    "G004",  # Logging statement uses f-string
     "PIE790",  # Unnecessary `pass` statement
     "PLC1901",  # `{}` can be simplified to `{}` as an empty string is falsey
     "PLE1205",  # Too many arguments for `logging` format string
+    "PLR09",  # Too many branches/statements/arguments/returns
+    "PLR2004",  # Magic value used in comparison
     "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
     "RUF013",  # PEP 484 prohibits implicit `Optional`
+    # flake8-bandit (S) https://docs.astral.sh/ruff/rules/#flake8-bandit-s
+    "S101",  # Use of `assert` detected
+    "S603",  # `subprocess` call: check for execution of untrusted input
+    "S607",  # Starting a process with a partial executable path
+    "S105",  # Possible hardcoded password assigned to: "PASS"
+    "SIM103",  # Return the condition directly - can hurt readability
+    "D200",  # One-line docstring should fit on one line
+    "D212",  # Multi-line docstring summary should start at the first line
 
     # pydocstyle
     # TODO: the permanent list (drop this comment once the temporary list
@@ -166,59 +196,10 @@ lint.ignore = [
     "D107",  # Missing docstring in __init__
     "D202",  # No blank lines allowed after function docstring
     "D205",  # 1 blank line required between summary line and description
-    "D210",  # No whitespaces allowed surrounding docstring text
-    "D212",  # Multi-line docstring summary should start at the first line
     "D301",  # Use r""" if any backslashes in a docstring
     "D400",  # First line should end with a period
     "D401",  # First line of docstring should be in imperative mood
     "D415",  # First line should end with a period, question mark, or exclamation point
-    # To review
-    "B007",
-    "B015",
-    "B018",
-    "C403",
-    "C405",
-    "C408",
-    "C409",
-    "C419",
-    "E721",
-    "N818",
-    "PGH004",
-    "PT009",
-    "PT011",
-    "PT012",
-    "PT027",
-    "RET505",
-    "RET507",
-    "RUF005",
-    "RUF017",
-    "SIM105",
-    "SIM108",
-    "SIM117",
-    "UP006",
-    "UP008",
-    "UP028",
-    "UP029",
-    "UP030",
-    "UP031",
-    "UP035",
-    # Auto-fixable
-    "D204",
-    "F401",
-    "I001",
-    "PLR0402",
-    "PT001",
-    "PT023",
-    "RSE102",
-    "RUF010",
-    "RUF100",
-    "UP003",
-    "UP009",
-    "UP020",
-    "UP024",
-    "UP024",
-    "UP025",
-    "UP032",
     ]
 
 [tool.ruff.lint.flake8-bugbear]
