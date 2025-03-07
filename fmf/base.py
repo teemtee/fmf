@@ -36,7 +36,7 @@ class AdjustCallback(Protocol):
     """
     A callback for per-rule notifications made by Tree.adjust()
 
-    Function be be called for every rule inspected by adjust().
+    Function which will be called for every rule inspected by adjust().
     It will be given three arguments: fmf tree being inspected,
     current adjust rule, and whether the rule was skipped (``None``),
     applied (``True``) or not applied (``False``).
@@ -450,10 +450,15 @@ class Tree:
         log.debug("Data for '{0}' updated.".format(self))
         log.data(pretty(self.data))
 
-    def adjust(self, context, key='adjust', undecided='skip',
-               case_sensitive=True, decision_callback=None,
-               additional_rules=None,
-               additional_rules_callback: Optional[ApplyRulesCallback] = None):
+    def adjust(
+            self,
+            context,
+            key='adjust',
+            undecided='skip',
+            case_sensitive=True,
+            decision_callback: Optional[AdjustCallback] = None,
+            additional_rules=None,
+            additional_rules_callback: Optional[ApplyRulesCallback] = None):
         """
         Adjust tree data based on provided context and rules
 
