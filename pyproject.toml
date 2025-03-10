@@ -61,7 +61,8 @@ platforms = ["linux"]
 [tool.hatch.envs.dev]
 description = "Development environment"
 dependencies = [
-    "pytest-cov"
+    "pytest-cov",
+    "ruff",
 ]
 features = ["tests"]
 
@@ -103,3 +104,115 @@ markers = [
 testpaths = [
     'tests',
 ]
+
+[tool.ruff]
+line-length = 99
+src = ["fmf", "tests"]
+target-version = "py39"
+
+[tool.ruff.format]
+quote-style = "preserve"
+exclude = [
+    "tests/*",
+    ]
+
+[tool.ruff.lint]
+select = [
+    "F",  # pyflakes
+    "E",  # pycodestyle error
+    "W",  # pycodestyle warning
+    "I",  # isort
+    "N",  # pep8-naming
+    "D",    # pydocstyle
+    "UP",  # pyupgrade
+    "YTT",  # flake8-2020
+    "ASYNC",  # flake8-async
+    "S",  # flake8-bandit
+    "B",  # flake8-bugbear
+    "A",  # flake8-builtins
+    "COM",  # flake8-commas
+    "C4",  # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "T10",  # flake8-debugger
+    "EXE",  # flake8-executable
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "LOG",  # flake8-logging
+    "G",  # flake8-logging-format
+    "PIE",  # flake8-pie
+    "PYI",  # flake8-pyi
+    "PT",  # flake8-pytest-style
+    "Q003",  # avoidable-escaped-quote
+    "Q004",  # unnecessary-escaped-quote
+    "RSE",  # flake8-raise
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "INT",  # flake8-gettext
+    "PGH",  # pygrep-hooks
+    "PLC",  # pylint-convention
+    "PLE",  # pylint-error
+    "PLR",  # pylint-refactor
+    "FLY",  # flynt
+    "FURB",  # refurb
+    "RUF",  # ruff
+    "D",    # pydocstyle
+    # Override docstring convention
+    "D213", # multi-line-summary-second-line
+    ]
+ignore = [
+    "B904",  # Within an `except` clause, raise exceptions with `raise ... from err` or `raise ...
+    "COM812",  # Trailing comma missing
+    "G004",  # Logging statement uses f-string
+    "PIE790",  # Unnecessary `pass` statement
+    "PLC1901",  # `{}` can be simplified to `{}` as an empty string is falsey
+    "PLE1205",  # Too many arguments for `logging` format string
+    "PLR09",  # Too many branches/statements/arguments/returns
+    "PLR2004",  # Magic value used in comparison
+    "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
+    "RUF013",  # PEP 484 prohibits implicit `Optional`
+    # flake8-bandit (S) https://docs.astral.sh/ruff/rules/#flake8-bandit-s
+    "S101",  # Use of `assert` detected
+    "S603",  # `subprocess` call: check for execution of untrusted input
+    "S607",  # Starting a process with a partial executable path
+    "S105",  # Possible hardcoded password assigned to: "PASS"
+    "SIM103",  # Return the condition directly - can hurt readability
+    "D200",  # One-line docstring should fit on one line
+    "D212",  # Multi-line docstring summary should start at the first line
+
+    # pydocstyle
+    # TODO: the permanent list (drop this comment once the temporary list
+    # below gets to zero items...)
+    "D203",  # 1 blank line required before class docstring
+    # TODO: the temporary list - some of these will be enabled in their
+    # own patches
+    "D100",  # Missing docstring in public module
+    "D101",  # Missing docstring in public class
+    "D102",  # Missing docstring in public method
+    "D103",  # Missing docstring in public function
+    "D104",  # Missing docstring in public package
+    "D105",  # Missing docstring in magic method
+    "D106",  # Missing docstring in public nested class
+    "D107",  # Missing docstring in __init__
+    "D202",  # No blank lines allowed after function docstring
+    "D205",  # 1 blank line required between summary line and description
+    "D301",  # Use r""" if any backslashes in a docstring
+    "D400",  # First line should end with a period
+    "D401",  # First line of docstring should be in imperative mood
+    "D415",  # First line should end with a period, question mark, or exclamation point
+    ]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["tmt.utils.field"]
+
+[tool.ruff.lint.pydocstyle]
+# "The PEP 257 convention includes all D errors apart from: D203, D212,
+# D213, D214, D215, D404, D405, D406, D407, D408, D409, D410, D411, D413,
+# D415, D416, and D417."
+#
+# See https://docs.astral.sh/ruff/faq/#does-ruff-support-numpy-or-google-style-docstrings for
+# the most up-to-date info.
+convention = "pep257"
+
+[tool.ruff.lint.isort]
+known-first-party = ["fmf"]
