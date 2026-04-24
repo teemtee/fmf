@@ -16,7 +16,13 @@ To use it from your code:
 See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 """
 
+import functools
 import re
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import ClassVar, Generic, TypeVar
+
+T = TypeVar("T")
 
 
 class CannotDecide(Exception):
@@ -29,6 +35,115 @@ class InvalidRule(Exception):
 
 class InvalidContext(Exception):
     pass
+
+
+@dataclass(frozen=True)
+class ContextDimension(ABC, Generic[T]):
+    """
+    Representation of a context dimension with both name and value.
+
+    This defines the operator rules and processing of the raw string values.
+
+    A consumer should subclass this and initialize :py:attr:`_registrar` to define
+    their own subset of context dimensions that they process. By default (if this is
+    not subclassed and nothing is registered) the dimension values are treated as
+    :py:class:`ContextValue`.
+
+    .. code-block:: python
+
+        class TmtContextDimension(fmf.context.ContextDimension):
+            _registrar = {}
+
+        class TmtContext(fmf.context.Context):
+            _dimensions = TmtContextDimension
+
+        class DistroContextDimension(TmtContextDimension[DistroAlias]):
+            _dimension_name = "distro"
+
+            @classmethod
+            @abstractmethod
+            def _make_value(cls, raw_value: str) -> DistroAlias:
+                ...
+
+            def operate_value(self, operator: str, other_value: DistroAlias) -> bool:
+                ...
+    """
+
+    #: Collection of known :py:class:`ContextDimension`. The consumer should
+    #: initialize
+    _registrar: ClassVar[dict[str, type["ContextDimension"]]]
+
+    #: Static dimension name. Must be defined when subclassing a specific
+    #: :py:class:`ContextDimension`
+    _dimension_name: ClassVar[str]
+
+    #: The raw value given by the user
+    raw_value: str
+
+    @property
+    def name(self) -> str:
+        """
+        The final context dimension name
+        """
+        return self._dimension_name
+
+    @functools.cached_property
+    def value(self) -> T:
+        """
+        The dimension's processed value
+        """
+        return self._make_value(self.raw_value)
+
+    @classmethod
+    @abstractmethod
+    def _make_value(cls, raw_value: str) -> T:
+        """
+        Convert a ``raw_value`` string into an actual ``T`` type
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def __init_subclass__(cls) -> None:
+        # Do nothing if this is a dynamic ContextDimension
+        if not hasattr(cls, "_dimension_name"):
+            return
+        cls._registrar[cls._dimension_name] = cls
+
+    @classmethod
+    def create(cls, dimension_name: str, raw_value: str) -> "ContextDimension":
+        """
+        Main constructor
+        """
+        # Safely get the registrar if one was initialized
+        registrar = getattr(cls, "_registrar", {})
+        if dimension_type := registrar.get(dimension_name):
+            return dimension_type(raw_value)
+        return cls.create_default(raw_value, dimension_name=dimension_name)
+
+    @classmethod
+    def create_default(cls, raw_value: str, *, dimension_name: str) -> "ContextDimension":
+        """
+        The default :py:class:`ContextDimension` if none were found in the :py:attr:`_registrar`.
+        """
+        return DefaultContextDimension(raw_value, dimension_name=dimension_name)
+
+    def operate(self, operator: str, other: str) -> bool:
+        # TODO: Define operator logic and create abstract placeholders
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class DefaultContextDimension(ContextDimension["ContextValue"]):
+    #: Dynamic dimension name
+    dimension_name: str = field(kw_only=True)
+
+    @property
+    def name(self) -> str:
+        return self.dimension_name
+
+    @classmethod
+    def _make_value(cls, raw_value: str) -> "ContextValue":
+        return ContextValue(raw_value)
 
 
 class ContextValue:
