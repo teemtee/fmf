@@ -19,8 +19,9 @@ See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 import functools
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import ClassVar, Generic, TypeVar
+from typing import ClassVar, Generic, Optional, TypeAlias, TypeVar
 
 T = TypeVar("T")
 
@@ -35,6 +36,43 @@ class InvalidRule(Exception):
 
 class InvalidContext(Exception):
     pass
+
+
+OperatorFunc: TypeAlias = Callable[[str], bool]
+
+
+@dataclass(frozen=True)
+class Operators:
+    """
+    Decorator for defining a comparison operator.
+    """
+
+    #: Registrar of defined operators and the functions associated with them. Negated
+    #: operators use the same function, but are marked to be negated in the second term
+    #: of the tuple.
+    registrar: dict[str, tuple[str, bool]] = field(default_factory=dict)
+
+    def add(self,
+            operator: str,
+            negated_operator: Optional[str] = None,
+            ) -> Callable[[OperatorFunc], OperatorFunc]:
+        def decorator(func: OperatorFunc) -> OperatorFunc:
+            if operator in self.registrar:
+                raise ValueError(f"Operator '{operator}' already defined")
+            self.registrar[operator] = (func.__name__, False)
+            if negated_operator:
+                self.registrar[negated_operator] = (func.__name__, True)
+            return func
+
+        assert operator != negated_operator
+        return decorator
+
+    def execute(self, operator: str, inst: "ContextDimension[T]", other: str) -> bool:
+        operator_func, negate = self.registrar[operator]
+        func: OperatorFunc = getattr(inst, operator_func)
+        if negate:
+            return not func(other)
+        return func(other)
 
 
 @dataclass(frozen=True)
@@ -68,6 +106,9 @@ class ContextDimension(ABC, Generic[T]):
             def operate_value(self, operator: str, other_value: DistroAlias) -> bool:
                 ...
     """
+
+    #: Collection of comparison operators defined
+    operators: ClassVar[Operators] = Operators()
 
     #: Collection of known :py:class:`ContextDimension`. The consumer should
     #: initialize
@@ -128,8 +169,9 @@ class ContextDimension(ABC, Generic[T]):
         return DefaultContextDimension(raw_value, dimension_name=dimension_name)
 
     def operate(self, operator: str, other: str) -> bool:
-        # TODO: Define operator logic and create abstract placeholders
-        raise NotImplementedError
+        if operator not in self.operators.registrar:
+            raise NotImplementedError
+        return self.operators.execute(operator, self, other)
 
 
 @dataclass(frozen=True)
