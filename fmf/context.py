@@ -173,9 +173,67 @@ class ContextDimension(ABC, Generic[T]):
             raise NotImplementedError
         return self.operators.execute(operator, self, other)
 
+    @operators.add("==", "!=")
+    @abstractmethod
+    def _op_eq(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("<")
+    @abstractmethod
+    def _op_less(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("<=")
+    @abstractmethod
+    def _op_less_or_equal(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add(">")
+    @abstractmethod
+    def _op_greater(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add(">=")
+    @abstractmethod
+    def _op_greater_or_equal(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~=", "~!=")
+    @abstractmethod
+    def _op_minor_eq(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~<")
+    @abstractmethod
+    def _op_minor_less(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~<=")
+    @abstractmethod
+    def _op_minor_less_or_equal(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~>")
+    @abstractmethod
+    def _op_minor_greater(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~>=")
+    @abstractmethod
+    def _op_minor_greater_or_equal(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~", "!~")
+    @abstractmethod
+    def _op_match(self, other: str) -> bool:
+        raise NotImplementedError
+
 
 @dataclass(frozen=True)
 class DefaultContextDimension(ContextDimension["ContextValue"]):
+    #: Whether the context dimensions are compared in a case sensitive way
+    case_sensitive: ClassVar[bool] = True
+
     #: Dynamic dimension name
     dimension_name: str = field(kw_only=True)
 
@@ -186,6 +244,84 @@ class DefaultContextDimension(ContextDimension["ContextValue"]):
     @classmethod
     def _make_value(cls, raw_value: str) -> "ContextValue":
         return ContextValue(raw_value)
+
+    def _op_eq(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=False,
+            case_sensitive=self.case_sensitive,
+            ) == 0
+
+    def _op_less(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) < 0
+
+    def _op_less_or_equal(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) <= 0
+
+    def _op_greater(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) > 0
+
+    def _op_greater_or_equal(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) >= 0
+
+    def _op_minor_eq(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=False,
+            case_sensitive=self.case_sensitive,
+            ) == 0
+
+    def _op_minor_less(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) < 0
+
+    def _op_minor_less_or_equal(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) <= 0
+
+    def _op_minor_greater(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) > 0
+
+    def _op_minor_greater_or_equal(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) >= 0
+
+    def _op_match(self, other: str) -> bool:
+        return re.search(other, self.raw_value) is not None
 
 
 class ContextValue:
