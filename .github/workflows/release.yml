@@ -14,7 +14,7 @@ jobs:
     permissions:
       id-token: write  # For pypi-publish
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build package
         run: pipx run hatch build
       - name: Publish to PyPI
