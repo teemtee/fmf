@@ -93,7 +93,7 @@ class ContextDimension(ABC, Generic[T]):
             _registrar = {}
 
         class TmtContext(fmf.context.Context):
-            _dimensions = TmtContextDimension
+            _context_dimensions = TmtContextDimension
 
         class DistroContextDimension(TmtContextDimension[DistroAlias]):
             _dimension_name = "distro"
@@ -512,7 +512,7 @@ class Context:
     """
     Represents https://fmf.readthedocs.io/en/latest/context.html
     """
-    # Operators' definitions
+    _context_dimensions: ClassVar[type[ContextDimension]] = ContextDimension
 
     def _op_defined(self, dimension_name, values):
         """
@@ -526,159 +526,7 @@ class Context:
         """
         return dimension_name not in self._dimensions
 
-    def _op_eq(self, dimension_name, values):
-        """
-        '=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=False, case_sensitive=self.case_sensitive) == 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_not_eq(self, dimension_name, values):
-        """
-        '!=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=False, case_sensitive=self.case_sensitive) != 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_match(self, dimension_name, values):
-        """
-        '~' operator, regular expression matches
-        """
-
-        def comparator(dimension_value, it_val):
-            return re.search(it_val.raw, dimension_value.raw) is not None
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_not_match(self, dimension_name, values):
-        """
-        '~' operator, regular expression does not match
-        """
-
-        def comparator(dimension_value, it_val):
-            return re.search(it_val.raw, dimension_value.raw) is None
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_eq(self, dimension_name, values):
-        """
-        '~=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=False, case_sensitive=self.case_sensitive) == 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_not_eq(self, dimension_name, values):
-        """
-        '~!=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=False, case_sensitive=self.case_sensitive) != 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_less_or_eq(self, dimension_name, values):
-        """
-        '~<=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) <= 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_less(self, dimension_name, values):
-        """
-        '~<' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) < 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_less(self, dimension_name, values):
-        """
-        '<' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=True, case_sensitive=self.case_sensitive) < 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_less_or_equal(self, dimension_name, values):
-        """
-        '<=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=True, case_sensitive=self.case_sensitive) <= 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_greater_or_equal(self, dimension_name, values):
-        """
-        '>=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=True, case_sensitive=self.case_sensitive) >= 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_greater_or_equal(self, dimension_name, values):
-        """
-        '~>=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) >= 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_greater(self, dimension_name, values):
-        """
-        '>' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=True, case_sensitive=self.case_sensitive) > 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_greater(self, dimension_name, values):
-        """
-        '~>' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) > 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_core(self, dimension_name, values, comparator):
+    def _op_core(self, dimension_name, values, operator):
         """
         Evaluate value from dimension vs target values combination
 
@@ -690,9 +538,10 @@ class Context:
         try:
             decided = False
             for dimension_value in self._dimensions[dimension_name]:
+                assert isinstance(dimension_value, ContextDimension)
                 for it_val in values:
                     try:
-                        if comparator(dimension_value, it_val):
+                        if dimension_value.operate(operator, it_val):
                             return True
                         else:
                             decided = True
@@ -706,34 +555,25 @@ class Context:
             raise CannotDecide(
                 "Dimension {0} is not defined.".format(dimension_name))
 
+    # TODO: clean this up, not really necessary anymore
+    #  Can't use the ContextDimension, but maybe we can use similar decorators.
     operator_map = {
         "is defined": _op_defined,
         "is not defined": _op_not_defined,
-        "<": _op_less,
-        "~<": _op_minor_less,
-        "<=": _op_less_or_equal,
-        "~<=": _op_minor_less_or_eq,
-        "==": _op_eq,
-        "~=": _op_minor_eq,
-        "!=": _op_not_eq,
-        "~!=": _op_minor_not_eq,
-        ">=": _op_greater_or_equal,
-        "~>=": _op_minor_greater_or_equal,
-        ">": _op_greater,
-        "~>": _op_minor_greater,
-        "~": _op_match,
-        "!~": _op_not_match,
         }
 
-    # Triple expression: dimension operator values
-    # [^=].* is necessary as .+ matches '= something'
-    re_expression_triple = re.compile(
-        r"([\w-]+)"
-        + r"\s*("
-        + r"|".join(
-            [key for key in operator_map if key not in ["is defined", "is not defined"]])
-        + r")\s*"
-        + r"([^=].*)")
+    @classmethod
+    @functools.cache
+    def re_expression_triple(cls) -> re.Pattern[str]:
+        # Triple expression: dimension operator values
+        # [^=].* is necessary as .+ matches '= something'
+        return re.compile(
+            r"([\w-]+)"
+            + r"\s*("
+            + r"|".join(
+                [re.escape(op) for op in cls._context_dimensions.operators.registrar])
+            + r")\s*"
+            + r"([^=].*)")
     # Double expression: dimension operator
     re_expression_double = re.compile(
         r"([\w-]+)" + r"\s*(" + r"|".join(["is defined", "is not defined"]) + r")"
@@ -763,20 +603,21 @@ class Context:
         if args:
             if len(args) != 1:
                 raise InvalidContext()
-            definition = Context.parse_rule(args[0])
+            definition = self.parse_rule(args[0])
             # No ORs and at least one expression in AND
             if len(definition) != 1 or not definition[0]:
                 raise InvalidContext()
             for dim, op, values in definition[0]:
                 if op != "==":
                     raise InvalidContext()
-                self._dimensions[dim] = set(values)
+                self._dimensions[dim] = set(
+                    [self._context_dimensions.create(dim, val) for val in values])
         # Initialized with dimension=value(s)
         for dimension_name, values in kwargs.items():
             if not isinstance(values, list):
                 values = [values]
             self._dimensions[dimension_name] = set(
-                [self.parse_value(val) for val in values]
+                [self._context_dimensions.create(dimension_name, val) for val in values]
                 )
 
     @property
@@ -787,8 +628,8 @@ class Context:
     def case_sensitive(self, value: bool):
         self._case_sensitive = value
 
-    @staticmethod
-    def parse_rule(rule):
+    @classmethod
+    def parse_rule(cls, rule):
         """
         Parses rule into expressions
 
@@ -814,31 +655,19 @@ class Context:
 
         # Change '=' to '=='
         rule = re.sub(r"(?<!=|!|~|<|>)=(?!=)", "==", rule)
-        rule_parts = Context.split_rule_to_groups(rule)
+        rule_parts = cls.split_rule_to_groups(rule)
         for and_group in rule_parts:
             parsed_and_group = []
             for part in and_group:
-                dimension, operator, raw_values = Context.split_expression(
+                dimension, operator, values = cls.split_expression(
                     part)
-                if raw_values is not None:
-                    values = [
-                        Context.parse_value(value) for value in raw_values]
-                else:
-                    values = None
                 parsed_and_group.append((dimension, operator, values))
             if parsed_and_group:
                 parsed_rule.append(parsed_and_group)
         return parsed_rule
 
-    @staticmethod
-    def parse_value(value):
-        """
-        Single place to convert to ContextValue
-        """
-        return ContextValue(str(value))
-
-    @staticmethod
-    def split_rule_to_groups(rule):
+    @classmethod
+    def split_rule_to_groups(cls, rule):
         """
         Split rule into nested lists, no real parsing
 
@@ -849,11 +678,11 @@ class Context:
         :raises InvalidRule: Syntax error in the rule
         """
         rule_parts = []
-        for or_group in Context.re_or_split.split(rule):
+        for or_group in cls.re_or_split.split(rule):
             if not or_group:
                 raise InvalidRule("Empty OR expression in {}.".format(rule))
             and_group = []
-            for part in Context.re_and_split.split(or_group):
+            for part in cls.re_and_split.split(or_group):
                 part_stripped = part.strip()
                 if not part_stripped:
                     raise InvalidRule(
@@ -862,8 +691,8 @@ class Context:
             rule_parts.append(and_group)
         return rule_parts
 
-    @staticmethod
-    def split_expression(expression):
+    @classmethod
+    def split_expression(cls, expression):
         """
         Split expression to dimension name, operator and values
 
@@ -877,7 +706,7 @@ class Context:
         :rtype: tuple(str|None, str|bool, list|None)
         """
         # true/false
-        match = Context.re_boolean.match(expression)
+        match = cls.re_boolean.match(expression)
         if match:
             # convert to bool and return expression tuple
             if match.group(1)[0].lower() == 't':
@@ -885,13 +714,13 @@ class Context:
             else:
                 return (None, False, None)
         # Triple expressions
-        match = Context.re_expression_triple.match(expression)
+        match = cls.re_expression_triple().match(expression)
         if match:
             dimension, operator, raw_values = match.groups()
             return (dimension, operator, [
                 val.strip() for val in raw_values.split(",")])
         # Double expressions
-        match = Context.re_expression_double.match(expression)
+        match = cls.re_expression_double.match(expression)
         if match:
             return (match.group(1), match.group(2), None)
         raise InvalidRule("Cannot parse expression '{}'.".format(expression))
@@ -970,4 +799,8 @@ class Context:
         dimension_name, operator, values = expression
         if isinstance(operator, bool):
             return operator
-        return self.operator_map[operator](self, dimension_name, values)
+        if operator in self.operator_map:
+            # TODO: clean this up, not really necessary anymore
+            return self.operator_map[operator](self, dimension_name, values)
+        else:
+            return self._op_core(dimension_name, values, operator)
