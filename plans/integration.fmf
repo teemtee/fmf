@@ -2,7 +2,6 @@ summary:
     Run integration tests with tmt
 discover:
     how: fmf
-    url: https://github.com/teemtee/tmt
     filter: 'tier: 1 & tag:-provision-only'
 prepare:
   - how: install
@@ -10,3 +9,28 @@ prepare:
       - jq
       - yq
       - python3-pip
+enabled: false
+
+adjust:
+  - when: initiator == packit
+    because: >
+      We want to test against the tmt main branch
+    prepare+:
+      - how: install
+        copr: "@teemtee/latest"
+    discover+:
+      url: https://github.com/teemtee/tmt
+      ref: main
+    enabled: true
+  - when: initiator == fedora-ci
+    because: >
+      We want to test against the source in Fedora
+    discover+:
+      dist-git-source: true
+      # Technically we do not want to do dist-git-merge, but it is safe for us right now
+      # because there are no clashing test definitions
+      # https://github.com/teemtee/tmt/issues/4840
+      dist-git-merge: true
+      url: https://src.fedoraproject.org/rpms/tmt.git
+      ref: $@{dist-git-branch}
+    enabled: true
