@@ -2,24 +2,35 @@ summary:
     Run integration tests with tmt
 discover:
     how: fmf
-    url: https://github.com/teemtee/tmt
-    ref: fedora
     filter: 'tier: 1 & tag:-provision-only'
 prepare:
   - how: install
     package:
       - jq
+      - yq
       - python3-pip
-      - tmt-all
-  - how: shell
-    script:
-      # Try to install into .local first, if that fails, try without --user.
-      # In the sane world, tmt would be running in a virtualenv, and we'd
-      # install yq there. Otherwise, we'd change system packages, but we'd
-      # have to run as root to do that, and who's running tmt test suite
-      # as root?
-      #
-      # We need to freeze yq to 3.1.1 so that it's installable on el8 as
-      # newer yq requires tomlkit>=0.11.7 which is python 3.7+ only.
-      - pip3 install --user yq==3.1.1 || pip3 install yq==3.1.1
-      - yq --help
+enabled: false
+
+adjust:
+  - when: initiator == packit
+    because: >
+      We want to test against the tmt main branch
+    prepare+:
+      - how: install
+        copr: "@teemtee/latest"
+    discover+:
+      url: https://github.com/teemtee/tmt
+      ref: main
+    enabled: true
+  - when: initiator == fedora-ci
+    because: >
+      We want to test against the source in Fedora
+    discover+:
+      dist-git-source: true
+      # Technically we do not want to do dist-git-merge, but it is safe for us right now
+      # because there are no clashing test definitions
+      # https://github.com/teemtee/tmt/issues/4840
+      dist-git-merge: true
+      url: https://src.fedoraproject.org/rpms/tmt.git
+      ref: $@{dist-git-branch}
+    enabled: true
