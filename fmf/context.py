@@ -597,7 +597,6 @@ class Context:
         :raises InvalidContext
         """
         self._dimensions = {}
-        self.case_sensitive = True
 
         # Initialized with rule
         if args:
@@ -619,14 +618,6 @@ class Context:
             self._dimensions[dimension_name] = set(
                 [self._context_dimensions.create(dimension_name, val) for val in values]
                 )
-
-    @property
-    def case_sensitive(self) -> bool:
-        return self._case_sensitive
-
-    @case_sensitive.setter
-    def case_sensitive(self, value: bool):
-        self._case_sensitive = value
 
     @classmethod
     def parse_rule(cls, rule):

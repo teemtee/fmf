@@ -495,7 +495,6 @@ class Tree:
             context,
             key='adjust',
             undecided='skip',
-            case_sensitive=True,
             decision_callback: Optional[AdjustCallback] = None,
             additional_rules=None,
             additional_rules_callback: Optional[ApplyRulesCallback] = None):
@@ -512,10 +511,6 @@ class Tree:
         context dimension is not defined. By default, such rules are
         skipped. In order to raise the fmf.context.CannotDecide
         exception in such cases use undecided='raise'.
-
-        Optional 'case_sensitive' parameter can be used to specify
-        if the context dimension values should be case-sensitive when
-        matching the rules. By default, values are case-sensitive.
 
         Optional 'decision_callback' callback would be called for every adjust
         rule inspected, with three arguments: current fmf node, current
@@ -558,8 +553,6 @@ class Tree:
             additional_rules = []
         elif isinstance(additional_rules, dict):
             additional_rules = [additional_rules]
-
-        context.case_sensitive = case_sensitive
 
         def apply_rules(rule_set):
             # 'continue' has to affect only its rule_set
@@ -624,7 +617,6 @@ class Tree:
         # Adjust all child nodes as well
         for child in self.children.values():
             child.adjust(context, key, undecided,
-                         case_sensitive=case_sensitive,
                          decision_callback=decision_callback,
                          additional_rules=additional_rules,
                          additional_rules_callback=additional_rules_callback)
