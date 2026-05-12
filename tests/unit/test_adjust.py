@@ -10,21 +10,21 @@ from fmf.utils import FormatError, GeneralError
 
 
 @pytest.fixture
-def fedora():
+def fedora(context_cls: type[Context]):
     """
     Fedora 33 on x86_64 and ppc64
     """
 
-    return Context(distro='fedora-33', arch=['x86_64', 'ppc64'])
+    return context_cls(distro='fedora-33', arch=['x86_64', 'ppc64'])
 
 
 @pytest.fixture
-def centos():
+def centos(context_cls: type[Context]):
     """
     CentOS 8.4
     """
 
-    return Context(distro='centos-8.4')
+    return context_cls(distro='centos-8.4')
 
 
 @pytest.fixture
@@ -304,20 +304,22 @@ class TestAdjust:
         mock_callback.assert_any_call(mini, add_rule, True)
         assert mock_callback.call_count == 2
 
-    def test_case_sensitive(self, mini, centos):
+    @pytest.mark.parametrize("case_sensitive", [True, False, pytest.param(None, id="default")])
+    def test_case_sensitive(self, mini, custom_context_cls, case_sensitive):
         """
-        Make sure the adjust rules are case-sensitive by default
+        Make sure the adjust rules follow case-sensitive setting
         """
+
+        if case_sensitive is not None:
+            # Set the value for `DefaultContextDimension.case_sensitive`
+            custom_context_cls._context_dimensions._default_dimension_cls.case_sensitive = (
+                case_sensitive)
+
+        centos = custom_context_cls(distro='centos-8.4')
 
         mini.data['adjust'] = dict(when='distro = CentOS', enabled=False)
         mini.adjust(centos)
-        assert mini.get('enabled') is True
-
-    def test_case_insensitive(self, mini, centos):
-        """
-        Make sure the adjust rules are case-insensitive when requested
-        """
-
-        mini.data['adjust'] = dict(when='distro = CentOS', enabled=False)
-        mini.adjust(centos, case_sensitive=False)
-        assert mini.get('enabled') is False
+        if case_sensitive or case_sensitive is None:
+            assert mini.get('enabled') is True
+        else:
+            assert mini.get('enabled') is False

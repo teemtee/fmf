@@ -5,8 +5,8 @@ from fmf.context import (CannotDecide, Context, ContextValue, InvalidContext,
 
 
 @pytest.fixture
-def env_centos():
-    return Context(
+def env_centos(context_cls: type[Context]):
+    return context_cls(
         arch="x86_64",
         distro="centos-8.4.0",
         component=["bash-5.0.17-1.fc32", "python3-3.8.5-5.fc32"],
@@ -66,13 +66,13 @@ class TestExample:
             "distro = fedora and component >= bash-5.0 or "
             "distro = rhel and component >= bash-4.9")
 
-    def test_minor_comparison_mode(self):
+    def test_minor_comparison_mode(self, context_cls: type[Context]):
         """
         How it minor comparison should work
         """
 
-        centos = Context(distro="centos-7.3.0")
-        centos6 = Context(distro="centos-6.9.0")
+        centos = context_cls(distro="centos-7.3.0")
+        centos6 = context_cls(distro="centos-6.9.0")
 
         # Simple version compare is not enough
         # Think about feature added in centos-7.4.0 and centos-6.9.0
@@ -119,31 +119,31 @@ class TestExample:
                 "distro ~>= centos-7.4.0 and distro ~>= centos-6.9.0"
                 )
 
-    def test_true_false(self):
+    def test_true_false(self, context_cls: type[Context]):
         """
         true/false can be used in rule
         """
 
-        empty = Context()
+        empty = context_cls()
         assert empty.matches('true')
         assert empty.matches(True)
         assert not empty.matches('false')
         assert not empty.matches(False)
 
-        fedora = Context(distro='fedora-rawhide')
+        fedora = context_cls(distro='fedora-rawhide')
         # e.g. ad-hoc disabling of rule
         assert not fedora.matches('false and distro == fedora')
 
         # or enable rule (can be done also by removing when key)
         assert fedora.matches('true or distro == centos-stream')
 
-    def test_right_side_defines_precision(self):
+    def test_right_side_defines_precision(self, context_cls: type[Context]):
         """
         Right side defines how many version parts need to match
         """
 
-        bar_830 = Context(dimension="bar-8.3.0")
-        bar_ = Context(dimension="bar")  # so essentially bar-0.0.0
+        bar_830 = context_cls(dimension="bar-8.3.0")
+        bar_ = context_cls(dimension="bar")  # so essentially bar-0.0.0
 
         # these are equal
         for value in "bar bar-8 bar-8.3 bar-8.3.0".split():
@@ -186,14 +186,14 @@ class TestExample:
             with pytest.raises(CannotDecide):
                 bar_.matches("dimension {0} {1}".format(op, value))
 
-    def test_right_side_defines_precision_tilda(self):
+    def test_right_side_defines_precision_tilda(self, context_cls: type[Context]):
         """
         Right side defines how many version parts need to match (~ operations)
         """
 
-        bar_830 = Context(dimension="bar-8.3.0")
-        bar_ = Context(dimension="bar")  # missing major
-        bar_8 = Context(dimension="bar-8")  # so essentially bar-8.0.0
+        bar_830 = context_cls(dimension="bar-8.3.0")
+        bar_ = context_cls(dimension="bar")  # missing major
+        bar_8 = context_cls(dimension="bar-8")  # so essentially bar-8.0.0
 
         # these are equal
         for value in "bar bar-8 bar-8.3 bar-8.3.0".split():
@@ -241,12 +241,12 @@ class TestExample:
                     with pytest.raises(CannotDecide):
                         bar_8.matches("dimension {0} {1}".format(op, value))
 
-    def test_module_streams(self):
+    def test_module_streams(self, context_cls: type[Context]):
         """
-        How you can use Context for modules
+        How you can use context_cls for modules
         """
 
-        perl = Context("module = perl:5.28")
+        perl = context_cls("module = perl:5.28")
 
         assert perl.matches("module >= perl:5")
         assert not perl.matches("module > perl:5")
@@ -262,14 +262,14 @@ class TestExample:
         # e.g feature in 5.28+ but dropped in perl6
         assert perl.matches("module ~>= perl:5.28")
         with pytest.raises(CannotDecide):
-            Context("module = perl:6.28").matches("module ~>= perl:5.28")
+            context_cls("module = perl:6.28").matches("module ~>= perl:5.28")
 
-    def test_comma(self):
+    def test_comma(self, context_cls: type[Context]):
         """
         Comma is sugar for OR
         """
 
-        con = Context(single="foo", multi=["first", "second"])
+        con = context_cls(single="foo", multi=["first", "second"])
         # First as longer line, then using comma
         assert con.matches("single == foo or single == bar")
         assert con.matches("single == foo, bar")
@@ -290,52 +290,63 @@ class TestExample:
         assert con.matches("multi != first or multi != second")
 
         # More real-life example
-        distro = Context(distro="centos-stream-8")
+        distro = context_cls(distro="centos-stream-8")
         assert distro.matches("distro < centos-stream-9, fedora-34")
         assert not distro.matches("distro < fedora-34, centos-stream-8")
 
-    def test_case_insensitive(self):
+    @pytest.mark.parametrize("case_sensitive", [True, False, pytest.param(None, id="default")])
+    def test_case_sensitive(self, custom_context_cls: type[Context], case_sensitive):
         """
         Test for case-insensitive matching
         """
+        if case_sensitive is not None:
+            # Set the value for `DefaultContextDimension.case_sensitive`
+            custom_context_cls._context_dimensions._default_dimension_cls.case_sensitive = (
+                case_sensitive)
 
-        python = Context(component="python3-3.8.5-5.fc32")
-        python.case_sensitive = False
+        python = custom_context_cls(component="python3-3.8.5-5.fc32")
 
         assert python.matches("component == python3")
         assert not python.matches("component == invalid")
-        assert python.matches("component == PYTHON3,INVALID")
-        assert python.matches("component == Python3")
-        assert python.matches("component == PyTHon3-3.8.5-5.FC32")
         assert python.matches("component > python3-3.7")
-        assert python.matches("component < PYTHON3-3.9")
+        if case_sensitive or case_sensitive is None:
+            assert not python.matches("component == PYTHON3,INVALID")
+            assert not python.matches("component == Python3")
+            assert not python.matches("component == PyTHon3-3.8.5-5.FC32")
+            with pytest.raises(CannotDecide):
+                python.matches("component < PYTHON3-3.9")
+        else:
+            assert python.matches("component == PYTHON3,INVALID")
+            assert python.matches("component == Python3")
+            assert python.matches("component == PyTHon3-3.8.5-5.FC32")
+            assert python.matches("component < PYTHON3-3.9")
 
-    def test_regular_expression_matching(self):
+    def test_regular_expression_matching(self, context_cls: type[Context]):
         """
         Matching regular expressions
         """
 
-        assert Context(distro="fedora-42").matches("distro ~ ^fedora-42$")
-        assert Context(distro="fedora-42").matches("distro ~ fedora")
-        assert Context(distro="fedora-42").matches("distro ~ fedora|rhel")
-        assert Context(distro="fedora-42").matches("distro ~ fedora-4.*")
-        assert not Context(distro="fedora-42").matches("distro ~ fedora-3.*")
-        assert not Context(distro="fedora-42").matches("distro ~ ubuntu")
+        assert context_cls(distro="fedora-42").matches("distro ~ ^fedora-42$")
+        assert context_cls(distro="fedora-42").matches("distro ~ fedora")
+        assert context_cls(distro="fedora-42").matches("distro ~ fedora|rhel")
+        assert context_cls(distro="fedora-42").matches("distro ~ fedora-4.*")
+        assert not context_cls(distro="fedora-42").matches("distro ~ fedora-3.*")
+        assert not context_cls(distro="fedora-42").matches("distro ~ ubuntu")
 
-        assert Context(arch="ppc64").matches("arch ~ ppc64.*")
-        assert Context(arch="ppc64le").matches("arch ~ ppc64.*")
-        assert not Context(arch="ppc64le").matches("arch ~ ppc64$")
+        assert context_cls(arch="ppc64").matches("arch ~ ppc64.*")
+        assert context_cls(arch="ppc64le").matches("arch ~ ppc64.*")
+        assert not context_cls(arch="ppc64le").matches("arch ~ ppc64$")
 
-        assert not Context(distro="fedora-42").matches("distro !~ ^fedora-42$")
-        assert not Context(distro="fedora-42").matches("distro !~ fedora")
-        assert not Context(distro="fedora-42").matches("distro !~ fedora|rhel")
-        assert not Context(distro="fedora-42").matches("distro !~ fedora-4.*")
-        assert Context(distro="fedora-42").matches("distro !~ fedora-3.*")
-        assert Context(distro="fedora-42").matches("distro !~ ubuntu")
+        assert not context_cls(distro="fedora-42").matches("distro !~ ^fedora-42$")
+        assert not context_cls(distro="fedora-42").matches("distro !~ fedora")
+        assert not context_cls(distro="fedora-42").matches("distro !~ fedora|rhel")
+        assert not context_cls(distro="fedora-42").matches("distro !~ fedora-4.*")
+        assert context_cls(distro="fedora-42").matches("distro !~ fedora-3.*")
+        assert context_cls(distro="fedora-42").matches("distro !~ ubuntu")
 
-        assert not Context(arch="ppc64").matches("arch !~ ppc64.*")
-        assert not Context(arch="ppc64le").matches("arch !~ ppc64.*")
-        assert Context(arch="ppc64le").matches("arch !~ ppc64$")
+        assert not context_cls(arch="ppc64").matches("arch !~ ppc64.*")
+        assert not context_cls(arch="ppc64le").matches("arch !~ ppc64.*")
+        assert context_cls(arch="ppc64le").matches("arch !~ ppc64$")
 
 
 class TestContextValue:
@@ -372,7 +383,7 @@ class TestContextValue:
         assert ContextValue("foo") != ContextValue("bar")
         assert ContextValue("value-123") == ContextValue(["value", "123"])
 
-    def test_version_cmp(self):
+    def test_version_cmp(self, context_cls: type[Context]):
         first = ContextValue("name")
         assert first.version_cmp(ContextValue("name")) == 0
         assert first.version_cmp(ContextValue("name"), minor_mode=True) == 0
@@ -455,14 +466,14 @@ class TestContextValue:
 
         # More error states
         with pytest.raises(CannotDecide):
-            first.version_cmp(Context())  # different object classes
+            first.version_cmp(context_cls())  # different object classes
 
         sixth = ContextValue([])
         with pytest.raises(CannotDecide):
             sixth.version_cmp(first, minor_mode=True)
         with pytest.raises(CannotDecide):
             sixth.version_cmp(first)
-        assert sixth != Context()
+        assert sixth != context_cls()
 
     def test_version_cmp_fedora(self):
         """
@@ -496,9 +507,6 @@ class TestContextValue:
 
         assert ContextValue.compare("8", "19") == -1
 
-    def test_string_conversion(self):
-        assert Context.parse_value(1) == ContextValue("1")
-
     def test_compare_with_case(self):
         assert ContextValue._compare_with_case("1", "1", case_sensitive=True)
         assert ContextValue._compare_with_case("name_1", "name_1", case_sensitive=True)
@@ -526,130 +534,123 @@ class TestParser:
         "defined dim",
         ]
 
-    def test_split_rule_to_groups(self):
+    def test_split_rule_to_groups(self, context_cls: type[Context]):
         """
         Split to lists
         """
 
         for invalid_rule in self.rule_groups_invalid:
             with pytest.raises(InvalidRule):
-                Context.split_rule_to_groups(invalid_rule)
+                context_cls.split_rule_to_groups(invalid_rule)
 
         # Valid wrt to group splitter
-        assert Context.split_rule_to_groups("bar") == [["bar"]]
-        assert Context.split_rule_to_groups(" bar   ") == [["bar"]]
-        assert Context.split_rule_to_groups("foo = bar") == [["foo = bar"]]
-        assert Context.split_rule_to_groups(
+        assert context_cls.split_rule_to_groups("bar") == [["bar"]]
+        assert context_cls.split_rule_to_groups(" bar   ") == [["bar"]]
+        assert context_cls.split_rule_to_groups("foo = bar") == [["foo = bar"]]
+        assert context_cls.split_rule_to_groups(
             "foo = bar and baz") == [["foo = bar", "baz"]]
-        assert Context.split_rule_to_groups(
+        assert context_cls.split_rule_to_groups(
             "foo = bar and is defined baz or is not defined foo") == [
                 ["foo = bar", "is defined baz"],
                 ["is not defined foo"],
                 ]
-        assert Context.split_rule_to_groups("a ~= b or c>d or is defined x") == [
+        assert context_cls.split_rule_to_groups("a ~= b or c>d or is defined x") == [
             ["a ~= b"],
             ["c>d"],
             ["is defined x"],
             ]
 
-        assert Context.split_rule_to_groups("a == b or true") == [
+        assert context_cls.split_rule_to_groups("a == b or true") == [
             ["a == b"],
             ["true"]
             ]
 
-    def test_split_expression(self):
+    def test_split_expression(self, context_cls: type[Context]):
         """
         Split to dimension/operator/value tuple
         """
 
         for invalid in self.invalid_expressions:
             with pytest.raises(InvalidRule):
-                Context.split_expression(invalid)
-        assert Context.split_expression("dim is defined") == (
+                context_cls.split_expression(invalid)
+        assert context_cls.split_expression("dim is defined") == (
             "dim", "is defined", None)
-        assert Context.split_expression("dim is not defined") == (
+        assert context_cls.split_expression("dim is not defined") == (
             "dim", "is not defined", None)
-        assert Context.split_expression("dim < value") == (
+        assert context_cls.split_expression("dim < value") == (
             "dim", "<", ["value"])
-        assert Context.split_expression("dim < value-123") == (
+        assert context_cls.split_expression("dim < value-123") == (
             "dim", "<", ["value-123"])
-        assert Context.split_expression("dim<value") == (
+        assert context_cls.split_expression("dim<value") == (
             "dim", "<", ["value"])
-        assert Context.split_expression("dim < value,second") == (
+        assert context_cls.split_expression("dim < value,second") == (
             "dim", "<", ["value", "second"])
-        assert Context.split_expression("dim < value , second") == (
+        assert context_cls.split_expression("dim < value , second") == (
             "dim", "<", ["value", "second"])
-        assert Context.split_expression("true") == (None, True, None)
-        assert Context.split_expression("provision-method == local") == (
+        assert context_cls.split_expression("true") == (None, True, None)
+        assert context_cls.split_expression("provision-method == local") == (
             "provision-method", "==", ["local"])
-        assert Context.split_expression("provision-method is defined") == (
+        assert context_cls.split_expression("provision-method is defined") == (
             "provision-method", "is defined", None)
 
-    def test_parse_rule(self):
+    def test_parse_rule(self, context_cls: type[Context]):
         """
         Rule parsing
         """
 
         for invalid in self.rule_groups_invalid + self.invalid_expressions:
             with pytest.raises(InvalidRule):
-                Context.parse_rule(invalid)
+                context_cls.parse_rule(invalid)
 
-        assert Context.parse_rule("dim is defined") == [
+        assert context_cls.parse_rule("dim is defined") == [
             [("dim", "is defined", None)]]
-        assert Context.parse_rule("dim < value") == [
-            [("dim", "<", [ContextValue("value")])]]
-        assert Context.parse_rule("dim < value-123") == [
-            [("dim", "<", [ContextValue("value-123")])]]
-        assert Context.parse_rule("dim ~< value, second") == [
-            [("dim", "~<", [ContextValue("value"), ContextValue("second")])]]
-        assert Context.parse_rule(
+        assert context_cls.parse_rule("dim < value") == [
+            [("dim", "<", ["value"])]]
+        assert context_cls.parse_rule("dim < value-123") == [
+            [("dim", "<", ["value-123"])]]
+        assert context_cls.parse_rule("dim ~< value, second") == [
+            [("dim", "~<", ["value", "second"])]]
+        assert context_cls.parse_rule(
             "dim < value and dim > valueB or dim != valueC") == [
             [
-                ("dim", "<", [ContextValue("value")]),
-                ("dim", ">", [ContextValue("valueB")])],
+                ("dim", "<", ["value"]),
+                ("dim", ">", ["valueB"])],
             [
-                ("dim", "!=", [ContextValue("valueC")])]]
+                ("dim", "!=", ["valueC"])]]
 
 
 class TestContext:
-    def test_creation(self):
+    def test_creation(self, context_cls: type[Context]):
         for created in [
-                Context(dim_a="value", dim_b=["val"], dim_c=["foo", "bar"]),
-                Context("dim_a=value and dim_b=val and dim_c == foo,bar")]:
-            assert created._dimensions["dim_a"] == set([ContextValue("value")])
-            assert created._dimensions["dim_b"] == set([ContextValue("val")])
-            assert created._dimensions["dim_c"] == set(
-                [ContextValue("foo"), ContextValue("bar")])
-        # Invalid ways to create Context
+                context_cls(dim_a="value", dim_b=["val"], dim_c=["foo", "bar"]),
+                context_cls("dim_a=value and dim_b=val and dim_c == foo,bar")]:
+            assert created._dimensions["dim_a"] == {
+                context_cls._context_dimensions.create("dim_a", "value")}
+            assert created._dimensions["dim_b"] == {
+                context_cls._context_dimensions.create("dim_b", "val")}
+            assert created._dimensions["dim_c"] == {
+                context_cls._context_dimensions.create(
+                    "dim_c", "foo"), context_cls._context_dimensions.create(
+                    "dim_c", "bar")}
+        # Invalid ways to create context_cls
         with pytest.raises(InvalidContext):
-            Context("a=b", "c=d")  # Just argument
+            context_cls("a=b", "c=d")  # Just argument
         with pytest.raises(InvalidContext):
-            Context("a=b or c=d")  # Can't use OR
+            context_cls("a=b or c=d")  # Can't use OR
         with pytest.raises(InvalidContext):
-            Context("a < d")  # Operator other than =/==
+            context_cls("a < d")  # Operator other than =/==
 
-    def test_prints(self):
-        c = Context()
+    def test_prints(self, context_cls: type[Context]):
+        c = context_cls()
         str(c)
         repr(c)
 
-    context = Context(
-        # nvr like single
-        distro="fedora-32",
-        # raw name  single
-        pipeline="ci",
-        # raw name list
-        arch=["x86_64", "ppc64le"],
-        # nvr like list
-        components=["bash-5.0.17-1.fc32", "curl-7.69.1-6.fc32"],
-        )
-
-    def test_matches_groups(self):
+    def test_matches_groups(self, context_cls: type[Context]):
         """
         and/or in rules with yes/no/cannotdecide outcome
         """
 
-        context = Context(distro="centos-8.2.0")
+        context = context_cls(distro="centos-8.2.0")
 
         # Clear outcome
         assert context.matches("distro = centos-8.2.0 or distro = fedora")
@@ -673,12 +674,12 @@ class TestContext:
             with pytest.raises(CannotDecide):
                 context.matches(undecidable)
 
-    def test_matches(self):
+    def test_matches(self, context_cls: type[Context]):
         """
         yes/no/skip test per operator for matches
         """
 
-        context = Context(
+        context = context_cls(
             distro="fedora-32",
             arch=["x86_64", "ppc64le"],
             component="bash-5.0.17-1.fc32",
@@ -725,11 +726,11 @@ class TestContext:
         # missing version parts are allowed but at least one needs to be
         # defined
         with pytest.raises(CannotDecide):
-            Context(distro='fedora').matches("distro < fedora-33")
-        assert Context(distro='foo-1').matches("distro < foo-1.1")
+            context_cls(distro='fedora').matches("distro < fedora-33")
+        assert context_cls(distro='foo-1').matches("distro < foo-1.1")
 
         # '~<':
-        assert Context(distro='centos-8.3').matches("distro ~< centos-8.4")
+        assert context_cls(distro='centos-8.3').matches("distro ~< centos-8.4")
         assert context.matches("distro ~< fedora-33")
         with pytest.raises(CannotDecide):
             context.matches("distro ~< centos-8")
@@ -794,35 +795,35 @@ class TestContext:
             context.matches("product ~> centos-8")
         assert not context.matches("distro ~> fedora")
 
-    def test_known_troublemakers(self):
+    def test_known_troublemakers(self, context_cls: type[Context]):
         """
         Do not regress on these expressions
         """
 
         # From fmf/issues/89:
         # following is true (missing left values are treated as lower)
-        assert Context(distro='foo-1').matches('distro < foo-1.1')
+        assert context_cls(distro='foo-1').matches('distro < foo-1.1')
         # but only if at least one version part is defined
         with pytest.raises(CannotDecide):
-            Context(distro='fedora').matches('distro < fedora-33')
+            context_cls(distro='fedora').matches('distro < fedora-33')
         # so use ~ if you need an explict Major check
         with pytest.raises(CannotDecide):
-            Context(distro='fedora').matches('distro ~< fedora-33')
+            context_cls(distro='fedora').matches('distro ~< fedora-33')
 
-        assert Context(distro='fedora-33').matches('distro == fedora')
+        assert context_cls(distro='fedora-33').matches('distro == fedora')
         with pytest.raises(CannotDecide):
-            Context("module = py:5.28").matches("module > perl:5.28")
+            context_cls("module = py:5.28").matches("module > perl:5.28")
         with pytest.raises(CannotDecide):
-            Context("module = py:5").matches("module > perl:5.28")
+            context_cls("module = py:5").matches("module > perl:5.28")
         with pytest.raises(CannotDecide):
-            Context("module = py:5").matches("module >= perl:5.28")
+            context_cls("module = py:5").matches("module >= perl:5.28")
         with pytest.raises(CannotDecide):
-            Context("distro = centos").matches("distro >= fedora")
+            context_cls("distro = centos").matches("distro >= fedora")
 
-        assert Context("distro = centos").matches("distro != fedora")
-        assert not Context("distro = centos").matches("distro == fedora")
+        assert context_cls("distro = centos").matches("distro != fedora")
+        assert not context_cls("distro = centos").matches("distro == fedora")
 
-        rhel7 = Context("distro = rhel-7")
+        rhel7 = context_cls("distro = rhel-7")
         assert rhel7.matches("distro == rhel")
         assert rhel7.matches("distro == rhel-7")
         assert not rhel7.matches("distro == rhel-7.3")
@@ -839,12 +840,12 @@ class TestContext:
         # Checking `CannotDecide or False`
         for distro in "fedora-33 fedora-34 centos-7.7".split():
             with pytest.raises(CannotDecide):
-                Context(distro=distro).matches(expr)
+                context_cls(distro=distro).matches(expr)
         # Checking `CannotDecide or True`
-        assert Context(distro="centos-6.5").matches(expr)
-        assert Context(distro="fedora-32").matches(expr)
+        assert context_cls(distro="centos-6.5").matches(expr)
+        assert context_cls(distro="fedora-32").matches(expr)
 
-    def test_cannotdecides(self):
+    def test_cannotdecides(self, context_cls: type[Context]):
         # https://github.com/psss/fmf/issues/117
         # CannotDecide and True = True and CannotDecide = CannotDecide
         # CannotDecide and False = False and CannotDecide = False
@@ -853,7 +854,7 @@ class TestContext:
         _true = "foo == bar"
         _false = "foo != bar"
         _cannot = "baz == bar"
-        env = Context(foo="bar")
+        env = context_cls(foo="bar")
         for a, op, b in [
                 (_cannot, 'and', _true),
                 (_true, 'and', _cannot),
@@ -882,60 +883,62 @@ class TestOperators:
     more thorough testing for operations
     """
 
-    context = Context(
-        # nvr like single
-        distro="fedora-32",
-        # raw name  single
-        pipeline="ci",
-        # raw name list
-        arch=["x86_64", "ppc64le"],
-        # nvr like list
-        components=["bash-5.0.17-1.fc32", "curl-7.69.1-6.fc32"],
-        )
+    @pytest.fixture()
+    def context(self, context_cls: type[Context]) -> Context:
+        return context_cls(
+            # nvr like single
+            distro="fedora-32",
+            # raw name  single
+            pipeline="ci",
+            # raw name list
+            arch=["x86_64", "ppc64le"],
+            # nvr like list
+            components=["bash-5.0.17-1.fc32", "curl-7.69.1-6.fc32"],
+            )
 
     # is (not) defined is too simple and covered by test_matches
 
-    def test_equal(self):
-        assert self.context.matches("distro=fedora-32")
+    def test_equal(self, context: Context):
+        assert context.matches("distro=fedora-32")
         # One of them matches
-        assert self.context.matches("distro=fedora-32,centos-8")
-        assert not self.context.matches("distro=fedora-3")
+        assert context.matches("distro=fedora-32,centos-8")
+        assert not context.matches("distro=fedora-3")
         # Version-like comparison
-        assert self.context.matches("distro=fedora")
+        assert context.matches("distro=fedora")
 
-        assert self.context.matches("pipeline=ci")
+        assert context.matches("pipeline=ci")
         # One of them matches
-        assert self.context.matches("pipeline=ci,devnull")
-        assert not self.context.matches("pipeline=devnull")
+        assert context.matches("pipeline=ci,devnull")
+        assert not context.matches("pipeline=devnull")
 
-        assert self.context.matches("arch=x86_64")
+        assert context.matches("arch=x86_64")
         # One of them matches
-        assert self.context.matches("arch=x86_64,aarch64")
-        assert not self.context.matches("arch=aarch64")
-        assert not self.context.matches("arch=aarch64,s390x")
+        assert context.matches("arch=x86_64,aarch64")
+        assert not context.matches("arch=aarch64")
+        assert not context.matches("arch=aarch64,s390x")
 
-    def test_not_equal(self):
-        assert not self.context.matches("distro!=fedora-32")
+    def test_not_equal(self, context: Context):
+        assert not context.matches("distro!=fedora-32")
         # One of them not matches
-        assert self.context.matches("distro!=fedora-32,centos-8")
-        assert self.context.matches("distro!=fedora-3")
+        assert context.matches("distro!=fedora-32,centos-8")
+        assert context.matches("distro!=fedora-3")
         # Version-like comparison
-        assert not self.context.matches("distro!=fedora")
+        assert not context.matches("distro!=fedora")
 
-        assert not self.context.matches("pipeline!=ci")
+        assert not context.matches("pipeline!=ci")
         # One of them matches
-        assert self.context.matches("pipeline!=ci,devnull")
-        assert self.context.matches("pipeline!=devnull")
+        assert context.matches("pipeline!=ci,devnull")
+        assert context.matches("pipeline!=devnull")
 
         # One of them not matches
-        assert self.context.matches("arch!=x86_64")
+        assert context.matches("arch!=x86_64")
         # One of them not matches
-        assert self.context.matches("arch!=x86_64,aarch64")
-        assert self.context.matches("arch!=aarch64")
-        assert self.context.matches("arch!=aarch64,s390x")
+        assert context.matches("arch!=x86_64,aarch64")
+        assert context.matches("arch!=aarch64")
+        assert context.matches("arch!=aarch64,s390x")
 
-    def test_minor_eq(self):
-        centos = Context(distro="centos-8.2.0")
+    def test_minor_eq(self, context_cls: type[Context]):
+        centos = context_cls(distro="centos-8.2.0")
         for not_equal in ["fedora", "fedora-3", "centos-7"]:
             assert not centos.matches("distro ~= {}".format(not_equal))
         assert centos.matches("distro ~= centos")
@@ -947,7 +950,7 @@ class TestOperators:
         with pytest.raises(CannotDecide):
             centos.matches("distro ~= centos-8.2.0.0")
 
-        multi = Context(distro=["centos-8.2.0", "centos-7.6.0"])
+        multi = context_cls(distro=["centos-8.2.0", "centos-7.6.0"])
         for not_equal in [
                 "fedora",
                 "fedora-3",
@@ -963,7 +966,7 @@ class TestOperators:
         assert multi.matches("distro ~= centos-7.6")
         assert not multi.matches("distro ~= centos-7.5")
 
-        multi_rh = Context(distro=["centos-8.2.0", "rhel-8.2.0", "fedora-40"])
+        multi_rh = context_cls(distro=["centos-8.2.0", "rhel-8.2.0", "fedora-40"])
         assert multi_rh.matches("distro ~= centos")
         assert multi_rh.matches("distro ~= rhel")
         assert multi_rh.matches("distro ~= fedora")
