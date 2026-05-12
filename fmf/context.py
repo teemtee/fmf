@@ -114,6 +114,9 @@ class ContextDimension(ABC, Generic[T]):
     #: initialize
     _registrar: ClassVar[dict[str, type["ContextDimension"]]]
 
+    #: Default :py:class:`ContextDimension` class used in :py:func:`create_default`
+    _default_dimension_cls: ClassVar[type["DefaultContextDimension"]]
+
     #: Static dimension name. Must be defined when subclassing a specific
     #: :py:class:`ContextDimension`
     _dimension_name: ClassVar[str]
@@ -166,7 +169,7 @@ class ContextDimension(ABC, Generic[T]):
         """
         The default :py:class:`ContextDimension` if none were found in the :py:attr:`_registrar`.
         """
-        return DefaultContextDimension(raw_value, dimension_name=dimension_name)
+        return cls._default_dimension_cls(raw_value, dimension_name=dimension_name)
 
     def operate(self, operator: str, other: str) -> bool:
         if operator not in self.operators.registrar:
@@ -322,6 +325,9 @@ class DefaultContextDimension(ContextDimension["ContextValue"]):
 
     def _op_match(self, other: str) -> bool:
         return re.search(other, self.raw_value) is not None
+
+
+ContextDimension._default_dimension_cls = DefaultContextDimension
 
 
 class ContextValue:
