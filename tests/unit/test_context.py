@@ -1,5 +1,3 @@
-import re
-
 import pytest
 
 from fmf.context import (CannotDecide, Context, ContextValue, InvalidContext,
@@ -1023,9 +1021,6 @@ class TestContextDimension:
 
             def _op_minor_greater_or_equal(self, other: str) -> bool:
                 return self._op_greater_or_equal(other)
-
-            def _op_match(self, other: str) -> bool:
-                return re.search(other, self.raw_value) is not None
 
         return custom_context_cls(
             foo="foo-10",

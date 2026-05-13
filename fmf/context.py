@@ -228,11 +228,9 @@ class ContextDimension(ABC, Generic[T]):
     def _op_minor_greater_or_equal(self, other: str) -> bool:
         raise NotImplementedError
 
-    # TODO: This can have a clear default
     @operators.add("~", "!~")
-    @abstractmethod
     def _op_match(self, other: str) -> bool:
-        raise NotImplementedError
+        return re.search(other, self.raw_value) is not None
 
 
 @dataclass(frozen=True)
@@ -325,9 +323,6 @@ class DefaultContextDimension(ContextDimension["ContextValue"]):
             ordered=True,
             case_sensitive=self.case_sensitive,
             ) >= 0
-
-    def _op_match(self, other: str) -> bool:
-        return re.search(other, self.raw_value) is not None
 
 
 ContextDimension._default_dimension_cls = DefaultContextDimension
