@@ -181,6 +181,7 @@ class ContextDimension(ABC, Generic[T]):
     def _op_eq(self, other: str) -> bool:
         raise NotImplementedError
 
+    # TODO: Check how to mimic functools.total_ordering logic
     @operators.add("<")
     @abstractmethod
     def _op_less(self, other: str) -> bool:
@@ -201,6 +202,7 @@ class ContextDimension(ABC, Generic[T]):
     def _op_greater_or_equal(self, other: str) -> bool:
         raise NotImplementedError
 
+    # TODO: Default to non-minor operators
     @operators.add("~=", "~!=")
     @abstractmethod
     def _op_minor_eq(self, other: str) -> bool:
@@ -226,6 +228,7 @@ class ContextDimension(ABC, Generic[T]):
     def _op_minor_greater_or_equal(self, other: str) -> bool:
         raise NotImplementedError
 
+    # TODO: This can have a clear default
     @operators.add("~", "!~")
     @abstractmethod
     def _op_match(self, other: str) -> bool:
