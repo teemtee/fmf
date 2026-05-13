@@ -53,8 +53,10 @@ docs = [
 [project.scripts]
 fmf = 'fmf.cli:cli_entry'
 
-[tool.hatch]
-version.source = 'vcs'
+[tool.hatch.version]
+source = 'vcs'
+raw-options.version_scheme = "release-branch-semver"
+raw-options.git_describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--abbrev=9", "--match", "*[0-9]*"]
 
 [tool.hatch.envs.default]
 platforms = ["linux"]
