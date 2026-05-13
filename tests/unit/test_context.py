@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from fmf.context import (CannotDecide, Context, ContextValue, InvalidContext,
@@ -978,3 +980,69 @@ class TestOperators:
         assert not multi_rh.matches("distro ~= centos-9")
         assert not multi_rh.matches("distro ~= rhel-9")
         assert not multi_rh.matches("distro ~= fedora-41")
+
+
+class TestContextDimension:
+    @pytest.fixture(scope="function")
+    def context(self, custom_context_cls: type[Context]) -> Context:
+        class FooContext(custom_context_cls._context_dimensions[str]):
+            _dimension_name = "foo"
+
+            # For simplicity, make this just compare string
+
+            @classmethod
+            def _make_value(cls, raw_value: str) -> str:
+                return raw_value
+
+            def _op_eq(self, other: str) -> bool:
+                return self.value == other
+
+            def _op_less(self, other: str) -> bool:
+                return self.value < other
+
+            def _op_less_or_equal(self, other: str) -> bool:
+                return self.value <= other
+
+            def _op_greater(self, other: str) -> bool:
+                return self.value > other
+
+            def _op_greater_or_equal(self, other: str) -> bool:
+                return self.value >= other
+
+            def _op_minor_eq(self, other: str) -> bool:
+                return self._op_eq(other)
+
+            def _op_minor_less(self, other: str) -> bool:
+                return self._op_less(other)
+
+            def _op_minor_less_or_equal(self, other: str) -> bool:
+                return self._op_minor_less_or_equal(other)
+
+            def _op_minor_greater(self, other: str) -> bool:
+                return self._op_greater(other)
+
+            def _op_minor_greater_or_equal(self, other: str) -> bool:
+                return self._op_greater_or_equal(other)
+
+            def _op_match(self, other: str) -> bool:
+                return re.search(other, self.raw_value) is not None
+
+        return custom_context_cls(
+            foo="foo-10",
+            bar="bar-10",
+            )
+
+    def test_custom_dimension(self, context: Context):
+        # foo is a custom dimension following text comparison ("10" < "2")
+        foo_dimensions = list(context._dimensions["foo"])
+        foo_class = foo_dimensions[0].__class__
+        assert foo_class.__name__ == "FooContext"
+        assert context.matches("foo < foo-2")
+        assert context.matches("foo > bar-2")
+
+        # bar is a ContextValue, so it should follow test_matches (int(10) > int(2))
+        bar_dimensions = list(context._dimensions["bar"])
+        assert isinstance(bar_dimensions[0], context._context_dimensions._default_dimension_cls)
+        assert context.matches("bar > bar-2")
+        with pytest.raises(CannotDecide):
+            context.matches("bar < foo-2")
