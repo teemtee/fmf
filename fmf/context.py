@@ -21,7 +21,7 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from typing import ClassVar, Generic, Optional, TypeVar
+from typing import ClassVar, Generic, Optional, TypeVar, Union
 
 from fmf._compat.typing import TypeAlias
 
@@ -604,7 +604,9 @@ class Context(Mapping[str, set[ContextValue]]):
     # To split by 'or' operator
     re_or_split = re.compile(r'\bor\b')
 
-    def __init__(self, *args, **kwargs):
+    _dimensions: dict[str, set[ContextValue]]
+
+    def __init__(self, **kwargs: Union[str, list[str]]) -> None:
         """
         Context(rule string)
         Context(dimension=ContextValue())
@@ -614,20 +616,6 @@ class Context(Mapping[str, set[ContextValue]]):
         """
         self._dimensions = {}
 
-        # Initialized with rule
-        if args:
-            if len(args) != 1:
-                raise InvalidContext()
-            definition = self.parse_rule(args[0])
-            # No ORs and at least one expression in AND
-            if len(definition) != 1 or not definition[0]:
-                raise InvalidContext()
-            for dim, op, values in definition[0]:
-                if op != "==":
-                    raise InvalidContext()
-                self._dimensions[dim] = set(
-                    [self._context_dimensions.create(dim, val) for val in values])
-        # Initialized with dimension=value(s)
         for dimension_name, values in kwargs.items():
             if not isinstance(values, list):
                 values = [values]
