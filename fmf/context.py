@@ -19,7 +19,7 @@ See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 import functools
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import ClassVar, Generic, Optional, TypeVar
 
@@ -524,7 +524,7 @@ class ContextValue:
         return hash(self._to_compare)
 
 
-class Context:
+class Context(Mapping[str, set[ContextValue]]):
     """
     Represents https://fmf.readthedocs.io/en/latest/context.html
     """
@@ -634,6 +634,15 @@ class Context:
             self._dimensions[dimension_name] = set(
                 [self._context_dimensions.create(dimension_name, val) for val in values]
                 )
+
+    def __getitem__(self, key: str) -> set[ContextValue]:
+        return self._dimensions[key]
+
+    def __len__(self):
+        return len(self._dimensions)
+
+    def __iter__(self):
+        yield from self._dimensions
 
     @classmethod
     def parse_rule(cls, rule):
