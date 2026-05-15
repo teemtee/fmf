@@ -495,6 +495,7 @@ class Tree:
             context,
             key='adjust',
             undecided='skip',
+            case_sensitive: Optional[bool] = None,
             decision_callback: Optional[AdjustCallback] = None,
             additional_rules=None,
             additional_rules_callback: Optional[ApplyRulesCallback] = None):
@@ -532,6 +533,10 @@ class Tree:
         if not isinstance(context, fmf.context.Context):
             raise utils.GeneralError(
                 "Invalid adjust context: '{}'.".format(type(context).__name__))
+
+        # TODO: Remove this in next release
+        if case_sensitive is not None:
+            context._context_dimensions._default_dimension_cls.case_sensitive = case_sensitive
 
         # Adjust rules should be a dictionary or a list of dictionaries
         try:
@@ -617,6 +622,7 @@ class Tree:
         # Adjust all child nodes as well
         for child in self.children.values():
             child.adjust(context, key, undecided,
+                         case_sensitive=case_sensitive,
                          decision_callback=decision_callback,
                          additional_rules=additional_rules,
                          additional_rules_callback=additional_rules_callback)
