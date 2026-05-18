@@ -323,3 +323,16 @@ class TestAdjust:
             assert mini.get('enabled') is True
         else:
             assert mini.get('enabled') is False
+
+    # TODO: Remove this in next release
+    @pytest.mark.parametrize("case_sensitive", [True, False])
+    def test_case_sensitive_workaround(self, mini, context_cls, case_sensitive):
+
+        centos = context_cls(distro='centos-8.4')
+
+        mini.data['adjust'] = dict(when='distro = CentOS', enabled=False)
+        mini.adjust(centos, case_sensitive=case_sensitive)
+        if case_sensitive:
+            assert mini.get('enabled') is True
+        else:
+            assert mini.get('enabled') is False
