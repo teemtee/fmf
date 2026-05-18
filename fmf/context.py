@@ -235,6 +235,16 @@ class ContextDimension(ABC, Generic[T]):
 
 @dataclass(frozen=True)
 class DefaultContextDimension(ContextDimension["ContextValue"]):
+    """
+    Generic :py:class:`ContextDimension` with variable dimension key.
+
+    The default implementation treats the context dimensions as :py:class:`ContextValue`
+    satisfying the comparison logic in :ref:`context` section.
+
+    This is used in :py:func:`ContextDimension.create_default` via
+    :py:attr:`ContextDimension._default_dimension_cls`.
+    """
+
     #: Whether the context dimensions are compared in a case sensitive way
     case_sensitive: ClassVar[bool] = True
 
