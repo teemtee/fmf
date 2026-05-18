@@ -251,7 +251,7 @@ class DefaultContextDimension(ContextDimension["ContextValue"]):
     case_sensitive: ClassVar[bool] = True
 
     #: Dynamic dimension name
-    dimension_name: str = field(kw_only=True)
+    dimension_name: str = field()
 
     @property
     def name(self) -> str:
