@@ -7,7 +7,7 @@ from fmf.context import Context, ContextDimension, DefaultContextDimension
 def custom_context_cls() -> type[Context]:
 
     class TestDefaultContextDimension(DefaultContextDimension):
-        pass
+        case_sensitive = True
 
     class TestContextDimension(ContextDimension):
         _registrar = {}
