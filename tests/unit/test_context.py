@@ -1014,7 +1014,7 @@ class TestContextDimension:
                 return self._op_less(other)
 
             def _op_minor_less_or_equal(self, other: str) -> bool:
-                return self._op_minor_less_or_equal(other)
+                return self._op_less_or_equal(other)
 
             def _op_minor_greater(self, other: str) -> bool:
                 return self._op_greater(other)
