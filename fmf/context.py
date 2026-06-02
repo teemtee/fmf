@@ -16,7 +16,16 @@ To use it from your code:
 See https://fmf.readthedocs.io/en/latest/modules.html#fmf.Tree.adjust
 """
 
+import functools
 import re
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import ClassVar, Generic, Optional, TypeVar
+
+from fmf._compat.typing import TypeAlias
+
+T = TypeVar("T")
 
 
 class CannotDecide(Exception):
@@ -29,6 +38,306 @@ class InvalidRule(Exception):
 
 class InvalidContext(Exception):
     pass
+
+
+OperatorFunc: TypeAlias = Callable[[str], bool]
+
+
+@dataclass(frozen=True)
+class Operators:
+    """
+    Decorator for defining a comparison operator.
+    """
+
+    #: Registrar of defined operators and the functions associated with them. Negated
+    #: operators use the same function, but are marked to be negated in the second term
+    #: of the tuple.
+    registrar: dict[str, tuple[str, bool]] = field(default_factory=dict)
+
+    def add(self,
+            operator: str,
+            negated_operator: Optional[str] = None,
+            ) -> Callable[[OperatorFunc], OperatorFunc]:
+        def decorator(func: OperatorFunc) -> OperatorFunc:
+            if operator in self.registrar:
+                raise ValueError(f"Operator '{operator}' already defined")
+            self.registrar[operator] = (func.__name__, False)
+            if negated_operator:
+                self.registrar[negated_operator] = (func.__name__, True)
+            return func
+
+        assert operator != negated_operator
+        return decorator
+
+    def execute(self, operator: str, inst: "ContextDimension[T]", other: str) -> bool:
+        operator_func, negate = self.registrar[operator]
+        func: OperatorFunc = getattr(inst, operator_func)
+        if negate:
+            return not func(other)
+        return func(other)
+
+
+@dataclass(frozen=True)
+class ContextDimension(ABC, Generic[T]):
+    """
+    Representation of a context dimension with both name and value.
+
+    This defines the operator rules and processing of the raw string values.
+
+    A consumer should subclass this and initialize :py:attr:`_registrar` to define
+    their own subset of context dimensions that they process. By default (if this is
+    not subclassed and nothing is registered) the dimension values are treated as
+    :py:class:`ContextValue`.
+
+    .. code-block:: python
+
+        class TmtContextDimension(fmf.context.ContextDimension):
+            _registrar = {}
+
+        class TmtContext(fmf.context.Context):
+            _context_dimensions = TmtContextDimension
+
+        class DistroContextDimension(TmtContextDimension[DistroAlias]):
+            _dimension_name = "distro"
+
+            @classmethod
+            @abstractmethod
+            def _make_value(cls, raw_value: str) -> DistroAlias:
+                ...
+
+            def operate_value(self, operator: str, other_value: DistroAlias) -> bool:
+                ...
+    """
+
+    #: Collection of comparison operators defined
+    operators: ClassVar[Operators] = Operators()
+
+    #: Collection of known :py:class:`ContextDimension`. The consumer should
+    #: initialize
+    _registrar: ClassVar[dict[str, type["ContextDimension"]]]
+
+    #: Default :py:class:`ContextDimension` class used in :py:func:`create_default`
+    _default_dimension_cls: ClassVar[type["DefaultContextDimension"]]
+
+    #: Static dimension name. Must be defined when subclassing a specific
+    #: :py:class:`ContextDimension`
+    _dimension_name: ClassVar[str]
+
+    #: The raw value given by the user
+    raw_value: str
+
+    @property
+    def name(self) -> str:
+        """
+        The final context dimension name
+        """
+        return self._dimension_name
+
+    @functools.cached_property
+    def value(self) -> T:
+        """
+        The dimension's processed value
+        """
+        return self._make_value(self.raw_value)
+
+    @classmethod
+    @abstractmethod
+    def _make_value(cls, raw_value: str) -> T:
+        """
+        Convert a ``raw_value`` string into an actual ``T`` type
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def __init_subclass__(cls) -> None:
+        # Do nothing if this is a dynamic ContextDimension
+        if not hasattr(cls, "_dimension_name"):
+            return
+        cls._registrar[cls._dimension_name] = cls
+
+    @classmethod
+    def create(cls, dimension_name: str, raw_value: str) -> "ContextDimension":
+        """
+        Main constructor
+        """
+        # Safely get the registrar if one was initialized
+        registrar = getattr(cls, "_registrar", {})
+        if dimension_type := registrar.get(dimension_name):
+            return dimension_type(raw_value)
+        return cls.create_default(raw_value, dimension_name=dimension_name)
+
+    @classmethod
+    def create_default(cls, raw_value: str, *, dimension_name: str) -> "ContextDimension":
+        """
+        The default :py:class:`ContextDimension` if none were found in the :py:attr:`_registrar`.
+        """
+        return cls._default_dimension_cls(raw_value, dimension_name=dimension_name)
+
+    def operate(self, operator: str, other: str) -> bool:
+        if operator not in self.operators.registrar:
+            raise NotImplementedError
+        return self.operators.execute(operator, self, other)
+
+    @operators.add("==", "!=")
+    @abstractmethod
+    def _op_eq(self, other: str) -> bool:
+        raise NotImplementedError
+
+    # TODO: Check how to mimic functools.total_ordering logic
+    @operators.add("<")
+    @abstractmethod
+    def _op_less(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("<=")
+    @abstractmethod
+    def _op_less_or_equal(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add(">")
+    @abstractmethod
+    def _op_greater(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add(">=")
+    @abstractmethod
+    def _op_greater_or_equal(self, other: str) -> bool:
+        raise NotImplementedError
+
+    # TODO: Default to non-minor operators
+    @operators.add("~=", "~!=")
+    @abstractmethod
+    def _op_minor_eq(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~<")
+    @abstractmethod
+    def _op_minor_less(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~<=")
+    @abstractmethod
+    def _op_minor_less_or_equal(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~>")
+    @abstractmethod
+    def _op_minor_greater(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~>=")
+    @abstractmethod
+    def _op_minor_greater_or_equal(self, other: str) -> bool:
+        raise NotImplementedError
+
+    @operators.add("~", "!~")
+    def _op_match(self, other: str) -> bool:
+        return re.search(other, self.raw_value) is not None
+
+
+@dataclass(frozen=True)
+class DefaultContextDimension(ContextDimension["ContextValue"]):
+    """
+    Generic :py:class:`ContextDimension` with variable dimension key.
+
+    The default implementation treats the context dimensions as :py:class:`ContextValue`
+    satisfying the comparison logic in :ref:`context` section.
+
+    This is used in :py:func:`ContextDimension.create_default` via
+    :py:attr:`ContextDimension._default_dimension_cls`.
+    """
+
+    #: Whether the context dimensions are compared in a case sensitive way
+    case_sensitive: ClassVar[bool] = True
+
+    #: Dynamic dimension name
+    dimension_name: str = field()
+
+    @property
+    def name(self) -> str:
+        return self.dimension_name
+
+    @classmethod
+    def _make_value(cls, raw_value: str) -> "ContextValue":
+        return ContextValue(raw_value)
+
+    def _op_eq(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=False,
+            case_sensitive=self.case_sensitive,
+            ) == 0
+
+    def _op_less(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) < 0
+
+    def _op_less_or_equal(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) <= 0
+
+    def _op_greater(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) > 0
+
+    def _op_greater_or_equal(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) >= 0
+
+    def _op_minor_eq(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=False,
+            case_sensitive=self.case_sensitive,
+            ) == 0
+
+    def _op_minor_less(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) < 0
+
+    def _op_minor_less_or_equal(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) <= 0
+
+    def _op_minor_greater(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) > 0
+
+    def _op_minor_greater_or_equal(self, other: str) -> bool:
+        return self.value.version_cmp(
+            self._make_value(other),
+            minor_mode=True,
+            ordered=True,
+            case_sensitive=self.case_sensitive,
+            ) >= 0
+
+
+ContextDimension._default_dimension_cls = DefaultContextDimension
 
 
 class ContextValue:
@@ -219,7 +528,7 @@ class Context:
     """
     Represents https://fmf.readthedocs.io/en/latest/context.html
     """
-    # Operators' definitions
+    _context_dimensions: ClassVar[type[ContextDimension]] = ContextDimension
 
     def _op_defined(self, dimension_name, values):
         """
@@ -233,159 +542,7 @@ class Context:
         """
         return dimension_name not in self._dimensions
 
-    def _op_eq(self, dimension_name, values):
-        """
-        '=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=False, case_sensitive=self.case_sensitive) == 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_not_eq(self, dimension_name, values):
-        """
-        '!=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=False, case_sensitive=self.case_sensitive) != 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_match(self, dimension_name, values):
-        """
-        '~' operator, regular expression matches
-        """
-
-        def comparator(dimension_value, it_val):
-            return re.search(it_val.raw, dimension_value.raw) is not None
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_not_match(self, dimension_name, values):
-        """
-        '~' operator, regular expression does not match
-        """
-
-        def comparator(dimension_value, it_val):
-            return re.search(it_val.raw, dimension_value.raw) is None
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_eq(self, dimension_name, values):
-        """
-        '~=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=False, case_sensitive=self.case_sensitive) == 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_not_eq(self, dimension_name, values):
-        """
-        '~!=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=False, case_sensitive=self.case_sensitive) != 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_less_or_eq(self, dimension_name, values):
-        """
-        '~<=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) <= 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_less(self, dimension_name, values):
-        """
-        '~<' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) < 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_less(self, dimension_name, values):
-        """
-        '<' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=True, case_sensitive=self.case_sensitive) < 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_less_or_equal(self, dimension_name, values):
-        """
-        '<=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=True, case_sensitive=self.case_sensitive) <= 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_greater_or_equal(self, dimension_name, values):
-        """
-        '>=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=True, case_sensitive=self.case_sensitive) >= 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_greater_or_equal(self, dimension_name, values):
-        """
-        '~>=' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) >= 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_greater(self, dimension_name, values):
-        """
-        '>' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, ordered=True, case_sensitive=self.case_sensitive) > 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_minor_greater(self, dimension_name, values):
-        """
-        '~>' operator
-        """
-
-        def comparator(dimension_value, it_val):
-            return dimension_value.version_cmp(
-                it_val, minor_mode=True, ordered=True, case_sensitive=self.case_sensitive) > 0
-
-        return self._op_core(dimension_name, values, comparator)
-
-    def _op_core(self, dimension_name, values, comparator):
+    def _op_core(self, dimension_name, values, operator):
         """
         Evaluate value from dimension vs target values combination
 
@@ -397,9 +554,10 @@ class Context:
         try:
             decided = False
             for dimension_value in self._dimensions[dimension_name]:
+                assert isinstance(dimension_value, ContextDimension)
                 for it_val in values:
                     try:
-                        if comparator(dimension_value, it_val):
+                        if dimension_value.operate(operator, it_val):
                             return True
                         else:
                             decided = True
@@ -413,34 +571,25 @@ class Context:
             raise CannotDecide(
                 "Dimension {0} is not defined.".format(dimension_name))
 
+    # TODO: clean this up, not really necessary anymore
+    #  Can't use the ContextDimension, but maybe we can use similar decorators.
     operator_map = {
         "is defined": _op_defined,
         "is not defined": _op_not_defined,
-        "<": _op_less,
-        "~<": _op_minor_less,
-        "<=": _op_less_or_equal,
-        "~<=": _op_minor_less_or_eq,
-        "==": _op_eq,
-        "~=": _op_minor_eq,
-        "!=": _op_not_eq,
-        "~!=": _op_minor_not_eq,
-        ">=": _op_greater_or_equal,
-        "~>=": _op_minor_greater_or_equal,
-        ">": _op_greater,
-        "~>": _op_minor_greater,
-        "~": _op_match,
-        "!~": _op_not_match,
         }
 
-    # Triple expression: dimension operator values
-    # [^=].* is necessary as .+ matches '= something'
-    re_expression_triple = re.compile(
-        r"([\w-]+)"
-        + r"\s*("
-        + r"|".join(
-            [key for key in operator_map if key not in ["is defined", "is not defined"]])
-        + r")\s*"
-        + r"([^=].*)")
+    @classmethod
+    @functools.cache
+    def re_expression_triple(cls) -> re.Pattern[str]:
+        # Triple expression: dimension operator values
+        # [^=].* is necessary as .+ matches '= something'
+        return re.compile(
+            r"([\w-]+)"
+            + r"\s*("
+            + r"|".join(
+                [re.escape(op) for op in cls._context_dimensions.operators.registrar])
+            + r")\s*"
+            + r"([^=].*)")
     # Double expression: dimension operator
     re_expression_double = re.compile(
         r"([\w-]+)" + r"\s*(" + r"|".join(["is defined", "is not defined"]) + r")"
@@ -464,38 +613,30 @@ class Context:
         :raises InvalidContext
         """
         self._dimensions = {}
-        self.case_sensitive = True
 
         # Initialized with rule
         if args:
             if len(args) != 1:
                 raise InvalidContext()
-            definition = Context.parse_rule(args[0])
+            definition = self.parse_rule(args[0])
             # No ORs and at least one expression in AND
             if len(definition) != 1 or not definition[0]:
                 raise InvalidContext()
             for dim, op, values in definition[0]:
                 if op != "==":
                     raise InvalidContext()
-                self._dimensions[dim] = set(values)
+                self._dimensions[dim] = set(
+                    [self._context_dimensions.create(dim, val) for val in values])
         # Initialized with dimension=value(s)
         for dimension_name, values in kwargs.items():
             if not isinstance(values, list):
                 values = [values]
             self._dimensions[dimension_name] = set(
-                [self.parse_value(val) for val in values]
+                [self._context_dimensions.create(dimension_name, val) for val in values]
                 )
 
-    @property
-    def case_sensitive(self) -> bool:
-        return self._case_sensitive
-
-    @case_sensitive.setter
-    def case_sensitive(self, value: bool):
-        self._case_sensitive = value
-
-    @staticmethod
-    def parse_rule(rule):
+    @classmethod
+    def parse_rule(cls, rule):
         """
         Parses rule into expressions
 
@@ -521,31 +662,19 @@ class Context:
 
         # Change '=' to '=='
         rule = re.sub(r"(?<!=|!|~|<|>)=(?!=)", "==", rule)
-        rule_parts = Context.split_rule_to_groups(rule)
+        rule_parts = cls.split_rule_to_groups(rule)
         for and_group in rule_parts:
             parsed_and_group = []
             for part in and_group:
-                dimension, operator, raw_values = Context.split_expression(
+                dimension, operator, values = cls.split_expression(
                     part)
-                if raw_values is not None:
-                    values = [
-                        Context.parse_value(value) for value in raw_values]
-                else:
-                    values = None
                 parsed_and_group.append((dimension, operator, values))
             if parsed_and_group:
                 parsed_rule.append(parsed_and_group)
         return parsed_rule
 
-    @staticmethod
-    def parse_value(value):
-        """
-        Single place to convert to ContextValue
-        """
-        return ContextValue(str(value))
-
-    @staticmethod
-    def split_rule_to_groups(rule):
+    @classmethod
+    def split_rule_to_groups(cls, rule):
         """
         Split rule into nested lists, no real parsing
 
@@ -556,11 +685,11 @@ class Context:
         :raises InvalidRule: Syntax error in the rule
         """
         rule_parts = []
-        for or_group in Context.re_or_split.split(rule):
+        for or_group in cls.re_or_split.split(rule):
             if not or_group:
                 raise InvalidRule("Empty OR expression in {}.".format(rule))
             and_group = []
-            for part in Context.re_and_split.split(or_group):
+            for part in cls.re_and_split.split(or_group):
                 part_stripped = part.strip()
                 if not part_stripped:
                     raise InvalidRule(
@@ -569,8 +698,8 @@ class Context:
             rule_parts.append(and_group)
         return rule_parts
 
-    @staticmethod
-    def split_expression(expression):
+    @classmethod
+    def split_expression(cls, expression):
         """
         Split expression to dimension name, operator and values
 
@@ -584,7 +713,7 @@ class Context:
         :rtype: tuple(str|None, str|bool, list|None)
         """
         # true/false
-        match = Context.re_boolean.match(expression)
+        match = cls.re_boolean.match(expression)
         if match:
             # convert to bool and return expression tuple
             if match.group(1)[0].lower() == 't':
@@ -592,13 +721,13 @@ class Context:
             else:
                 return (None, False, None)
         # Triple expressions
-        match = Context.re_expression_triple.match(expression)
+        match = cls.re_expression_triple().match(expression)
         if match:
             dimension, operator, raw_values = match.groups()
             return (dimension, operator, [
                 val.strip() for val in raw_values.split(",")])
         # Double expressions
-        match = Context.re_expression_double.match(expression)
+        match = cls.re_expression_double.match(expression)
         if match:
             return (match.group(1), match.group(2), None)
         raise InvalidRule("Cannot parse expression '{}'.".format(expression))
@@ -677,4 +806,8 @@ class Context:
         dimension_name, operator, values = expression
         if isinstance(operator, bool):
             return operator
-        return self.operator_map[operator](self, dimension_name, values)
+        if operator in self.operator_map:
+            # TODO: clean this up, not really necessary anymore
+            return self.operator_map[operator](self, dimension_name, values)
+        else:
+            return self._op_core(dimension_name, values, operator)
