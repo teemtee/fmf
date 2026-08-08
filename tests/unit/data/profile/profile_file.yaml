@@ -1,0 +1,23 @@
+plan1_definition:
+  where: execute is defined cc and discover is defined
+  # append to prepare phase
+  prepare+:
+    name: some name
+    how: shell
+    script: systemctl start httpd
+   # create reporting if not defined
+  report?:
+    how: html
+    open: true
+
+   # override provision by own definition
+  provision:
+    how: virtual
+    image: fedora-37
+
+
+test1_definition:
+  where: summary is defined and test is defined
+  new_attribute: hello world
+  test+: appended
+
