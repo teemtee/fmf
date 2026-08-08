@@ -491,6 +491,40 @@ class TestContextValue:
         assert frawhide.version_cmp(f33) > 0
         assert f33.version_cmp(frawhide) < 0
 
+    def test_version_cmp_centos_stream(self):
+        """
+        CentOS Stream comparison
+        """
+
+        cs9 = ContextValue("centos-stream-9")
+        csrawhide = ContextValue("centos-stream-rawhide")
+
+        assert cs9.version_cmp(ContextValue("centos-stream-9")) == 0
+        assert cs9.version_cmp(ContextValue("centos-stream-8")) > 0
+        assert cs9.version_cmp(ContextValue("centos-stream-10")) < 0
+
+        assert csrawhide.version_cmp(ContextValue("centos-stream-rawhide")) == 0
+        assert csrawhide.version_cmp(cs9) > 0
+        assert cs9.version_cmp(csrawhide) < 0
+
+    def test_version_cmp_rhel(self):
+        """
+        RHEL comparison
+        """
+
+        rhel9_1 = ContextValue("rhel-9.1")
+        rhel9_rawhide = ContextValue("rhel-9.rawhide")
+
+        assert rhel9_1.version_cmp(ContextValue("rhel-9.1")) == 0
+        assert rhel9_1.version_cmp(ContextValue("rhel-9")) == 0
+        assert rhel9_1.version_cmp(ContextValue("rhel-9.0")) > 0
+        assert rhel9_1.version_cmp(ContextValue("rhel-9.2")) < 0
+        assert rhel9_1.version_cmp(ContextValue("rhel-10")) < 0
+
+        assert rhel9_rawhide.version_cmp(ContextValue("rhel-9.rawhide")) == 0
+        assert rhel9_rawhide.version_cmp(rhel9_1) > 0
+        assert rhel9_1.version_cmp(rhel9_rawhide) < 0
+
     def test_prints(self):
         f33 = ContextValue("fedora-33")
         str(f33)
