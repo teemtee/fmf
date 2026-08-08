@@ -12,6 +12,12 @@ fmf library consumers can define custom :ref:`context` dimension
 handling by extending :py:class:`fmf.context.ContextDimension` and
 :py:class:`fmf.context.Context`.
 
+The symlink loop detection has been improved to correctly handle
+multiple symlinks pointing to the same target directory. Previously,
+only the first symlink was followed while subsequent ones were
+incorrectly skipped as loops. The detection now tracks ancestor
+directories per branch instead of globally across the whole tree.
+
 
 fmf-1.7.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -575,6 +575,59 @@ class TestTree:
         with pytest.raises(fmf.utils.JsonSchemaError):
             self.wget.find('/recursion/deep').validate('invalid')
 
+    def test_symlink_shared_target(self):
+        """
+        Multiple symlinks pointing to the same directory should all be followed
+        """
+
+        directory = tempfile.mkdtemp()
+        try:
+            Tree.init(directory)
+            common = os.path.join(directory, 'common')
+            os.mkdir(common)
+            with open(os.path.join(common, 'main.fmf'), 'w') as main:
+                main.write('execute:\n    how: tmt\n')
+            for name in ('one', 'two'):
+                subdir = os.path.join(directory, name)
+                os.mkdir(subdir)
+                with open(os.path.join(subdir, 'main.fmf'), 'w') as main:
+                    main.write(f'environment:\n    VARIABLE: {name}\n')
+                os.symlink('../common', os.path.join(subdir, 'plan'))
+
+            tree = Tree(directory)
+            one_plan = tree.find('/one/plan')
+            two_plan = tree.find('/two/plan')
+            assert one_plan is not None
+            assert two_plan is not None
+            assert one_plan.get('execute') == {'how': 'tmt'}
+            assert two_plan.get('execute') == {'how': 'tmt'}
+            assert one_plan.get('environment') == {'VARIABLE': 'one'}
+            assert two_plan.get('environment') == {'VARIABLE': 'two'}
+        finally:
+            rmtree(directory)
+
+    def test_symlink_loop(self):
+        """
+        Symlink loops should be detected and silently skipped
+        """
+
+        directory = tempfile.mkdtemp()
+        try:
+            Tree.init(directory)
+            subdir = os.path.join(directory, 'child')
+            os.mkdir(subdir)
+            with open(os.path.join(subdir, 'main.fmf'), 'w') as main:
+                main.write('key: value\n')
+            os.symlink('..', os.path.join(subdir, 'loop'))
+
+            tree = Tree(directory)
+            child = tree.find('/child')
+            assert child is not None
+            assert child.get('key') == 'value'
+            assert tree.find('/child/loop') is None
+        finally:
+            rmtree(directory)
+
 
 class TestRemote:
     """
