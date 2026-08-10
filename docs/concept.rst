@@ -123,6 +123,91 @@ In the example above files or directories named ``.plans`` or
 the ``.fmf`` directory cannot be used for storing metadata.
 
 
+Plugins
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Starting with fmf 2.0, a plugin system allows reading metadata from
+multiple file formats beyond ``.fmf`` (YAML) files. This enables
+extracting test metadata directly from source files like Python tests
+or Bash scripts.
+
+.. _config-plugins:
+
+Plugin Configuration
+--------------------
+
+Plugins can be enabled in the ``.fmf/config`` file:
+
+.. code-block:: yaml
+
+    plugins:
+      - fmf  # Short name for FmfPlugin
+      # or use full path:
+      - fmf.plugins.fmf.FmfPlugin
+      # Future phases:
+      # - bash
+      # - pytest
+
+The ``plugins`` section lists built-in plugins to load. Each plugin
+handles specific file types (e.g., ``.sh`` for Bash, ``.py`` for Python).
+
+**Security**: Only built-in plugins from ``fmf/plugins/`` can be loaded.
+Arbitrary code execution from config files is prevented.
+
+If no ``plugins`` section is present, only the default ``FmfPlugin``
+is loaded (for backward compatibility), which handles ``.fmf`` files.
+
+Plugin Priority
+---------------
+
+When multiple plugins can handle the same file extension, the plugin
+with the highest priority (0-200) is selected. Built-in plugins use
+these priorities:
+
+* FmfPlugin: 100 (default format)
+* BashPlugin: 50 (future)
+* PytestPlugin: 50 (future)
+
+You can override plugin priorities in ``.fmf/config``:
+
+.. code-block:: yaml
+
+    plugins:
+      - fmf
+      - bash
+
+    # Override priorities to prefer bash over fmf
+    bash:
+      priority: 120  # Higher than FmfPlugin (100)
+
+    # Or lower fmf priority
+    fmf:
+      priority: 30   # Lower than default (100)
+
+This allows you to control which plugin takes precedence when
+multiple formats are present in the same tree.
+
+File Pattern Override
+---------------------
+
+Future enhancement: Plugins will support custom file patterns via
+configuration to filter which files are processed.
+
+Available Plugins
+-----------------
+
+**Phase 1 (Current):**
+
+* ``fmf.plugins.fmf.FmfPlugin`` - YAML-based ``.fmf`` files (default)
+
+**Future Phases:**
+
+* ``fmf.plugins.bash.BashPlugin`` - Bash scripts with ``#:FMF:`` comments
+* ``fmf.plugins.pytest.PytestPlugin`` - Python tests with pytest marks
+
+See ``PLUGIN_FUTURE.md`` for detailed plugin implementation roadmap.
+
+
 Names
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
