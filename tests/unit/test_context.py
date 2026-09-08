@@ -1,7 +1,6 @@
 import pytest
 
-from fmf.context import (CannotDecide, Context, ContextValue, InvalidContext,
-                         InvalidRule)
+from fmf.context import CannotDecide, Context, ContextValue, InvalidRule
 
 
 @pytest.fixture
@@ -246,7 +245,7 @@ class TestExample:
         How you can use context_cls for modules
         """
 
-        perl = context_cls("module = perl:5.28")
+        perl = context_cls(module="perl:5.28")
 
         assert perl.matches("module >= perl:5")
         assert not perl.matches("module > perl:5")
@@ -262,7 +261,7 @@ class TestExample:
         # e.g feature in 5.28+ but dropped in perl6
         assert perl.matches("module ~>= perl:5.28")
         with pytest.raises(CannotDecide):
-            context_cls("module = perl:6.28").matches("module ~>= perl:5.28")
+            context_cls(module="perl:6.28").matches("module ~>= perl:5.28")
 
     def test_comma(self, context_cls: type[Context]):
         """
@@ -621,24 +620,10 @@ class TestParser:
 
 class TestContext:
     def test_creation(self, context_cls: type[Context]):
-        for created in [
-                context_cls(dim_a="value", dim_b=["val"], dim_c=["foo", "bar"]),
-                context_cls("dim_a=value and dim_b=val and dim_c == foo,bar")]:
-            assert created._dimensions["dim_a"] == {
-                context_cls._context_dimensions.create("dim_a", "value")}
-            assert created._dimensions["dim_b"] == {
-                context_cls._context_dimensions.create("dim_b", "val")}
-            assert created._dimensions["dim_c"] == {
-                context_cls._context_dimensions.create(
-                    "dim_c", "foo"), context_cls._context_dimensions.create(
-                    "dim_c", "bar")}
-        # Invalid ways to create context_cls
-        with pytest.raises(InvalidContext):
-            context_cls("a=b", "c=d")  # Just argument
-        with pytest.raises(InvalidContext):
-            context_cls("a=b or c=d")  # Can't use OR
-        with pytest.raises(InvalidContext):
-            context_cls("a < d")  # Operator other than =/==
+        context = context_cls(dim_a="value", dim_b=["val"], dim_c=["foo", "bar"])
+        assert context._dimensions["dim_a"] == {ContextValue("value")}
+        assert context._dimensions["dim_b"] == {ContextValue("val")}
+        assert context._dimensions["dim_c"] == {ContextValue("foo"), ContextValue("bar")}
 
     def test_prints(self, context_cls: type[Context]):
         c = context_cls()
@@ -812,18 +797,18 @@ class TestContext:
 
         assert context_cls(distro='fedora-33').matches('distro == fedora')
         with pytest.raises(CannotDecide):
-            context_cls("module = py:5.28").matches("module > perl:5.28")
+            context_cls(module="py:5.28").matches("module > perl:5.28")
         with pytest.raises(CannotDecide):
-            context_cls("module = py:5").matches("module > perl:5.28")
+            context_cls(module="py:5").matches("module > perl:5.28")
         with pytest.raises(CannotDecide):
-            context_cls("module = py:5").matches("module >= perl:5.28")
+            context_cls(module="py:5").matches("module >= perl:5.28")
         with pytest.raises(CannotDecide):
-            context_cls("distro = centos").matches("distro >= fedora")
+            context_cls(distro="centos").matches("distro >= fedora")
 
-        assert context_cls("distro = centos").matches("distro != fedora")
-        assert not context_cls("distro = centos").matches("distro == fedora")
+        assert context_cls(distro="centos").matches("distro != fedora")
+        assert not context_cls(distro="centos").matches("distro == fedora")
 
-        rhel7 = context_cls("distro = rhel-7")
+        rhel7 = context_cls(distro="rhel-7")
         assert rhel7.matches("distro == rhel")
         assert rhel7.matches("distro == rhel-7")
         assert not rhel7.matches("distro == rhel-7.3")
