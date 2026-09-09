@@ -12,19 +12,20 @@ from pprint import pformat as pretty
 from typing import Any, Dict, Optional, Protocol
 
 from ruamel.yaml import YAML
-from ruamel.yaml.constructor import DuplicateKeyError
 from ruamel.yaml.error import YAMLError
 
 import fmf.context
 import fmf.utils as utils
+from fmf.plugin_loader import get_registry
+# Re-export constants for backward compatibility
+from fmf.plugins.fmf import MAIN, SUFFIX
 from fmf.utils import dict_to_yaml, log
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SUFFIX = ".fmf"
-MAIN = "main" + SUFFIX
+# SUFFIX and MAIN moved to fmf.plugins.fmf and re-exported above
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
 ADJUST_CONTROL_KEYS = ['because', 'continue', 'when']
 
@@ -209,6 +210,11 @@ class Tree:
             log.debug("Config file not found.")
         except YAMLError as error:
             raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
+
+        # Let every plugin read its own section from the config once per tree.
+        # The config is identical for all nodes, so this is done here at the
+        # root rather than for each file loaded during grow().
+        get_registry().configure(self.config or {})
 
     def _merge_plus(self, data, key, value, prepend=False):
         """
@@ -716,35 +722,50 @@ class Tree:
             log.debug("Skipping '{0}' (not accessible).".format(path))
             return
 
-        # Investigate main.fmf as the first file (for correct inheritance)
-        filenames = sorted(
-            [filename for filename in filenames if filename.endswith(SUFFIX)])
-        try:
-            filenames.insert(0, filenames.pop(filenames.index(MAIN)))
-        except ValueError:
-            pass
+        # Get plugin registry
+        registry = get_registry()
 
-        # Check every metadata file and load data (ignore hidden)
+        # Prioritize main.fmf first if it exists (for correct inheritance)
+        if MAIN in filenames:
+            filenames = sorted([f for f in filenames if f != MAIN])
+            filenames.insert(0, MAIN)
+        else:
+            filenames = sorted(filenames)
+
+        # Check every file and load data if a plugin can handle it
         for filename in filenames:
+            # Skip hidden files (unless enabled in config)
             if filename.startswith(".") and filename not in self.explore_include:
                 continue
+
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
-            log.info("Checking file {0}".format(fullpath))
+
+            # Find appropriate plugin for this file. The registry hands out a
+            # cached, already-configured instance (read_config is applied once
+            # per tree, not per file) so large trees don't pay a per-file
+            # plugin construction cost. This uses can_handle() which can check
+            # regex patterns.
+            plugin = registry.get_plugin_instance_for_file(filename)
+            if not plugin:
+                # No plugin can handle this file, skip silently
+                continue
+
+            # Read file using plugin
+            log.info(f"Processing '{fullpath}' with {type(plugin).__name__}")
             try:
-                with open(fullpath, encoding='utf-8') as datafile:
-                    # Workadound ruamel s390x read issue - fmf/issues/164
-                    content = datafile.read()
-                    data = YAML(typ="safe").load(content)
-            except (YAMLError, DuplicateKeyError) as error:
+                data = plugin.read(fullpath)
+            except Exception as error:
                 raise utils.FileError(
-                    f"Failed to parse '{fullpath}'.\n{error}")
+                    f"Failed to read '{fullpath}' with {type(plugin).__name__}.\n{error}")
+
             log.data(pretty(data))
-            # Handle main.fmf as data for self
+
+            # Handle main.fmf specially (backward compatibility)
             if filename == MAIN:
                 self.sources.append(fullpath)
                 self._raw_data = copy.deepcopy(data)
                 self.update(data)
-            # Handle other *.fmf files as children
+            # Handle other files as children
             else:
                 self.child(os.path.splitext(filename)[0], data, fullpath)
 
@@ -1007,11 +1028,14 @@ class Tree:
         raw data identify the dictionary corresponding to the current
         node, create if needed. Detect the raw data source filename.
 
-        Return tuple with the following three items:
+        Return tuple with the following four items:
 
         node_data ... dictionary containing raw data for the current node
         full_data ... full raw data from the closest parent node
         source ... file system path where the full raw data are stored
+        hierarchy ... virtual node names from the source node down to this
+                      node (empty when the node is itself file-backed), so a
+                      writer plugin knows where in the structure the node sits
         """
 
         # List of node names in the virtual hierarchy
@@ -1044,7 +1068,7 @@ class Tree:
             node_data = node_data[key]
 
         # The full raw data were read from the last source
-        return node_data, full_data, node.sources[-1]
+        return node_data, full_data, node.sources[-1], hierarchy
 
     def __enter__(self):
         """
@@ -1075,9 +1099,36 @@ class Tree:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
         Experimental: Store modified metadata to disk
+
+        Uses the plugin system to write data back to the source file.
+        Falls back to direct YAML write if no plugin is found.
         """
 
-        _, full_data, source = self._locate_raw_data()
+        _, full_data, source, hierarchy = self._locate_raw_data()
+
+        # Try to use plugin for writing. The registry returns a cached,
+        # already-configured instance (config is applied per tree, not here).
+        registry = get_registry()
+        registry.configure(self.config or {})
+        plugin = registry.get_plugin_instance_for_file(source)
+
+        if plugin:
+            try:
+                # full_data holds the complete raw structure (including the
+                # in-place modifications and any 'key+' / 'key-' merge keys),
+                # so a round-trip writer like FmfPlugin can just dump it.
+                # hierarchy tells non-YAML writers where this node lives; the
+                # decomposed append/modified/deleted dicts are not tracked yet
+                # (see Plugin.write) and are passed empty for now.
+                plugin.write(source, hierarchy, full_data, {}, {}, [])
+                return
+            except NotImplementedError:
+                # Plugin doesn't support write, fall back to default
+                log.debug(f"Plugin {type(plugin).__name__} doesn't support write, using default")
+            except Exception as error:
+                log.warning(f"Plugin write failed: {error}, using default")
+
+        # Fallback: direct YAML write (backward compatibility)
         with open(source, "w", encoding='utf-8') as file:
             file.write(dict_to_yaml(full_data))
 
