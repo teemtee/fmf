@@ -126,86 +126,102 @@ the ``.fmf`` directory cannot be used for storing metadata.
 Plugins
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Starting with fmf 2.0, a plugin system allows reading metadata from
-multiple file formats beyond ``.fmf`` (YAML) files. This enables
-extracting test metadata directly from source files like Python tests
-or Bash scripts.
+.. versionadded:: 1.8
 
-.. _config-plugins:
+A plugin system allows reading metadata from multiple file formats
+beyond ``.fmf`` (YAML) files. This enables extracting test metadata
+directly from source files like Python tests or Bash scripts. The
+built-in ``FmfPlugin`` handles the traditional ``.fmf`` files and is
+always available.
 
-Plugin Configuration
---------------------
+Registration
+------------
 
-Plugins can be enabled in the ``.fmf/config`` file:
+Plugins are discovered through the ``fmf.plugins`` `entry point group
+<https://packaging.python.org/en/latest/specifications/entry-points/>`__.
+A package advertises a plugin in its ``pyproject.toml``:
+
+.. code-block:: toml
+
+    [project.entry-points."fmf.plugins"]
+    bash = "mypackage.plugins:BashPlugin"
+
+Any plugin installed in the current environment is picked up
+automatically.
+
+Loading order
+-------------
+
+When more than one plugin can handle the same file, the first plugin in
+load order (the order in which the plugin modules are discovered) is used.
+The order is not user configurable.
+
+.. warning::
+
+    As with :ref:`elasticity <elasticity>`, the resolution order when the
+    *same* node is defined by several formats (for example a ``.fmf`` file
+    and a source file at the same level) is not yet fully specified. Avoid
+    relying on cross-format overrides until the behavior is well defined.
+
+Configuration
+-------------
+
+Each plugin can read its own section from the ``.fmf/config`` file. A
+plugin declares the name of its section through the ``config_section``
+class attribute and picks up the settings by implementing the
+``read_config()`` method. This keeps every plugin's options isolated in
+a dedicated, clearly named block:
 
 .. code-block:: yaml
 
-    plugins:
-      - fmf  # Short name for FmfPlugin
-      # or use full path:
-      - fmf.plugins.fmf.FmfPlugin
-      # Future phases:
-      # - bash
-      # - pytest
-
-The ``plugins`` section lists built-in plugins to load. Each plugin
-handles specific file types (e.g., ``.sh`` for Bash, ``.py`` for Python).
-
-**Security**: Only built-in plugins from ``fmf/plugins/`` can be loaded.
-Arbitrary code execution from config files is prevented.
-
-If no ``plugins`` section is present, only the default ``FmfPlugin``
-is loaded (for backward compatibility), which handles ``.fmf`` files.
-
-Plugin Priority
----------------
-
-When multiple plugins can handle the same file extension, the plugin
-with the highest priority (0-200) is selected. Built-in plugins use
-these priorities:
-
-* FmfPlugin: 100 (default format)
-* BashPlugin: 50 (future)
-* PytestPlugin: 50 (future)
-
-You can override plugin priorities in ``.fmf/config``:
-
-.. code-block:: yaml
-
-    plugins:
-      - fmf
-      - bash
-
-    # Override priorities to prefer bash over fmf
-    bash:
-      priority: 120  # Higher than FmfPlugin (100)
-
-    # Or lower fmf priority
+    # .fmf/config
     fmf:
-      priority: 30   # Lower than default (100)
+        # options for the built-in FmfPlugin
+    bash:
+        # options for a bash plugin
 
-This allows you to control which plugin takes precedence when
-multiple formats are present in the same tree.
+A plugin receives the whole parsed config and reads just its own part,
+for example::
 
-File Pattern Override
----------------------
+    class BashPlugin(Plugin):
+        config_section = "bash"
 
-Future enhancement: Plugins will support custom file patterns via
-configuration to filter which files are processed.
+        def read_config(self, config):
+            self.settings = self.config_section_data(config)
 
-Available Plugins
+The ``config_section_data()`` helper returns the mapping stored under the
+plugin's ``config_section`` (or an empty dict when the section is missing
+or the plugin defines no section). The built-in ``FmfPlugin`` reads the
+``fmf`` section; it currently has no options and the section is reserved
+for future settings.
+
+Because the config is identical for every node in a tree, ``read_config()``
+is called only *once per tree*, not for each file.
+
+Performance
+-----------
+
+The plugin layer keeps loading fast. A single instance of each plugin is
+created and reused for the whole tree instead of being constructed for every
+file. Trees can hold thousands of ``.fmf`` files and constructing a plugin is
+not free (``FmfPlugin`` builds a YAML parser in its constructor), so caching
+the instance avoids a per-file cost that would otherwise dominate on large
+trees. Plugins must therefore keep no per-file state: :meth:`read` and
+:meth:`write` receive the filename as an argument, and configuration is
+applied once via ``read_config()``.
+
+File matching is also kept cheap. The default ``can_handle()`` checks the
+plugin's ``extensions`` (a plain suffix test) first and only then its
+``file_patterns``, which are compiled to regular expressions once and cached
+on the class rather than recompiled for every file.
+
+Available plugins
 -----------------
 
-**Phase 1 (Current):**
+* ``fmf.plugins.fmf.FmfPlugin`` -- YAML-based ``.fmf`` files (built-in)
 
-* ``fmf.plugins.fmf.FmfPlugin`` - YAML-based ``.fmf`` files (default)
-
-**Future Phases:**
-
-* ``fmf.plugins.bash.BashPlugin`` - Bash scripts with ``#:FMF:`` comments
-* ``fmf.plugins.pytest.PytestPlugin`` - Python tests with pytest marks
-
-See ``PLUGIN_FUTURE.md`` for detailed plugin implementation roadmap.
+Additional plugins (Bash scripts, Python/pytest tests) are planned; see
+``PLUGIN_FUTURE.md`` for the implementation roadmap.
 
 
 Names

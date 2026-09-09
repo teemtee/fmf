@@ -53,6 +53,11 @@ docs = [
 [project.scripts]
 fmf = 'fmf.cli:cli_entry'
 
+# Built-in metadata loader plugins. Third-party plugins advertise themselves
+# under the same 'fmf.plugins' entry point group and are discovered automatically.
+[project.entry-points."fmf.plugins"]
+fmf = 'fmf.plugins.fmf:FmfPlugin'
+
 [tool.hatch.version]
 source = 'vcs'
 raw-options.version_scheme = "release-branch-semver"

@@ -7,28 +7,33 @@ This document outlines the future phases of the FMF plugin system development. P
 **Status**: Implemented on `preparation_pyloader` branch
 
 **What was delivered**:
-- Abstract `Plugin` base class with `can_handle()`, `read()`, `write()` methods
-- `PluginRegistry` for static plugin registration and management
+- Abstract `Plugin` base class with `can_handle()`, `read()`, `write()` and
+  `read_config()` methods
+- Per-plugin configuration: each plugin declares a `config_section` and reads
+  its own block from `.fmf/config` via `read_config()`, applied once per tree
+- `PluginRegistry` discovering plugins via the `fmf.plugins` entry point group,
+  caching one instance per plugin class so large trees pay no per-file plugin
+  construction cost
 - `FmfPlugin` - refactored .fmf file loading into the plugin system
 - Integration into `Tree` class for seamless file loading
-- Configuration support via `.fmf/config`
-- Priority system (0-200 scale) with config override support
-- Comprehensive unit and integration tests (275 tests)
+- Deterministic loading order based on plugin discovery order (not user-configurable)
+- Comprehensive unit and integration tests
 - Backward compatibility - all existing tests pass
-- Security: Only built-in plugins from `fmf/plugins/` can be loaded
 
 **Key files**:
-- `fmf/plugin.py` - Plugin ABC (148 lines)
-- `fmf/plugin_loader.py` - Registry and loader (73 lines)
-- `fmf/plugins/__init__.py` - Static registration (23 lines)
-- `fmf/plugins/fmf.py` - FmfPlugin implementation (110 lines)
-- `tests/unit/test_plugin.py` - Plugin tests (29 tests)
+- `fmf/plugin.py` - Plugin ABC
+- `fmf/plugin_loader.py` - Registry and entry point discovery
+- `fmf/plugins/__init__.py` - Plugins package
+- `fmf/plugins/fmf.py` - FmfPlugin implementation
+- `tests/unit/test_plugin.py` - Plugin tests
 
-**Recent improvements**:
-- Simplified plugin_loader from 169 to 73 lines
-- Priority override via config (e.g., `fmf: { priority: 30 }`)
-- Mock plugin tests to verify multi-format support
-- Direct `can_handle()` filtering (supports regex patterns)
+**Design decisions**:
+- Registration uses the standard `entry-point` mechanism.
+- The loading order follows plugin discovery order and is *not*
+  user-configurable. Cross-format override behavior is not yet fully defined
+  (same open question as `elasticity`).
+- The format version stays at `1.x` for now; the plugin system is additive
+  and backward compatible.
 
 ---
 
@@ -62,8 +67,7 @@ wget --version
 1. **Create `fmf/plugins/bash.py`**
    - Class: `BashPlugin(Plugin)`
    - Extensions: `[".sh"]`
-   - Priority: `50` (lower than FmfPlugin)
-   - File patterns: Configurable, default `r".*\.sh$"`
+   - File patterns: default `r".*\.sh$"`
 
 2. **Implement `can_handle()`**
    - Check `.sh` extension
@@ -80,22 +84,18 @@ wget --version
    - Use `_write_fmf_fallback()` to create `.fmf` file
    - Don't modify original bash script (safety)
 
-5. **Register in `fmf/plugins/__init__.py`**
-   ```python
-   from fmf.plugins.bash import BashPlugin
-   _registry.register(BashPlugin)
-   PLUGIN_NAMES['bash'] = BashPlugin
+5. **Advertise via the `fmf.plugins` entry point** (in the providing
+   package's `pyproject.toml`)
+   ```toml
+   [project.entry-points."fmf.plugins"]
+   bash = "fmf.plugins.bash:BashPlugin"
    ```
 
-6. **Configuration support**
-   - Allow pattern override: `bash: { file_patterns: ["test_.*\\.sh"] }`
-   - Allow priority override: `bash: { priority: 120 }`
-
-7. **Testing**
+6. **Testing**
    - Unit tests for metadata extraction
    - Test value parsing (lists, bools, numbers)
    - Test with Tree integration
-   - Test priority vs FmfPlugin
+   - Test load order vs FmfPlugin
    - Test write fallback creates .fmf
 
 ### Example Use Case
@@ -105,14 +105,12 @@ wget --version
 tests/
   .fmf/
     version: 1
-    config:
-      plugins:
-        - fmf
-        - bash
   main.fmf          # Root metadata
   test-basic.sh     # Bash test with fmf comments
   test-wget.sh      # Another bash test
 ```
+
+The `bash` plugin is picked up automatically once its package is installed.
 
 **test-basic.sh**:
 ```bash
@@ -130,8 +128,8 @@ wget --version
 
 - Existing bash scripts work without changes
 - Add `# fmf-*` comments to enable metadata extraction
-- If both `test.sh` and `test.fmf` exist, FmfPlugin wins (priority 100 > 50)
-- Override with `bash: { priority: 120 }` to prefer .sh files
+- If both `test.sh` and `test.fmf` exist, the plugin that comes first in
+  load order wins; this order is not user-configurable
 
 ---
 
@@ -170,7 +168,6 @@ def test_basic_auth():
 1. **Create `fmf/plugins/pytest.py`**
    - Class: `PytestPlugin(Plugin)`
    - Extensions: `[".py"]`
-   - Priority: `50`
    - File patterns: Default `r"test_.*\.py$|.*_test\.py$"`
 
 2. **Implement `can_handle()`**
@@ -200,17 +197,15 @@ def test_basic_auth():
 6. **Implement `write()`**
    - Use `_write_fmf_fallback()` (don't modify Python code)
 
-7. **Register in `fmf/plugins/__init__.py`**
-   ```python
-   from fmf.plugins.pytest import PytestPlugin
-   _registry.register(PytestPlugin)
-   PLUGIN_NAMES['pytest'] = PytestPlugin
+7. **Advertise via the `fmf.plugins` entry point**
+   ```toml
+   [project.entry-points."fmf.plugins"]
+   pytest = "fmf.plugins.pytest:PytestPlugin"
    ```
 
-8. **Configuration support**
-   - Pattern override: `pytest: { file_patterns: ["check_.*\\.py"] }`
-   - Mark mapping: Custom mark → tag conversions
-   - Priority override: `pytest: { priority: 150 }`
+8. **Behavior notes**
+   - A doc-string based and a decorator based approach should be mutually
+     exclusive (do not mix both within a single plugin)
 
 9. **Testing**
    - Test AST parsing of various test patterns
@@ -347,56 +342,36 @@ with Tree("/path/to/metadata") as data:
 
 ---
 
-## Configuration System (All Phases)
+## Plugin Registration & Ordering (All Phases)
 
-### Current Config Format
+### Registration
 
-```yaml
-plugins:
-  - fmf
-  - bash
-  - pytest
+Plugins are discovered through the `fmf.plugins` entry point group. A package
+advertises its plugin like this:
 
-# Plugin-specific settings
-fmf:
-  priority: 100
-
-bash:
-  priority: 50
-  file_patterns:
-    - "test_.*\\.sh$"
-    - "runtest\\.sh$"
-
-pytest:
-  priority: 50
-  file_patterns:
-    - "test_.*\\.py$"
-    - ".*_test\\.py$"
+```toml
+[project.entry-points."fmf.plugins"]
+bash = "fmf.plugins.bash:BashPlugin"
+pytest = "fmf.plugins.pytest:PytestPlugin"
 ```
 
-### Features to Add
+Any installed plugin is picked up automatically.
 
-1. **Include/exclude directories** (per plugin)
-   ```yaml
-   pytest:
-     include_dirs:
-       - tests/
-       - checks/
-     exclude_dirs:
-       - tests/integration/  # Too slow
-   ```
+### Loading order
 
-2. **Pattern overrides** (Phase 2/3)
-   - Override default `file_patterns`
-   - Per-plugin basis
+When multiple plugins can handle the same file, the first plugin in load
+order (the order in which the plugin modules are discovered) is used. This
+order is *not* user-configurable.
 
-3. **Mark mappings** (Phase 3)
-   ```yaml
-   pytest:
-     mark_mappings:
-       tier1: Tier1
-       security: Security
-   ```
+As with `elasticity`, the resolution order when the *same* node is defined by
+several formats is not yet fully specified and should be documented per plugin.
+
+### Possible future work (not yet decided)
+
+- Per-plugin file pattern / directory include-exclude handling. If added, it
+  should go through a single, well-defined mechanism consistent with the
+  entry-point approach.
+- Mark mappings for the pytest plugin (custom mark → tag conversions).
 
 ---
 
@@ -407,20 +382,19 @@ pytest:
 Each plugin needs:
 1. **Unit tests**: Parsing, value extraction
 2. **Integration tests**: Tree loading
-3. **Priority tests**: Conflicts with other plugins
-4. **Config tests**: Pattern overrides, priority overrides
-5. **Write tests**: Fallback creation
+3. **Load order tests**: Conflicts with other plugins
+4. **Write tests**: Fallback creation
 
 ### Cross-Plugin Tests
 
 1. **Mixed format trees**: `.fmf` + `.sh` + `.py` in same tree
-2. **Priority resolution**: Multiple plugins for same extension
-3. **Config validation**: Invalid plugin names, bad priorities
+2. **Load order resolution**: Multiple plugins for same extension
+3. **Entry point discovery**: Plugins are found automatically
 
 ### Regression Tests
 
 1. **Backward compatibility**: Existing examples still work
-2. **No plugin config**: Default FmfPlugin-only mode
+2. **Only FmfPlugin installed**: Default `.fmf`-only mode
 3. **Performance**: Plugin overhead is minimal
 
 ---
@@ -448,7 +422,7 @@ Each plugin needs:
 ### Phase 2 (Bash)
 - [ ] BashPlugin reads metadata from `# fmf-*` comments
 - [ ] Configurable file patterns work
-- [ ] Priority override works
+- [ ] Load order with FmfPlugin behaves as documented
 - [ ] Write fallback creates `.fmf` files
 - [ ] Tests: 10+ new tests, all pass
 - [ ] Documentation updated
@@ -509,10 +483,11 @@ Each plugin needs:
 
 ### Current (Phase 1)
 
-✅ **Only built-in plugins** from `fmf/plugins/` directory
-✅ **No dynamic loading** from environment or arbitrary paths
-✅ **Static registration** in `fmf/plugins/__init__.py`
-✅ **Config validation** against known plugin names
+✅ **Plugins are installed Python packages** advertised via the `fmf.plugins`
+   entry point group
+✅ **No loading from arbitrary filesystem paths** or the fmf tree itself
+✅ **Trust boundary is package installation** (same as any dependency)
+✅ **Safe YAML parsing** (`typ="safe"`) in the built-in FmfPlugin
 
 ### Future Phases
 
@@ -523,27 +498,22 @@ Each plugin needs:
 
 ### Threat Model
 
-**Out of scope**: Malicious .fmf/config files
-- User controls config → can break their own tree
-- No remote/untrusted trees processed
-
-**In scope**: Prevent arbitrary code execution
-- No loading external plugins
+**In scope**: Prevent arbitrary code execution during metadata reading
 - No executing test code during read
 - No dangerous YAML tags (use `typ="safe"`)
+
+**Note**: Plugins are ordinary installed Python packages advertised via
+entry points, so they are trusted to the same degree as any other installed
+dependency; the trust boundary is package installation, not the fmf tree.
 
 ---
 
 ## Migration Guide (for users)
 
-### Adding Bash Plugin to Existing Tree
+### Adding the Bash Plugin to an Existing Tree
 
-1. Update `.fmf/config`:
-   ```yaml
-   plugins:
-     - fmf
-     - bash
-   ```
+1. Install a package that provides the bash plugin (it registers itself via
+   the `fmf.plugins` entry point).
 
 2. Add metadata to bash scripts:
    ```bash
@@ -553,14 +523,9 @@ Each plugin needs:
 
 3. Verify: `fmf ls` should show both `.fmf` and `.sh` nodes
 
-### Adding Pytest Plugin
+### Adding the Pytest Plugin
 
-1. Update `.fmf/config`:
-   ```yaml
-   plugins:
-     - fmf
-     - pytest
-   ```
+1. Install a package that provides the pytest plugin.
 
 2. Add pytest marks to tests (if not present):
    ```python
@@ -572,14 +537,10 @@ Each plugin needs:
 
 3. Verify: `fmf ls` shows Python test functions as nodes
 
-### Priority Override
+### Loading Order
 
-If both `.sh` and `.fmf` exist, choose which wins:
-
-```yaml
-bash:
-  priority: 120  # Bash wins over FmfPlugin (100)
-```
+If both `.sh` and `.fmf` define the same node, the plugin that comes first in
+load order wins. This order cannot be overridden by users.
 
 ---
 

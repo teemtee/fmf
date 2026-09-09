@@ -2,7 +2,8 @@
 FMF Plugin - YAML-based metadata loader
 """
 
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -26,8 +27,7 @@ class FmfPlugin(Plugin):
 
     extensions = [SUFFIX]
     file_patterns = [r".*\.fmf$"]
-    priority = 100  # Default format priority (0-200 scale, overridable in config)
-    CONFIG_SECTION = "fmf"
+    config_section = "fmf"
 
     def __init__(self):
         """Initialize FmfPlugin with YAML loader."""
@@ -35,17 +35,17 @@ class FmfPlugin(Plugin):
         # typ="safe" provides safe loading without code execution
         self._yaml = YAML(typ="safe")
 
-    def can_handle(self, filename: str) -> bool:
+    def read_config(self, config: Dict[str, Any]) -> None:
         """
-        Check if file has .fmf extension.
+        Read the ``fmf`` section from ``.fmf/config``.
 
-        Args:
-            filename: Name or path of file to check
-
-        Returns:
-            True if filename ends with .fmf
+        The built-in FmfPlugin currently has no configurable options; the
+        section is read for consistency and reserved for future settings.
         """
-        return filename.endswith(SUFFIX)
+        self.settings = self.config_section_data(config)
+
+    # can_handle() is inherited from Plugin: extensions = [".fmf"] already
+    # selects every .fmf file via the cheap suffix check.
 
     def read(self, filename: str) -> Dict[str, Any]:
         """
@@ -64,12 +64,11 @@ class FmfPlugin(Plugin):
             FileError: If file cannot be parsed or contains duplicate keys
         """
         try:
-            with open(filename, encoding='utf-8') as datafile:
-                content = datafile.read()
-                data = self._yaml.load(content)
-                log.debug(f"Loaded .fmf file: {filename}")
-                # YAML loader returns None for empty files
-                return data if data is not None else {}
+            content = Path(filename).read_text(encoding='utf-8')
+            data = self._yaml.load(content)
+            log.debug(f"Loaded .fmf file: {filename}")
+            # YAML loader returns None for empty files
+            return data if data is not None else {}
 
         except YAMLError as error:
             raise utils.FileError(
@@ -81,11 +80,11 @@ class FmfPlugin(Plugin):
     def write(
             self,
             filename: str,
-            hierarchy,  # noqa: ARG002
-            data,
-            append_dict,  # noqa: ARG002
-            modified_dict,  # noqa: ARG002
-            deleted_items) -> None:  # noqa: ARG002
+            hierarchy: List[str],  # noqa: ARG002
+            data: Dict[str, Any],
+            append_dict: Dict[str, Any],  # noqa: ARG002
+            modified_dict: Dict[str, Any],  # noqa: ARG002
+            deleted_items: List[str]) -> None:  # noqa: ARG002
         """
         Write metadata back to .fmf file.
 
@@ -105,5 +104,4 @@ class FmfPlugin(Plugin):
             as prepared by Tree._locate_raw_data(). We just need to write it
             to the YAML file.
         """
-        with open(filename, 'w', encoding='utf-8') as f:
-            f.write(dict_to_yaml(data))
+        Path(filename).write_text(dict_to_yaml(data), encoding='utf-8')

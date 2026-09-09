@@ -6,6 +6,7 @@ import os
 import tempfile
 from pathlib import Path
 from shutil import rmtree
+from typing import Optional
 
 import pytest
 
@@ -25,20 +26,28 @@ class TestPluginRegistry:
         """Clean up after tests."""
         get_registry().clear()
 
-    def test_fmf_plugin_auto_registered(self):
-        """Test that FmfPlugin is auto-registered on import."""
-        # Clear and re-import to trigger registration
-        get_registry().clear()
-        import importlib
-
-        import fmf.plugins.fmf
-        importlib.reload(fmf.plugins.fmf)
+    def test_fmf_plugin_discovered_via_entry_point(self):
+        """Test that FmfPlugin is discovered through the entry point group."""
+        from fmf.plugins.fmf import FmfPlugin
 
         registry = get_registry()
+        registry.clear()
+        registry.discover()
+
         # Should be able to handle .fmf files
         plugin = registry.get_plugin_for_file("test.fmf")
-        assert plugin is not None
+        assert plugin is FmfPlugin
         assert plugin.extensions == [".fmf"]
+
+    def test_get_plugin_triggers_discovery(self):
+        """Test that discovery happens lazily on first lookup after clear."""
+        from fmf.plugins.fmf import FmfPlugin
+
+        registry = get_registry()
+        registry.clear()
+
+        # No explicit discover()/register() call - lookup must trigger it
+        assert registry.get_plugin_for_file("test.fmf") is FmfPlugin
 
     def test_plugin_can_handle_fmf_files(self):
         """Test that FmfPlugin handles .fmf files."""
@@ -60,50 +69,31 @@ class TestPluginRegistry:
         plugin_class = registry.get_plugin_for_file("test.xyz")
         assert plugin_class is None
 
-    def test_plugin_priority_system(self):
-        """Test that higher priority plugins are preferred."""
+    def test_plugin_load_order(self):
+        """Test that the first plugin in load order wins for a file."""
         from fmf.plugins.fmf import FmfPlugin
 
-        # Create a mock plugin with lower priority
-        class LowPriorityPlugin(Plugin):
+        # Another plugin that also handles .fmf files
+        class OtherFmfPlugin(Plugin):
             extensions = [".fmf"]
             file_patterns = [r".*\.fmf$"]
-            priority = 10  # Lower than FmfPlugin (100)
+
+            def read_config(self, config):
+                pass
 
             def can_handle(self, filename):
                 return filename.endswith(".fmf")
 
             def read(self, filename):
-                return {"from": "LowPriorityPlugin"}
+                return {"from": "OtherFmfPlugin"}
 
         registry = get_registry()
         registry.register(FmfPlugin)
-        registry.register(LowPriorityPlugin)
+        registry.register(OtherFmfPlugin)
 
-        # FmfPlugin should win due to higher priority
+        # FmfPlugin was registered first, so it wins
         plugin_class = registry.get_plugin_for_file("test.fmf")
         assert plugin_class == FmfPlugin
-
-    def test_load_builtin_plugin_by_short_name(self):
-        """Test loading built-in plugin by short name."""
-        registry = get_registry()
-
-        # Load by short name (just validates, doesn't actually load)
-        config = {"plugins": ["fmf"]}
-        registry.load_from_config(config)
-
-        # Should not raise an error (plugin name is valid)
-        # Note: load_from_config now just validates, doesn't load
-
-    def test_load_non_builtin_plugin_warns(self):
-        """Test that non-built-in plugin names generate warnings."""
-        registry = get_registry()
-
-        # Try to load unknown plugin
-        config = {"plugins": ["some.arbitrary.module"]}
-
-        # Should log a warning but not raise
-        registry.load_from_config(config)
 
     def test_register_invalid_plugin_fails(self):
         """Test that registering non-Plugin class raises error."""
@@ -212,18 +202,62 @@ class TestFmfPlugin:
             assert "tag:" in content
 
 
+class TestPluginConfigSection:
+    """Test that plugins can read their own section from .fmf/config."""
+
+    def _make_plugin(self, section: Optional[str] = "my"):
+        """Build a minimal concrete plugin with the given config section."""
+        from fmf.plugins.fmf import FmfPlugin
+
+        class MyPlugin(FmfPlugin):
+            config_section = section
+
+            def read_config(self, config):
+                self.settings = self.config_section_data(config)
+
+        return MyPlugin()
+
+    def test_config_section_data_returns_own_section(self):
+        """Plugin gets only its own section from the config."""
+        plugin = self._make_plugin("my")
+        config = {"my": {"option": 1}, "other": {"option": 2}}
+        assert plugin.config_section_data(config) == {"option": 1}
+
+    def test_config_section_data_missing_section(self):
+        """Missing or non-mapping sections yield an empty dict."""
+        plugin = self._make_plugin("my")
+        assert plugin.config_section_data({}) == {}
+        assert plugin.config_section_data({"my": "not-a-dict"}) == {}
+
+    def test_config_section_data_no_section_defined(self):
+        """A plugin without config_section always gets an empty dict."""
+        plugin = self._make_plugin(None)
+        assert plugin.config_section_data({"anything": {"a": 1}}) == {}
+
+    def test_read_config_receives_section(self):
+        """read_config() is passed the whole config and can pick its section."""
+        plugin = self._make_plugin("my")
+        plugin.read_config({"my": {"greeting": "hello"}})
+        assert plugin.settings == {"greeting": "hello"}
+
+    def test_fmf_plugin_reads_its_section(self):
+        """FmfPlugin stores its own 'fmf' config section in settings."""
+        from fmf.plugins.fmf import FmfPlugin
+
+        plugin = FmfPlugin()
+        plugin.read_config({"fmf": {"future_option": True}, "other": {}})
+        assert plugin.settings == {"future_option": True}
+
+
 class TestTreeWithPlugins:
     """Test Tree integration with plugin system."""
 
     def setup_method(self):
         """Create temporary directory and initialize fmf."""
-        # Clear registry first to ensure clean state
-        get_registry().clear()
-        # Re-import to trigger FmfPlugin auto-registration
-        import importlib
-
-        import fmf.plugins.fmf
-        importlib.reload(fmf.plugins.fmf)
+        # Reset registry and rediscover plugins from entry points
+        registry = get_registry()
+        registry.clear()
+        registry.discover()
 
         self.tmpdir = tempfile.mkdtemp()
         Tree.init(self.tmpdir)
@@ -243,12 +277,13 @@ class TestTreeWithPlugins:
         tree = Tree(self.tmpdir)
         assert tree.data["description"] == "Test"
 
-    def test_tree_with_plugin_config(self):
-        """Test Tree with explicit plugin configuration."""
-        # Create config
+    def test_tree_ignores_unrelated_config(self):
+        """Test Tree loads fine with unrelated keys in .fmf/config."""
+        # Plugins are discovered via entry points, not config; any extra
+        # config keys must be tolerated without affecting loading.
         config_dir = os.path.join(self.tmpdir, ".fmf")
         with open(os.path.join(config_dir, "config"), "w") as f:
-            f.write("plugins:\n  - fmf.plugins.fmf.FmfPlugin\n")
+            f.write("some_other_setting: value\n")
 
         # Create main.fmf
         with open(os.path.join(self.tmpdir, "main.fmf"), "w") as f:
@@ -334,103 +369,15 @@ class TestTreeWithPlugins:
         assert tree2.data["description"] == "Original"
 
 
-class TestPluginConfigurationOverride:
-    """Test plugin configuration override features."""
-
-    def setup_method(self):
-        """Clear registry before tests."""
-        get_registry().clear()
-
-    def teardown_method(self):
-        """Clean up."""
-        get_registry().clear()
-
-    def test_priority_override_from_config(self):
-        """Test that plugin priority can be overridden in config."""
-        from fmf.plugins.fmf import FmfPlugin
-
-        # Register plugin with default priority
-        registry = get_registry()
-        registry.register(FmfPlugin)
-
-        # Check default priority
-        assert FmfPlugin.priority == 100
-
-        # Override priority via config
-        config = {
-            "plugins": ["fmf"],
-            "fmf": {
-                "priority": 150
-                }
-            }
-        registry.load_from_config(config)
-
-        # Priority should be changed
-        assert FmfPlugin.priority == 150
-
-    def test_priority_override_invalid_value(self):
-        """Test that invalid priority values are rejected."""
-        from fmf.plugins.fmf import FmfPlugin
-
-        registry = get_registry()
-        registry.register(FmfPlugin)
-        original_priority = FmfPlugin.priority
-
-        # Try invalid priority (too high)
-        config = {
-            "plugins": ["fmf"],
-            "fmf": {"priority": 300}
-            }
-        registry.load_from_config(config)
-
-        # Priority should not change
-        assert FmfPlugin.priority == original_priority
-
-        # Try invalid priority (negative)
-        config["fmf"]["priority"] = -10
-        registry.load_from_config(config)
-        assert FmfPlugin.priority == original_priority
-
-        # Try invalid type
-        config["fmf"]["priority"] = "high"
-        registry.load_from_config(config)
-        assert FmfPlugin.priority == original_priority
-
-    def test_plugin_file_pattern_override_placeholder(self):
-        """
-        Placeholder test for file pattern override (Phase 2/3).
-
-        In future phases, plugins should support configuration like:
-
-        plugins:
-          - fmf.plugins.python.PythonPlugin
-
-        python:
-          file_patterns:
-            - "^check-.*\\.py$"
-            - "^test_.*$"
-
-        This would override the default plugin.file_patterns.
-        """
-        # This test is a placeholder for Phase 2/3
-        # When implemented, it should:
-        # 1. Load plugin with custom file_patterns from config
-        # 2. Verify only matching files are processed
-        # 3. Verify default patterns are overridden, not merged
-        pass
-
-
 # Integration test with real examples
 class TestRealWorldExamples:
     """Test plugin system with real fmf examples."""
 
     def setup_method(self):
         """Ensure FmfPlugin is loaded for examples."""
-        get_registry().clear()
-        import importlib
-
-        import fmf.plugins.fmf
-        importlib.reload(fmf.plugins.fmf)
+        registry = get_registry()
+        registry.clear()
+        registry.discover()
 
     def teardown_method(self):
         """Clean up registry."""
@@ -485,7 +432,9 @@ class TestMockPlugin:
 
             extensions = [".txt"]
             file_patterns = [r".*\.txt$"]
-            priority = 50
+
+            def read_config(self, config):
+                pass
 
             def can_handle(self, filename):
                 return filename.endswith(".txt")
@@ -614,21 +563,23 @@ class TestMockPlugin:
             assert "new:" in content
             assert "data" in content
 
-    def test_plugin_priority_resolution(self):
-        """Test that higher priority plugin wins when both can handle."""
+    def test_plugin_load_order_resolution(self):
+        """Test that the first registered plugin wins when both can handle."""
         from fmf.plugins.fmf import FmfPlugin
 
-        # Create another .fmf handler with lower priority
-        class LowPriorityFmfPlugin(Plugin):
+        # Another .fmf handler registered after FmfPlugin
+        class OtherFmfPlugin(Plugin):
             extensions = [".fmf"]
             file_patterns = [r".*\.fmf$"]
-            priority = 10  # Lower than FmfPlugin (100)
+
+            def read_config(self, config):
+                pass
 
             def can_handle(self, filename):
                 return filename.endswith(".fmf")
 
             def read(self, filename):
-                return {"source": "low-priority"}
+                return {"source": "other"}
 
             def write(self, filename, hierarchy, data, append_dict,
                       modified_dict, deleted_items):
@@ -636,9 +587,8 @@ class TestMockPlugin:
 
         registry = get_registry()
         registry.register(FmfPlugin)
-        registry.register(LowPriorityFmfPlugin)
+        registry.register(OtherFmfPlugin)
 
-        # FmfPlugin should win due to higher priority
+        # FmfPlugin was registered first, so it wins
         plugin_class = registry.get_plugin_for_file("test.fmf")
         assert plugin_class == FmfPlugin
-        assert plugin_class.priority == 100

@@ -15,7 +15,6 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 import fmf.context
-import fmf.plugins  # noqa: F401  # Load built-in plugins
 import fmf.utils as utils
 from fmf.plugin_loader import get_registry
 # Re-export constants for backward compatibility
@@ -212,17 +211,10 @@ class Tree:
         except YAMLError as error:
             raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
 
-        # Initialize plugin registry
-        registry = get_registry()
-
-        # Load plugins from config if specified
-        if "plugins" in self.config:
-            registry.load_from_config(self.config)
-            log.debug("Plugins loaded from config.")
-        else:
-            # Default: only FmfPlugin (already auto-registered)
-            # This ensures backward compatibility when no config exists
-            log.debug("No plugin config found, using default FmfPlugin.")
+        # Let every plugin read its own section from the config once per tree.
+        # The config is identical for all nodes, so this is done here at the
+        # root rather than for each file loaded during grow().
+        get_registry().configure(self.config or {})
 
     def _merge_plus(self, data, key, value, prepend=False):
         """
@@ -748,21 +740,23 @@ class Tree:
 
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
 
-            # Find appropriate plugin for this file
-            # This uses can_handle() which can check regex patterns
-            plugin_class = registry.get_plugin_for_file(filename)
-            if not plugin_class:
+            # Find appropriate plugin for this file. The registry hands out a
+            # cached, already-configured instance (read_config is applied once
+            # per tree, not per file) so large trees don't pay a per-file
+            # plugin construction cost. This uses can_handle() which can check
+            # regex patterns.
+            plugin = registry.get_plugin_instance_for_file(filename)
+            if not plugin:
                 # No plugin can handle this file, skip silently
                 continue
 
             # Read file using plugin
-            log.info(f"Processing '{fullpath}' with {plugin_class.__name__}")
+            log.info(f"Processing '{fullpath}' with {type(plugin).__name__}")
             try:
-                plugin = plugin_class()
                 data = plugin.read(fullpath)
             except Exception as error:
                 raise utils.FileError(
-                    f"Failed to read '{fullpath}' with {plugin_class.__name__}.\n{error}")
+                    f"Failed to read '{fullpath}' with {type(plugin).__name__}.\n{error}")
 
             log.data(pretty(data))
 
@@ -1034,11 +1028,14 @@ class Tree:
         raw data identify the dictionary corresponding to the current
         node, create if needed. Detect the raw data source filename.
 
-        Return tuple with the following three items:
+        Return tuple with the following four items:
 
         node_data ... dictionary containing raw data for the current node
         full_data ... full raw data from the closest parent node
         source ... file system path where the full raw data are stored
+        hierarchy ... virtual node names from the source node down to this
+                      node (empty when the node is itself file-backed), so a
+                      writer plugin knows where in the structure the node sits
         """
 
         # List of node names in the virtual hierarchy
@@ -1071,7 +1068,7 @@ class Tree:
             node_data = node_data[key]
 
         # The full raw data were read from the last source
-        return node_data, full_data, node.sources[-1]
+        return node_data, full_data, node.sources[-1], hierarchy
 
     def __enter__(self):
         """
@@ -1107,22 +1104,27 @@ class Tree:
         Falls back to direct YAML write if no plugin is found.
         """
 
-        _, full_data, source = self._locate_raw_data()
+        _, full_data, source, hierarchy = self._locate_raw_data()
 
-        # Try to use plugin for writing
+        # Try to use plugin for writing. The registry returns a cached,
+        # already-configured instance (config is applied per tree, not here).
         registry = get_registry()
-        plugin_class = registry.get_plugin_for_file(source)
+        registry.configure(self.config or {})
+        plugin = registry.get_plugin_instance_for_file(source)
 
-        if plugin_class:
+        if plugin:
             try:
-                plugin = plugin_class()
-                # For now, we pass full_data as the data parameter
-                # hierarchy, append_dict, modified_dict, deleted_items are not used yet
-                plugin.write(source, [], full_data, {}, {}, [])
+                # full_data holds the complete raw structure (including the
+                # in-place modifications and any 'key+' / 'key-' merge keys),
+                # so a round-trip writer like FmfPlugin can just dump it.
+                # hierarchy tells non-YAML writers where this node lives; the
+                # decomposed append/modified/deleted dicts are not tracked yet
+                # (see Plugin.write) and are passed empty for now.
+                plugin.write(source, hierarchy, full_data, {}, {}, [])
                 return
             except NotImplementedError:
                 # Plugin doesn't support write, fall back to default
-                log.debug(f"Plugin {plugin_class.__name__} doesn't support write, using default")
+                log.debug(f"Plugin {type(plugin).__name__} doesn't support write, using default")
             except Exception as error:
                 log.warning(f"Plugin write failed: {error}, using default")
 
