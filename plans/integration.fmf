@@ -16,6 +16,11 @@ adjust:
     because: >
       We want to test against the tmt main branch
     prepare+:
+      - # TODO: Remove this when multihost pipeline is live
+        summary: Disable testing-farm tag repo
+        how: shell
+        script: |
+          dnf config-manager disable testing-farm-tag-repository || true
       - how: install
         copr: "@teemtee/latest"
     discover+:
