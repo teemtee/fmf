@@ -1,4 +1,5 @@
 import copy
+import unittest.mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -296,12 +297,12 @@ class TestAdjust:
 
         mock_callback = MagicMock(name='<mock>callback')
         mini.adjust(centos, decision_callback=mock_callback)
-        mock_callback.assert_called_once_with(mini, rule, True)
+        mock_callback.assert_called_once_with(mini, rule, True, before=unittest.mock.ANY)
 
         mock_callback = MagicMock(name='<mock>callback')
         mini.adjust(centos, decision_callback=mock_callback, additional_rules=[add_rule])
-        mock_callback.assert_any_call(mini, rule, True)
-        mock_callback.assert_any_call(mini, add_rule, True)
+        mock_callback.assert_any_call(mini, rule, True, before=unittest.mock.ANY)
+        mock_callback.assert_any_call(mini, add_rule, True, before=unittest.mock.ANY)
         assert mock_callback.call_count == 2
 
     @pytest.mark.parametrize("case_sensitive", [True, False, pytest.param(None, id="default")])
