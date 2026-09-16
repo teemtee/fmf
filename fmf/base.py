@@ -104,12 +104,11 @@ class Tree:
         # Special directives
         self._directives = dict()
 
-        # Store symlinks in while walking tree in grow() to detect
-        # symlink loops
+        # Track real paths of ancestor directories to detect symlink loops
         if parent is None:
-            self._symlinkdirs = []
+            self._realpaths = set()
         else:
-            self._symlinkdirs = parent._symlinkdirs
+            self._realpaths = set(parent._realpaths)
 
         # Special handling for top parent
         if self.parent is None:
@@ -708,6 +707,7 @@ class Tree:
         if path in IGNORED_DIRECTORIES:  # pragma: no cover
             log.debug("Ignoring '{0}' (special directory).".format(path))
             return
+        self._realpaths.add(os.path.realpath(path))
         log.info("Walking through directory {0}".format(
             os.path.abspath(path)))
         try:
@@ -754,16 +754,10 @@ class Tree:
                 continue
             fulldir = os.path.join(dirpath, dirname)
             if os.path.islink(fulldir):
-                # According to the documentation, calling os.path.realpath
-                # with strict = True will raise OSError if a symlink loop
-                # is encountered. But it does not do that with a loop with
-                # more than one node
                 fullpath = os.path.realpath(fulldir)
-                if fullpath in self._symlinkdirs:
+                if fullpath in self._realpaths:
                     log.debug("Not entering symlink loop {}".format(fulldir))
                     continue
-                else:
-                    self._symlinkdirs.append(fullpath)
 
             # Ignore metadata subtrees
             if os.path.isdir(os.path.join(path, dirname, SUFFIX)):
