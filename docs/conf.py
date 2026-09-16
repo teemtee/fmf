@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.abspath('../'))
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosectionlabel',
     'sphinx_rtd_theme',
     ]
 
@@ -204,6 +205,9 @@ html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'fmfdoc'
+
+autosectionlabel_maxdepth = 2
+autosectionlabel_prefix_document = True
 
 # -- Options for manual page output ---------------------------------------
 
