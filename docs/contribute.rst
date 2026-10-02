@@ -147,3 +147,33 @@ Building documentation is then quite straightforward::
 
 Find the resulting html pages under the ``docs/_build/html``
 folder.
+
+.. _writing-plugins:
+
+Writing metadata plugins
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Subclass ``fmf.plugin.Plugin`` and advertise the concrete class through
+an entry point in your package's ``pyproject.toml``:
+
+.. code-block:: toml
+
+    [project.entry-points."fmf.plugins"]
+    example = "example_package:ExamplePlugin"
+
+Define ``CONFIG_SECTION: ClassVar[str]`` and implement ``read_config()``,
+``can_handle()``, and ``read()``. ``read_config()`` receives the full config;
+``config_section_data()`` extracts the plugin's mapping. Each plugin
+implements its own file matching.
+
+Each tree configures its own plugin instances once and reuses them across
+files, avoiding repeated parser construction and keeping settings isolated.
+
+``read()`` returns raw metadata, including hierarchy and merge keys.
+The optional ``write()`` receives the source filename, the edited node's
+hierarchy, and complete raw source data. The three operation arguments
+currently arrive empty. Writers must preserve raw ``key+`` and ``key-``
+operations, including the values used for subtraction.
+
+Writing errors propagate. ``_write_fmf_fallback(destination, data)`` creates
+an explicitly named ``.fmf`` sidecar without overwriting existing files.

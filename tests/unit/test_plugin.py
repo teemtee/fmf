@@ -6,13 +6,160 @@ import os
 import tempfile
 from pathlib import Path
 from shutil import rmtree
-from typing import Optional
 
 import pytest
 
 from fmf.base import Tree
 from fmf.plugin import Plugin
-from fmf.plugin_loader import get_registry
+from fmf.utils import FileError
+
+
+def reset_plugins():
+    Plugin._plugins = []
+    Plugin._discovered = False
+
+
+@pytest.fixture
+def isolated_plugins(monkeypatch):
+    """Isolate test discovery from installed entry points and other tests."""
+    reset_plugins()
+    monkeypatch.setattr('fmf.plugin.entry_points', lambda **kwargs: [])
+    yield
+    reset_plugins()
+
+
+def test_tree_plugin_lifetime(tmp_path, isolated_plugins):
+    """Interleaved trees and writes retain their own configured instances."""
+    from fmf.plugins.fmf import FmfPlugin
+
+    class RecordingPlugin(FmfPlugin):
+        instances = []
+
+        def __init__(self):
+            super().__init__()
+            self.config_calls = 0
+            self.writes = []
+            self.instances.append(self)
+
+        def read_config(self, config):
+            self.config_calls += 1
+            super().read_config(config)
+
+        def write(self, filename, hierarchy, data, *args):
+            self.writes.append((Path(filename).name, hierarchy, self.settings['marker']))
+            super().write(filename, hierarchy, data, *args)
+
+    Plugin.register(RecordingPlugin)
+    trees = []
+    for marker in ('a', 'b'):
+        root = tmp_path / marker
+        root.mkdir()
+        Tree.init(str(root))
+        (root / '.fmf/config').write_text(f'fmf:\n  marker: {marker}\n')
+        (root / 'main.fmf').write_text('summary: root\n/embedded:\n  tag+: [one]\n')
+        (root / 'named.fmf').write_text('summary: named\n')
+        trees.append(Tree(str(root)))
+
+    a, b = trees
+    first, second = RecordingPlugin.instances
+    assert first is not second
+    assert a.find('/embedded')._plugins is a._plugins
+    with a.find('/embedded') as data:
+        data['tag-'] = ['two']
+    with a.find('/named') as data:
+        data['summary'] = 'changed'
+    with b.find('/embedded') as data:
+        data['summary'] = 'other tree'
+    assert first.config_calls == second.config_calls == 1
+    assert first.writes == [('main.fmf', ['/embedded'], 'a'), ('named.fmf', [], 'a')]
+    assert second.writes == [('main.fmf', ['/embedded'], 'b')]
+
+    duplicate = a.copy()
+    assert duplicate._plugins[0] is not first
+    assert duplicate.find('/embedded')._plugins is duplicate._plugins
+    assert duplicate._plugins[0].settings == first.settings
+    duplicate._plugins[0].settings['marker'] = 'copy'
+    assert first.settings['marker'] == 'a'
+
+    from ruamel.yaml import YAML
+    raw = YAML(typ='safe').load((tmp_path / 'a/main.fmf').read_text())
+    assert raw['/embedded'] == {'tag+': ['one'], 'tag-': ['two']}
+    assert YAML(typ='safe').load((tmp_path / 'a/named.fmf').read_text()) == {
+        'summary': 'changed'}
+
+
+@pytest.mark.parametrize('failure', [NotImplementedError, RuntimeError])
+def test_writer_failure_preserves_source(tmp_path, isolated_plugins, failure):
+    """Unsupported or broken writers never trigger YAML output to source code."""
+    class SourcePlugin(Plugin):
+        CONFIG_SECTION = 'source'
+
+        def read_config(self, config):
+            pass
+
+        def can_handle(self, filename):
+            return filename.endswith('.py')
+
+        def read(self, filename):
+            return {'summary': 'source'}
+
+        def write(self, *args):
+            raise failure('write unavailable')
+
+    Plugin.register(SourcePlugin)
+    Tree.init(str(tmp_path))
+    source = tmp_path / 'test.py'
+    original = 'print("original source")\n'
+    source.write_text(original)
+    tree = Tree(str(tmp_path))
+    with pytest.raises(FileError, match='write unavailable'):
+        with tree.find('/test') as data:
+            data['summary'] = 'edited'
+    assert source.read_text() == original
+    assert not (tmp_path / 'test.fmf').exists()
+
+
+def test_sidecar_preserves_existing_file(tmp_path):
+    from fmf.plugins.fmf import FmfPlugin
+
+    destination = tmp_path / 'test.fmf'
+    destination.write_text('summary: existing\n')
+    with pytest.raises(FileExistsError):
+        FmfPlugin()._write_fmf_fallback(destination, {'summary': 'replacement'})
+    assert destination.read_text() == 'summary: existing\n'
+
+
+def test_discovery_is_once_and_deduplicated(monkeypatch, isolated_plugins):
+    from fmf.plugins.fmf import FmfPlugin
+
+    calls = []
+
+    class EntryPoint:
+        name = 'fmf'
+
+        def load(self):
+            calls.append(self.name)
+            return FmfPlugin
+
+    monkeypatch.setattr('fmf.plugin.entry_points', lambda **kwargs: [EntryPoint(), EntryPoint()])
+    first = Plugin.for_tree({})
+    second = Plugin.for_tree({})
+    assert calls == ['fmf', 'fmf']
+    assert len(first) == len(second) == 1
+    assert first[0] is not second[0]
+
+
+def test_abstract_plugin_rejected(isolated_plugins):
+    class AbstractPlugin(Plugin):
+        CONFIG_SECTION = 'abstract'
+
+    with pytest.raises(ValueError, match='abstract'):
+        Plugin.register(AbstractPlugin)
+
+
+def matching_class(filename):
+    plugin = Plugin.for_file(filename, Plugin.for_tree({}))
+    return type(plugin) if plugin else None
 
 
 class TestPluginRegistry:
@@ -20,53 +167,49 @@ class TestPluginRegistry:
 
     def setup_method(self):
         """Clear registry before each test."""
-        get_registry().clear()
+        reset_plugins()
 
     def teardown_method(self):
         """Clean up after tests."""
-        get_registry().clear()
+        reset_plugins()
 
     def test_fmf_plugin_discovered_via_entry_point(self):
         """Test that FmfPlugin is discovered through the entry point group."""
         from fmf.plugins.fmf import FmfPlugin
 
-        registry = get_registry()
-        registry.clear()
-        registry.discover()
+        reset_plugins()
+        Plugin.discover()
 
         # Should be able to handle .fmf files
-        plugin = registry.get_plugin_for_file("test.fmf")
+        plugin = matching_class("test.fmf")
         assert plugin is FmfPlugin
-        assert plugin.extensions == [".fmf"]
+        assert plugin().can_handle("test.fmf")
 
     def test_get_plugin_triggers_discovery(self):
         """Test that discovery happens lazily on first lookup after clear."""
         from fmf.plugins.fmf import FmfPlugin
 
-        registry = get_registry()
-        registry.clear()
+        reset_plugins()
 
         # No explicit discover()/register() call - lookup must trigger it
-        assert registry.get_plugin_for_file("test.fmf") is FmfPlugin
+        assert matching_class("test.fmf") is FmfPlugin
 
     def test_plugin_can_handle_fmf_files(self):
         """Test that FmfPlugin handles .fmf files."""
         from fmf.plugins.fmf import FmfPlugin
 
-        registry = get_registry()
-        registry.register(FmfPlugin)
+        Plugin.register(FmfPlugin)
 
-        plugin_class = registry.get_plugin_for_file("test.fmf")
+        plugin_class = matching_class("test.fmf")
         assert plugin_class == FmfPlugin
 
     def test_no_plugin_for_unknown_extension(self):
         """Test that unknown extensions return None."""
         from fmf.plugins.fmf import FmfPlugin
 
-        registry = get_registry()
-        registry.register(FmfPlugin)
+        Plugin.register(FmfPlugin)
 
-        plugin_class = registry.get_plugin_for_file("test.xyz")
+        plugin_class = matching_class("test.xyz")
         assert plugin_class is None
 
     def test_plugin_load_order(self):
@@ -75,8 +218,7 @@ class TestPluginRegistry:
 
         # Another plugin that also handles .fmf files
         class OtherFmfPlugin(Plugin):
-            extensions = [".fmf"]
-            file_patterns = [r".*\.fmf$"]
+            CONFIG_SECTION = "other"
 
             def read_config(self, config):
                 pass
@@ -87,23 +229,21 @@ class TestPluginRegistry:
             def read(self, filename):
                 return {"from": "OtherFmfPlugin"}
 
-        registry = get_registry()
-        registry.register(FmfPlugin)
-        registry.register(OtherFmfPlugin)
+        Plugin.register(FmfPlugin)
+        Plugin.register(OtherFmfPlugin)
 
         # FmfPlugin was registered first, so it wins
-        plugin_class = registry.get_plugin_for_file("test.fmf")
+        plugin_class = matching_class("test.fmf")
         assert plugin_class == FmfPlugin
 
     def test_register_invalid_plugin_fails(self):
         """Test that registering non-Plugin class raises error."""
-        registry = get_registry()
 
         class NotAPlugin:
             pass
 
         with pytest.raises(ValueError, match="not a Plugin subclass"):
-            registry.register(NotAPlugin)
+            Plugin.register(NotAPlugin)
 
 
 class TestFmfPlugin:
@@ -205,12 +345,12 @@ class TestFmfPlugin:
 class TestPluginConfigSection:
     """Test that plugins can read their own section from .fmf/config."""
 
-    def _make_plugin(self, section: Optional[str] = "my"):
+    def _make_plugin(self, section: str = "my"):
         """Build a minimal concrete plugin with the given config section."""
         from fmf.plugins.fmf import FmfPlugin
 
         class MyPlugin(FmfPlugin):
-            config_section = section
+            CONFIG_SECTION = section
 
             def read_config(self, config):
                 self.settings = self.config_section_data(config)
@@ -227,12 +367,23 @@ class TestPluginConfigSection:
         """Missing or non-mapping sections yield an empty dict."""
         plugin = self._make_plugin("my")
         assert plugin.config_section_data({}) == {}
-        assert plugin.config_section_data({"my": "not-a-dict"}) == {}
+        with pytest.raises(FileError, match="must be a mapping"):
+            plugin.config_section_data({"my": "not-a-dict"})
 
-    def test_config_section_data_no_section_defined(self):
-        """A plugin without config_section always gets an empty dict."""
-        plugin = self._make_plugin(None)
-        assert plugin.config_section_data({"anything": {"a": 1}}) == {}
+    def test_config_section_required(self):
+        """Concrete plugins must declare a configuration section."""
+        class MissingSection(Plugin):
+            def read_config(self, config):
+                pass
+
+            def can_handle(self, filename):
+                return False
+
+            def read(self, filename):
+                return {}
+
+        with pytest.raises(ValueError, match="CONFIG_SECTION"):
+            Plugin.register(MissingSection)
 
     def test_read_config_receives_section(self):
         """read_config() is passed the whole config and can pick its section."""
@@ -255,9 +406,8 @@ class TestTreeWithPlugins:
     def setup_method(self):
         """Create temporary directory and initialize fmf."""
         # Reset registry and rediscover plugins from entry points
-        registry = get_registry()
-        registry.clear()
-        registry.discover()
+        reset_plugins()
+        Plugin.discover()
 
         self.tmpdir = tempfile.mkdtemp()
         Tree.init(self.tmpdir)
@@ -265,7 +415,7 @@ class TestTreeWithPlugins:
     def teardown_method(self):
         """Clean up."""
         rmtree(self.tmpdir)
-        get_registry().clear()
+        reset_plugins()
 
     def test_tree_loads_with_default_fmf_plugin(self):
         """Test that Tree works without explicit plugin config."""
@@ -375,13 +525,12 @@ class TestRealWorldExamples:
 
     def setup_method(self):
         """Ensure FmfPlugin is loaded for examples."""
-        registry = get_registry()
-        registry.clear()
-        registry.discover()
+        reset_plugins()
+        Plugin.discover()
 
     def teardown_method(self):
         """Clean up registry."""
-        get_registry().clear()
+        reset_plugins()
 
     def test_wget_example_still_works(self):
         """Test that existing wget example works with plugin system."""
@@ -424,14 +573,13 @@ class TestMockPlugin:
     def setup_method(self):
         """Create temporary directory and mock plugin."""
         self.tmpdir = tempfile.mkdtemp()
-        get_registry().clear()
+        reset_plugins()
 
         # Define a simple mock plugin for .txt files
         class MockTxtPlugin(Plugin):
             """Mock plugin for testing - reads .txt files with key=value format."""
 
-            extensions = [".txt"]
-            file_patterns = [r".*\.txt$"]
+            CONFIG_SECTION = "txt"
 
             def read_config(self, config):
                 pass
@@ -454,14 +602,14 @@ class TestMockPlugin:
                       modified_dict, deleted_items):
                 """Use fallback .fmf writer."""
                 self._write_fmf_fallback(
-                    filename, hierarchy, modified_dict, append_dict)
+                    Path(filename).with_suffix('.fmf'), data)
 
         self.MockTxtPlugin = MockTxtPlugin
 
     def teardown_method(self):
         """Clean up."""
         rmtree(self.tmpdir)
-        get_registry().clear()
+        reset_plugins()
 
     def test_mock_plugin_can_handle_txt_files(self):
         """Test that mock plugin handles .txt files."""
@@ -492,23 +640,21 @@ class TestMockPlugin:
         """Test that registry manages multiple plugins correctly."""
         from fmf.plugins.fmf import FmfPlugin
 
-        registry = get_registry()
-        registry.register(FmfPlugin)
-        registry.register(self.MockTxtPlugin)
+        Plugin.register(FmfPlugin)
+        Plugin.register(self.MockTxtPlugin)
 
         # Should find correct plugin for each extension
-        assert registry.get_plugin_for_file("test.fmf") == FmfPlugin
-        assert registry.get_plugin_for_file("test.txt") == self.MockTxtPlugin
-        assert registry.get_plugin_for_file("test.py") is None
+        assert matching_class("test.fmf") == FmfPlugin
+        assert matching_class("test.txt") == self.MockTxtPlugin
+        assert matching_class("test.py") is None
 
     def test_tree_loads_multiple_file_types(self):
         """Test Tree loads both .fmf and .txt files with different plugins."""
         from fmf.plugins.fmf import FmfPlugin
 
         # Register both plugins
-        registry = get_registry()
-        registry.register(FmfPlugin)
-        registry.register(self.MockTxtPlugin)
+        Plugin.register(FmfPlugin)
+        Plugin.register(self.MockTxtPlugin)
 
         # Initialize tree
         Tree.init(self.tmpdir)
@@ -551,7 +697,7 @@ class TestMockPlugin:
             f.write("old=value\n")
 
         plugin = self.MockTxtPlugin()
-        plugin.write(txt_file, [], {}, {}, {"new": "data"}, [])
+        plugin.write(txt_file, [], {"new": "data"}, {}, {}, [])
 
         # Should create test.fmf (fallback)
         expected_fmf = os.path.join(self.tmpdir, "test.fmf")
@@ -569,8 +715,7 @@ class TestMockPlugin:
 
         # Another .fmf handler registered after FmfPlugin
         class OtherFmfPlugin(Plugin):
-            extensions = [".fmf"]
-            file_patterns = [r".*\.fmf$"]
+            CONFIG_SECTION = "other"
 
             def read_config(self, config):
                 pass
@@ -585,10 +730,9 @@ class TestMockPlugin:
                       modified_dict, deleted_items):
                 pass
 
-        registry = get_registry()
-        registry.register(FmfPlugin)
-        registry.register(OtherFmfPlugin)
+        Plugin.register(FmfPlugin)
+        Plugin.register(OtherFmfPlugin)
 
         # FmfPlugin was registered first, so it wins
-        plugin_class = registry.get_plugin_for_file("test.fmf")
+        plugin_class = matching_class("test.fmf")
         assert plugin_class == FmfPlugin

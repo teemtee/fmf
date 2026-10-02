@@ -16,10 +16,10 @@ from ruamel.yaml.error import YAMLError
 
 import fmf.context
 import fmf.utils as utils
-from fmf.plugin_loader import get_registry
+from fmf.plugin import Plugin
 # Re-export constants for backward compatibility
 from fmf.plugins.fmf import MAIN, SUFFIX
-from fmf.utils import dict_to_yaml, log
+from fmf.utils import log
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -94,6 +94,7 @@ class Tree:
         self.sources = list()
         self.root = None
         self.config = {}
+        self._plugins = None
         self.version = utils.VERSION
         self.original_data = dict()
         self._commit = None
@@ -122,6 +123,7 @@ class Tree:
         else:
             self.root = self.parent.root
             self.config = self.parent.config
+            self._plugins = self.parent._plugins
             self.name = os.path.join(self.parent.name, name)
 
         # Update data from a dictionary (handle empty nodes)
@@ -211,10 +213,7 @@ class Tree:
         except YAMLError as error:
             raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
 
-        # Let every plugin read its own section from the config once per tree.
-        # The config is identical for all nodes, so this is done here at the
-        # root rather than for each file loaded during grow().
-        get_registry().configure(self.config or {})
+        self._plugins = Plugin.for_tree(self.config or {})
 
     def _merge_plus(self, data, key, value, prepend=False):
         """
@@ -722,8 +721,8 @@ class Tree:
             log.debug("Skipping '{0}' (not accessible).".format(path))
             return
 
-        # Get plugin registry
-        registry = get_registry()
+        if self._plugins is None:
+            self._plugins = Plugin.for_tree(self.config or {})
 
         # Prioritize main.fmf first if it exists (for correct inheritance)
         if MAIN in filenames:
@@ -740,12 +739,7 @@ class Tree:
 
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
 
-            # Find appropriate plugin for this file. The registry hands out a
-            # cached, already-configured instance (read_config is applied once
-            # per tree, not per file) so large trees don't pay a per-file
-            # plugin construction cost. This uses can_handle() which can check
-            # regex patterns.
-            plugin = registry.get_plugin_instance_for_file(filename)
+            plugin = Plugin.for_file(filename, self._plugins)
             if not plugin:
                 # No plugin can handle this file, skip silently
                 continue
@@ -1101,36 +1095,20 @@ class Tree:
         Experimental: Store modified metadata to disk
 
         Uses the plugin system to write data back to the source file.
-        Falls back to direct YAML write if no plugin is found.
+        Writer failures are reported without replacing the source format.
         """
 
         _, full_data, source, hierarchy = self._locate_raw_data()
 
-        # Try to use plugin for writing. The registry returns a cached,
-        # already-configured instance (config is applied per tree, not here).
-        registry = get_registry()
-        registry.configure(self.config or {})
-        plugin = registry.get_plugin_instance_for_file(source)
-
-        if plugin:
-            try:
-                # full_data holds the complete raw structure (including the
-                # in-place modifications and any 'key+' / 'key-' merge keys),
-                # so a round-trip writer like FmfPlugin can just dump it.
-                # hierarchy tells non-YAML writers where this node lives; the
-                # decomposed append/modified/deleted dicts are not tracked yet
-                # (see Plugin.write) and are passed empty for now.
-                plugin.write(source, hierarchy, full_data, {}, {}, [])
-                return
-            except NotImplementedError:
-                # Plugin doesn't support write, fall back to default
-                log.debug(f"Plugin {type(plugin).__name__} doesn't support write, using default")
-            except Exception as error:
-                log.warning(f"Plugin write failed: {error}, using default")
-
-        # Fallback: direct YAML write (backward compatibility)
-        with open(source, "w", encoding='utf-8') as file:
-            file.write(dict_to_yaml(full_data))
+        if self._plugins is None:
+            self._plugins = Plugin.for_tree(self.config or {})
+        plugin = Plugin.for_file(source, self._plugins)
+        if plugin is None:
+            raise utils.FileError(f"No plugin can write '{source}'")
+        try:
+            plugin.write(source, hierarchy, full_data, {}, {}, [])
+        except Exception as error:
+            raise utils.FileError(f"Failed to write '{source}': {error}") from error
 
     def __getitem__(self, key):
         """
