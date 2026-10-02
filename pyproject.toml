@@ -31,6 +31,7 @@ dependencies = [
     'ruamel.yaml',
     'filelock',
     'jsonschema',
+    "importlib-metadata>=3.6; python_version < '3.10'",
     "typing-extensions>=4; python_version < '3.13'",
 ]
 dynamic = ['version']
@@ -52,6 +53,11 @@ docs = [
 
 [project.scripts]
 fmf = 'fmf.cli:cli_entry'
+
+# Built-in metadata loader plugins. Third-party plugins advertise themselves
+# under the same 'fmf.plugins' entry point group and are discovered automatically.
+[project.entry-points."fmf.plugins"]
+fmf = 'fmf.plugins.fmf:FmfPlugin'
 
 [tool.hatch.version]
 source = 'vcs'

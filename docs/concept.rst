@@ -123,6 +123,16 @@ In the example above files or directories named ``.plans`` or
 the ``.fmf`` directory cannot be used for storing metadata.
 
 
+Plugins
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 1.8
+
+Installed metadata plugins let fmf read additional file formats.
+The built-in plugin handles ``.fmf`` files. See :doc:`plugins` for
+configuration and :ref:`writing-plugins` for plugin development.
+
+
 Names
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
