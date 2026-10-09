@@ -11,8 +11,7 @@ from typing import Any, Dict, Optional, Protocol
 
 import fmf.context
 import fmf.utils as utils
-from fmf.plugin import Plugin
-from fmf.plugins.fmf import FmfPlugin
+from fmf.plugins._loader import Loader
 from fmf.utils import log
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,7 +65,8 @@ class Tree:
     Metadata Tree
     """
 
-    def __init__(self, data, name=None, parent=None):
+    def __init__(self, data, name=None, parent=None, *,
+                 _loader=None, _plugin=None, _inherit=True):
         """
         Initialize metadata tree from directory path or data dictionary
 
@@ -75,7 +75,7 @@ class Tree:
         """
 
         # Bail out if no data and no parent given
-        if not data and not parent:
+        if not data and not parent and _loader is None:
             raise utils.GeneralError(
                 "No data or parent provided to initialize the tree.")
 
@@ -91,7 +91,11 @@ class Tree:
         self._commit = None
         self._raw_data = dict()
         self._source_plugin = None
-        self._plugins = parent._plugins if parent else []
+        self._source_node = None
+        self._loader = _loader or (parent._loader if parent else Loader())
+        self._plugin = _plugin or (parent._plugin if parent else self._loader.dictionary)
+        self._layers = []
+        self._pending_layers = False
         # Track whether the data dictionary has been updated
         # (needed to prevent removing nodes with an empty dict).
         self._updated = False
@@ -99,28 +103,18 @@ class Tree:
         # Special directives
         self._directives = dict()
 
-        # Special handling for top parent
         if self.parent is None:
             self.name = "/"
-            if not isinstance(data, dict):
-                self._initialize(path=data)
-                data = self.root
-        # Handle child node creation
         else:
             self.root = self.parent.root
             self.config = self.parent.config
-            self.name = os.path.join(self.parent.name, name)
+            self.name = self.parent.name.rstrip('/') + '/' + name
 
-        # Update data from a dictionary (handle empty nodes)
-        if isinstance(data, dict) or data is None:
-            self.update(data)
-        # Grow the tree from a directory path
-        else:
-            self.grow(data)
+        self._loader.load(self, data)
 
         # Apply inheritance when all scattered data are gathered.
         # This is done only once, from the top parent object.
-        if self.parent is None:
+        if self.parent is None and _inherit:
             self.inherit()
 
         log.debug("New tree '{0}' created.".format(self))
@@ -159,10 +153,10 @@ class Tree:
         return self.name
 
     def _initialize(self, path):
-        FmfPlugin.initialize(self, path)
+        self._loader.initialize(self, path)
 
     def _merge_special(self, data, source):
-        Plugin.merge(self, data, source)
+        self._plugin.merge(self, data, source)
 
     def _process_directives(self, directives):
         """
@@ -201,7 +195,7 @@ class Tree:
     @staticmethod
     def init(path):
         """Create metadata tree root under given path."""
-        return FmfPlugin.init(path)
+        return Loader().init(path)
 
     def merge(self, parent=None):
         """
@@ -217,7 +211,7 @@ class Tree:
         else:
             self.sources = parent.sources + self.sources
             data = copy.deepcopy(parent.data)
-        self._merge_special(data, self.data)
+        self._loader.merge(self, data)
         self.data = data
 
     def inherit(self):
@@ -236,45 +230,8 @@ class Tree:
             child.inherit()
 
     def update(self, data):
-        """
-        Update metadata, handle virtual hierarchy
-        """
-
-        # Make a note that the data dictionary has been updated
-        # None is handled in the same way as an empty dictionary
-        self._updated = True
-        # Nothing to do if no data
-        if data is None:
-            return
-
-        # Handle fmf directives first
-        try:
-            directives = data.pop("/")
-            self._process_directives(directives)
-        except KeyError:
-            pass
-
-        # Process the metadata
-        for key, value in data.items():
-            # Ensure there are no 'None' keys
-            if key is None:
-                raise utils.FormatError("Invalid key 'None'.")
-            # Handle child attributes
-            if key.startswith('/'):
-                name = key.lstrip('/')
-                # Handle deeper nesting (e.g. keys like /one/two/three) by
-                # extracting only the first level of the hierarchy as name
-                match = re.search("([^/]+)(/.*)", name)
-                if match:
-                    name = match.groups()[0]
-                    value = {match.groups()[1]: value}
-                # Update existing child or create a new one
-                self.child(name, value)
-            # Update regular attributes
-            else:
-                self.data[key] = value
-        log.debug("Data for '{0}' updated.".format(self))
-        log.data(pretty(self.data))
+        """Update raw metadata using this node's backend."""
+        self._plugin.update(self, data)
 
     def adjust(
             self,
@@ -444,35 +401,17 @@ class Tree:
         return data
 
     def child(self, name, data, source=None):
-        """
-        Create or update child with given data
-        """
-
-        try:
-            # Update data from a dictionary (handle empty nodes)
-            if isinstance(data, dict) or data is None:
-                self.children[name].update(data)
-            # Grow the tree from a directory path
-            else:
-                self.children[name].grow(data)
-        except KeyError:
-            self.children[name] = Tree(data, name, parent=self)
-        # Save source file
-        if source is not None:
-            self.children[name].sources.append(source)
-            self.children[name]._raw_data = copy.deepcopy(data)
+        """Create or update a child through the input backend."""
+        self._loader.child(self, name, data, source)
 
     @property
     def explore_include(self):
-        """Additional filenames explored by the native FMF collector."""
-        return FmfPlugin.explore_include(self)
+        """Additional hidden sources included by the tree's root backend."""
+        return self._loader.explore_include(self)
 
     def grow(self, path):
-        """Ask each collector to discover metadata using its own traversal."""
-        if not self._plugins:
-            self._plugins.extend(Plugin.for_tree(self.config))
-        for plugin in self._plugins:
-            plugin.grow(self, path)
+        """Collect raw hierarchies, retaining merge operations until inheritance."""
+        self._loader.grow(self, path)
 
     def climb(self, whole: bool = False, sort: bool = True):
         """
@@ -698,13 +637,13 @@ class Tree:
         """
         Experimental: Modify metadata and store changes to disk
 
-        This provides an experimental support for storing modified node
-        data to disk. For now, the implementation is very simple, data
-        are always stored into the last source file from which node data
-        were read.
+        The source-owning backend supplies editable raw data and stores
+        changes on exit. A read-only backend can delegate storage to an
+        overlay backend. Dictionary trees retain edits in memory.
 
-        The provided object contains only raw data. There is no support
-        for inheritance, elasticity or data merging. For example, if you
+        Direct source editing exposes raw data without inheritance or
+        elasticity. An overlay backend may instead materialize effective
+        metadata; see its storage documentation. For example, if you
         have defined "key+: value" in the file for node and you will add
         "key: other" it will result into "othervalue".
 
@@ -713,19 +652,20 @@ class Tree:
             with Tree('.').find('/tests/core/smoke') as test:
                 test['tier'] = 0
 
-        Note that white space will be stripped and comments removed as
-        export to yaml does not preserve this information. The feature
+        Native FMF writes strip white space and comments as YAML export
+        does not preserve this information. The feature
         is experimental and can be later modified, use at your own risk.
         """
 
-        return Plugin.for_node(self).read(self)
+        self._editor, self._edit_node = self._loader.edit(self)
+        return self._editor.read(self._edit_node)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
         Experimental: Store modified metadata to disk
         """
 
-        Plugin.for_node(self).write(self)
+        self._editor.write(self._edit_node)
 
     def __getitem__(self, key):
         """

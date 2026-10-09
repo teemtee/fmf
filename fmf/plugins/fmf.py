@@ -1,5 +1,6 @@
 """Native FMF discovery and storage, moved from Tree."""
 
+import copy
 import os
 from pathlib import Path
 from pprint import pformat as pretty
@@ -9,7 +10,8 @@ from ruamel.yaml.constructor import DuplicateKeyError
 from ruamel.yaml.error import YAMLError
 
 import fmf.utils as utils
-from fmf.plugin import Plugin
+from fmf.plugins import Plugin
+from fmf.plugins.dictionary import DictionaryPlugin
 from fmf.utils import dict_to_yaml, log
 
 SUFFIX = ".fmf"
@@ -21,12 +23,15 @@ class FmfPlugin(Plugin):
     """Discover .fmf files using the original recursive directory walk."""
 
     CONFIG_SECTION = 'fmf'
+    writable = True
+    overlay = True
 
     def __init__(self):
+        super().__init__()
+        self.dictionary = DictionaryPlugin()
         self._symlinkdirs = []
 
-    @staticmethod
-    def initialize(tree, path):
+    def initialize(self, tree, path):
         """
         Find metadata tree root, detect format version, check for config
         """
@@ -36,9 +41,7 @@ class FmfPlugin(Plugin):
         try:
             while ".fmf" not in next(os.walk(root))[1]:
                 if root == "/":
-                    raise utils.RootError(
-                        "Unable to find tree root for '{0}'.".format(
-                            os.path.abspath(path)))
+                    return False
                 root = os.path.abspath(os.path.join(root, os.pardir))
         except StopIteration:
             raise utils.FileError("Invalid directory path: {0}".format(root))
@@ -70,8 +73,9 @@ class FmfPlugin(Plugin):
         except YAMLError as error:
             raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
 
-    @staticmethod
-    def init(path):
+        return True
+
+    def init(self, path):
         """
         Create metadata tree root under given path
         """
@@ -89,8 +93,7 @@ class FmfPlugin(Plugin):
                 root, error))
         return root
 
-    @staticmethod
-    def explore_include(tree):
+    def explore_include(self, tree):
         """
         Additional filenames to be explored
         """
@@ -139,7 +142,7 @@ class FmfPlugin(Plugin):
 
         # Check every metadata file and load data (ignore hidden)
         for filename in filenames:
-            if filename.startswith(".") and filename not in tree.explore_include:
+            if filename.startswith(".") and filename not in self.explore_include(tree):
                 continue
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
             log.info("Checking file {0}".format(fullpath))
@@ -163,7 +166,7 @@ class FmfPlugin(Plugin):
 
         # Explore every child directory (ignore hidden dirs and subtrees)
         for dirname in sorted(dirnames):
-            if dirname.startswith(".") and dirname not in tree.explore_include:
+            if dirname.startswith(".") and dirname not in self.explore_include(tree):
                 continue
             fulldir = os.path.join(dirpath, dirname)
             if os.path.islink(fulldir):
@@ -195,60 +198,50 @@ class FmfPlugin(Plugin):
                 del tree.children[name]
                 log.debug("Empty tree '{0}' removed.".format(child.name))
 
-    @staticmethod
-    def _locate_raw_data(tree):
-        """
-        Detect location of raw data from which the node has been created
-
-        Find the closest parent node which has raw data defined. In the
-        raw data identify the dictionary corresponding to the current
-        node, create if needed. Detect the raw data source filename.
-
-        Return tuple with the following three items:
-
-        node_data ... dictionary containing raw data for the current node
-        full_data ... full raw data from the closest parent node
-        source ... file system path where the full raw data are stored
-        """
-
-        # List of node names in the virtual hierarchy
-        hierarchy = list()
-
-        # Find the closest parent with raw data defined
-        node = tree
-        while True:
-            # Raw data found
-            full_data = node._raw_data
-            if node._source_plugin is not None:
-                if full_data is None:
-                    full_data = node._raw_data = {}
-                break
-            # No raw data, perhaps a Tree initialized from a dict?
-            if not node.parent:
-                raise utils.GeneralError(
-                    "No raw data found, does the Tree grow on a filesystem?")
-            # Extend virtual hierarchy with the current node name, go up
-            hierarchy.insert(0, "/" + node.name.rsplit("/")[-1])
-            node = node.parent
-
-        # Localize node data dictionary in the virtual hierarchy
-        node_data = full_data
-        for key in hierarchy:
-            # Create a virtual hierarchy level if missing
-            if key not in node_data:
-                node_data[key] = dict()
-            # Initialize as an empty dict if leaf node is empty
-            if node_data[key] is None:
-                node_data[key] = dict()
-            node_data = node_data[key]
-
-        # The full raw data were read from the last source
-        return node_data, full_data, node.sources[-1]
-
     def read(self, node):
-        return self._locate_raw_data(node)[0]
+        return self.dictionary.locate(node)[0]
 
     def write(self, node):
-        _, full_data, source = self._locate_raw_data(node)
-        with open(source, "w", encoding='utf-8') as file:
-            file.write(dict_to_yaml(full_data))
+        _, full_data, owner = self.dictionary.locate(node)
+        destination = Path(owner.sources[-1])
+        if getattr(owner, '_new_source', False):
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            mode = 'x'
+        else:
+            mode = 'w'
+        content = dict_to_yaml(full_data)
+        with destination.open(mode, encoding='utf-8') as file:
+            file.write(content)
+        owner._new_source = False
+
+    def prepare_edit(self, node):
+        """Provide a native sidecar for a read-only collector's metadata."""
+        from fmf.base import Tree
+
+        if node.root is None:
+            raise NotImplementedError
+        root = Path(node.root).resolve()
+        relative = node.name.lstrip('/')
+        destination = root / (relative + SUFFIX) if relative else root / MAIN
+        if not destination.resolve().is_relative_to(root):
+            raise utils.FileError(f"Sidecar destination is outside the tree: {destination}")
+        new_source = not destination.exists()
+        if new_source:
+            # A fallback is an explicit snapshot of effective metadata, not a
+            # reinterpretation of another collector's raw operator syntax.
+            data = copy.deepcopy(node.data)
+            roundtrip = {}
+            self.merge(node, roundtrip, copy.deepcopy(data))
+            if roundtrip != data:
+                raise utils.FileError(
+                    f"FMF cannot represent '{node.name}' without reinterpreting merge keys.")
+        else:
+            try:
+                data = YAML(typ="safe").load(destination.read_text(encoding='utf-8'))
+            except YAMLError as error:
+                raise utils.FileError(f"Failed to parse '{destination}'.\n{error}") from error
+        editable = Tree({}, _loader=node._loader, _plugin=self, _inherit=False)
+        editable.name, editable.root = node.name, node.root
+        self.load(editable, data, str(destination))
+        editable._new_source = new_source
+        return editable

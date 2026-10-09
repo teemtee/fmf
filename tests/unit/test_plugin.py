@@ -7,15 +7,17 @@ from types import SimpleNamespace
 import pytest
 
 from fmf import Tree
-from fmf.plugin import Plugin
+from fmf.plugins import Merger, Plugin
+from fmf.plugins.dictionary import DictionaryPlugin
 from fmf.plugins.fmf import FmfPlugin
-from fmf.utils import FileError, GeneralError
+from fmf.utils import FileError, RootError
 
 
 class ItemPlugin(Plugin):
     """Stand-in for a framework collector that returns selected test items."""
 
     CONFIG_SECTION = 'items'
+    writable = True
 
     def grow(self, tree, path):
         self.visited = getattr(self, 'visited', []) + [path]
@@ -43,8 +45,8 @@ def metadata_root(tmp_path):
 
 @pytest.fixture
 def collectors(monkeypatch):
-    entries = []
-    monkeypatch.setattr('fmf.plugin.entry_points', lambda **kwargs: entries)
+    entries = [SimpleNamespace(name='fmf', load=lambda: FmfPlugin)]
+    monkeypatch.setattr('fmf.plugins._loader.entry_points', lambda **kwargs: entries)
 
     def register(plugin):
         entries.append(SimpleNamespace(name=plugin.__name__, load=lambda: plugin))
@@ -58,7 +60,7 @@ def test_independent_collection(metadata_root, collectors):
     nested.mkdir()
     (nested / 'main.fmf').write_text('summary: native\n')
     tree = Tree(str(metadata_root))
-    plugin = tree._plugins[1]
+    plugin = tree._loader.plugins[0]
     assert plugin.visited == [str(metadata_root)]
     assert tree.find('/nested').get('summary') == 'native'
     assert [node.name for node in tree.prune(keys=['duration'])] == [
@@ -66,8 +68,8 @@ def test_independent_collection(metadata_root, collectors):
     item = tree.find('/suite/test_one')
     assert item.get('tags') == ['base', 'test_one']
     assert item.get('duration') == 4
-    assert isinstance(Plugin.for_node(item), ItemPlugin)
-    assert isinstance(Plugin.for_node(tree.find('/nested')), FmfPlugin)
+    assert isinstance(tree._loader.owner(item), ItemPlugin)
+    assert isinstance(tree._loader.owner(tree.find('/nested')), FmfPlugin)
 
 
 def test_plugin_selects_items_without_shared_walk(metadata_root, collectors, monkeypatch):
@@ -86,8 +88,8 @@ def test_plugin_instances_and_configuration_are_per_tree(metadata_root, collecto
     first = Tree(str(metadata_root))
     config.write_text('items:\n  selected: [second]\n')
     second = Tree(str(metadata_root))
-    assert first._plugins[1] is not second._plugins[1]
-    assert first._plugins[1].config == {'selected': ['first']}
+    assert first._loader.plugins[0] is not second._loader.plugins[0]
+    assert first._loader.plugins[0].config == {'selected': ['first']}
     assert second.find('/suite/second') is not None
     assert second.find('/suite/first') is None
 
@@ -132,23 +134,34 @@ def test_native_empty_source_can_be_edited(metadata_root, collectors, content):
     assert 'summary' not in (metadata_root / 'main.fmf').read_text()
 
 
-def test_read_only_plugin_does_not_write_native_source(metadata_root, collectors):
+def test_read_only_plugin_creates_native_sidecar(metadata_root, collectors):
     class ReadOnly(ItemPlugin):
+        writable = False
         read = Plugin.read
         write = Plugin.write
 
     collectors(ReadOnly)
     tree = Tree(str(metadata_root))
-    with pytest.raises(NotImplementedError, match='does not support editing'):
-        with tree.find('/suite/test_one'):
-            pass
+    original = (metadata_root / 'main.fmf').read_text()
+    with tree.find('/suite/test_one') as data:
+        assert data['tags'] == ['base', 'test_one']
+        data['tags'] = ['edited']
     assert not (metadata_root / 'collected.json').exists()
+    assert (metadata_root / 'suite/test_one.fmf').exists()
+    assert (metadata_root / 'main.fmf').read_text() == original
+    reloaded = Tree(str(metadata_root))
+    assert reloaded.find('/suite/test_one').get('tags') == ['edited']
+    assert reloaded.find('/suite/test_one').get('duration') == 4
+    # A subsequent edit reuses the sidecar through the normal FMF writer.
+    with reloaded.find('/suite/test_one') as data:
+        data['summary'] = 'updated again'
+    assert Tree(str(metadata_root)).find('/suite/test_one').get('summary') == 'updated again'
 
 
 def test_native_entry_point_is_not_loaded_twice(metadata_root, collectors):
     collectors(FmfPlugin)
     tree = Tree(str(metadata_root))
-    assert len(tree._plugins) == 1
+    assert len(tree._loader.plugins) == 1
     assert tree.sources == [str(metadata_root / 'main.fmf')]
 
 
@@ -170,9 +183,11 @@ def test_dictionary_tree_needs_no_collectors(collectors):
     collectors(dict)  # Discovery would fail if it were attempted.
     tree = Tree({'tags': ['base'], '/child': {'tags+': ['child']}})
     assert tree.find('/child').get('tags') == ['base', 'child']
-    with pytest.raises(GeneralError, match='No raw data'):
-        with tree:
-            pass
+    assert isinstance(tree._plugin, DictionaryPlugin)
+    with tree.find('/child') as data:
+        data['tags+'] = ['edited']
+    assert Tree(tree._raw_data).find('/child').get('tags') == ['base', 'edited']
+    assert tree.sources == []
 
 
 def test_dictionary_tree_can_grow_from_files(metadata_root, collectors):
@@ -207,7 +222,7 @@ def test_native_discovery_boundaries(metadata_root, collectors):
     assert tree.find('/branch/loop/loop') is None
 
 
-def test_later_collector_owns_overlapping_source(metadata_root, collectors):
+def test_native_overlay_owns_overlapping_source(metadata_root, collectors):
     class Override(Plugin):
         def grow(self, tree, path):
             self.load(tree, {'summary': 'override'}, Path(path) / 'other.json')
@@ -224,5 +239,175 @@ def test_later_collector_owns_overlapping_source(metadata_root, collectors):
     assert tree.get('summary') == 'override'
     with tree as data:
         data['summary'] = 'edited'
-    assert json.loads((metadata_root / 'other.json').read_text()) == {'summary': 'edited'}
+    assert not (metadata_root / 'other.json').exists()
+    assert Tree(str(metadata_root)).get('summary') == 'edited'
+    assert 'summary: edited' in (metadata_root / 'main.fmf').read_text()
+
+
+@pytest.mark.parametrize(('first', 'second', 'native', 'expected'), [
+    ({'tags+': ['a']}, {'tags+': ['b']}, {'tags+': ['c']}, ['base', 'a', 'b', 'c']),
+    ({'tags+': ['a']}, {'tags+<': ['b']}, {'tags-': ['base']}, ['b', 'a']),
+    ({'tags+': ['a']}, {'tags-': ['a']}, {'tags+': ['c']}, ['base', 'c']),
+    ])
+def test_raw_merge_keys_survive_independent_collection(
+        metadata_root, collectors, first, second, native, expected):
+    from fmf.utils import dict_to_yaml
+
+    observations = []
+
+    class First(Plugin):
+        def grow(self, tree, path):
+            observations.append(tree.find('/shared'))
+            self.load(tree, {'/shared': first}, 'first-source')
+
+    class Second(Plugin):
+        def grow(self, tree, path):
+            observations.append(tree.find('/shared'))
+            self.load(tree, {'/shared': second}, 'second-source')
+
+    collectors(First)
+    collectors(Second)
+    (metadata_root / 'shared.fmf').write_text(dict_to_yaml(native))
+    node = Tree(str(metadata_root)).find('/shared')
+    assert observations == [None, None]  # Collectors cannot see each other's trees.
+    assert node.get('tags') == expected
+    # Preserve all raw layers even when the same operator key occurs twice.
+    assert [data for _, data in node._layers] == [first, second, native]
+
+
+def test_cross_plugin_numeric_and_nested_merges(metadata_root, collectors):
+    (metadata_root / 'main.fmf').write_text(
+        'duration: 10\noptions: {list: [base], value: 3}\n')
+    (metadata_root / 'shared.fmf').write_text('duration-: 2\noptions+: {list-: [base]}\n')
+
+    class First(Plugin):
+        def grow(self, tree, path):
+            self.load(tree, {'/shared': {'duration+': 5, 'options+': {'list+': ['a']}}})
+
+    class Second(Plugin):
+        def grow(self, tree, path):
+            self.load(tree, {'/shared': {'duration-': 3, 'options+': {'list+': ['b']}}})
+
+    collectors(First)
+    collectors(Second)
+    node = Tree(str(metadata_root)).find('/shared')
+    assert node.get('duration') == 10
+    assert node.get('options') == {'list': ['a', 'b'], 'value': 3}
+    assert node._layers[0][1]['options+'] == {'list+': ['a']}
+
+
+def test_plugin_controls_its_own_merger(metadata_root, collectors):
+    class LiteralMerger(Merger):
+        def merge(self, node, data, source):
+            data.update(source)
+
+    class Literal(Plugin):
+        merger_class = LiteralMerger
+
+        def grow(self, tree, path):
+            self.load(tree, {'/shared': {'tags+': ['literal']}})
+
+    collectors(Literal)
+    (metadata_root / 'shared.fmf').write_text('tags+: [native]\n')
+    tree = Tree(str(metadata_root))
+    node = tree.find('/shared')
+    assert node.get('tags') == ['base', 'native']
+    assert node.get('tags+') == ['literal']
+    assert isinstance(tree._loader.plugins[0].merger, LiteralMerger)
+    assert tree._loader.plugins[0].merger is not tree._loader.plugins[1].merger
+
+
+@pytest.mark.parametrize('data', [
+    {'/one/two/one': {'summary': 'before'}},
+    {'/one/two': {'/one': {'summary': 'before'}}},
+    {'/one': {'/two': {'/one': {'summary': 'before'}}}},
+    ])
+def test_virtual_dictionary_edit_preserves_hierarchy(data):
+    tree = Tree(data)
+    with tree.find('/one/two/one') as raw:
+        raw['summary'] = 'after'
+    assert Tree(tree._raw_data).find('/one/two/one').get('summary') == 'after'
+
+
+def test_native_backend_requires_entry_point(metadata_root, monkeypatch):
+    monkeypatch.setattr('fmf.plugins._loader.entry_points', lambda **kwargs: [])
+    with pytest.raises(RootError, match='No installed metadata plugin recognizes'):
+        Tree(str(metadata_root))
+    # Dictionary construction does not require package discovery.
+    assert Tree({'summary': 'virtual'}).get('summary') == 'virtual'
+
+
+def test_non_native_backend_can_initialize_tree(tmp_path, collectors, monkeypatch):
+    class Other(ItemPlugin):
+        def initialize(self, tree, path):
+            tree.root = str(path)
+            tree.config = {'items': {'selected': ['chosen']}}
+            return True
+
+    monkeypatch.setattr('fmf.plugins._loader.entry_points', lambda **kwargs: [
+        SimpleNamespace(name='other', load=lambda: Other)])
+    tree = Tree(str(tmp_path))
+    assert tree.find('/suite/chosen') is not None
+    assert not (tmp_path / '.fmf').exists()
+
+
+def test_no_writer_reports_clear_error(tmp_path, monkeypatch):
+    class ReadOnly(ItemPlugin):
+        writable = False
+
+        def initialize(self, tree, path):
+            tree.root = str(path)
+            return True
+
+    monkeypatch.setattr('fmf.plugins._loader.entry_points', lambda **kwargs: [
+        SimpleNamespace(name='readonly', load=lambda: ReadOnly)])
+    tree = Tree(str(tmp_path))
+    with pytest.raises(FileError, match='No installed plugin can store edits'):
+        with tree.find('/suite/test_one'):
+            pass
+
+
+def test_virtual_source_keeps_collecting_ancestry(metadata_root, collectors):
+    class Virtual(Plugin):
+        writable = True
+
+        def grow(self, tree, path):
+            self.load(tree, {'/virtual': {'summary': 'original'}}, str(Path(path) / 'items.json'))
+
+        def read(self, node):
+            return DictionaryPlugin().read(node)
+
+        def write(self, node):
+            _, data, owner = DictionaryPlugin().locate(node)
+            Path(owner.sources[-1]).write_text(json.dumps(data))
+
+    collectors(Virtual)
+    tree = Tree(str(metadata_root))
+    # The combined root comes from main.fmf, while this virtual node's raw
+    # ancestor comes from items.json. Editing must retain that provenance.
+    assert isinstance(tree._loader.owner(tree), FmfPlugin)
+    with tree.find('/virtual') as data:
+        assert data['summary'] == 'original'
+        data['summary'] = 'edited'
+    assert json.loads((metadata_root / 'items.json').read_text()) == {
+        '/virtual': {'summary': 'edited'}}
     assert 'summary' not in (metadata_root / 'main.fmf').read_text()
+
+
+def test_fallback_refuses_to_reinterpret_another_plugins_operator_keys(metadata_root, collectors):
+    class LiteralMerger(Merger):
+        def merge(self, node, data, source):
+            data.update(source)
+
+    class Literal(Plugin):
+        merger_class = LiteralMerger
+
+        def grow(self, tree, path):
+            self.load(tree, {'/literal': {'tags+': ['literal-key']}})
+
+    collectors(Literal)
+    tree = Tree(str(metadata_root))
+    with pytest.raises(FileError, match='without reinterpreting merge keys'):
+        with tree.find('/literal'):
+            pass
+    assert not (metadata_root / 'literal.fmf').exists()
