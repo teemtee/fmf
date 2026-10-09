@@ -23,6 +23,26 @@ may use pytest collection, including classes, parametrization and selection.
 A pytest adapter is not bundled. Framework collection may execute imports
 and hooks; adapters should document this behavior.
 
+``Plugin.update`` treats metadata as a flat mapping. Dictionary hierarchy
+and directive parsing belong to ``DictionaryPlugin.update``. FMF delegates
+to that parser after decoding YAML; other collectors may opt in in the same
+way without giving up their merge or storage behavior::
+
+    from fmf.plugins.dictionary import DictionaryPlugin
+
+    class StructuredTestsPlugin(TestsPlugin):
+        def __init__(self):
+            super().__init__()
+            self.dictionary = DictionaryPlugin()
+
+        def update(self, node, data):
+            self.dictionary.update(node, data)
+
+Delegation interprets nested and compact ``/path`` keys and ``/`` directives,
+but keeps the originating plugin on every node. It leaves ``+``/``-`` keys
+intact for that plugin's merger to apply later. The dictionary backend also
+uses this parser when constructing a Tree directly from a dictionary.
+
 Register a collector as an installed entry point::
 
     [project.entry-points."fmf.plugins"]
@@ -71,10 +91,8 @@ in-memory hierarchy, independently of source discovery.
 import copy
 import re
 from abc import ABC, abstractmethod
-from pprint import pformat as pretty
 
 import fmf.utils as utils
-from fmf.utils import log
 
 
 class Merger:
@@ -283,45 +301,14 @@ class Plugin(ABC):
         self.update(node, data)
 
     def update(self, node, data):
-        """
-        Update metadata, handle virtual hierarchy
-        """
+        """Update flat metadata without interpreting hierarchy or directives.
 
-        # Make a note that the data dictionary has been updated
-        # None is handled in the same way as an empty dictionary
+        Backends using FMF dictionary conventions can delegate this method
+        to DictionaryPlugin.update() while retaining source ownership.
+        """
         node._updated = True
-        # Nothing to do if no data
-        if data is None:
-            return
-
-        # Handle fmf directives first
-        try:
-            directives = data.pop("/")
-            node._process_directives(directives)
-        except KeyError:
-            pass
-
-        # Process the metadata
-        for key, value in data.items():
-            # Ensure there are no 'None' keys
-            if key is None:
-                raise utils.FormatError("Invalid key 'None'.")
-            # Handle child attributes
-            if key.startswith('/'):
-                name = key.lstrip('/')
-                # Handle deeper nesting (e.g. keys like /one/two/three) by
-                # extracting only the first level of the hierarchy as name
-                match = re.search("([^/]+)(/.*)", name)
-                if match:
-                    name = match.groups()[0]
-                    value = {match.groups()[1]: value}
-                # Update existing child or create a new one
-                node.child(name, value)
-            # Update regular attributes
-            else:
-                node.data[key] = value
-        log.debug("Data for '{0}' updated.".format(node))
-        log.data(pretty(node.data))
+        if data is not None:
+            node.data.update(data)
 
     @abstractmethod
     def grow(self, tree, path):

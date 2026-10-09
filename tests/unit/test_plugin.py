@@ -1,16 +1,29 @@
 """Collectors own traversal and storage; Tree only combines their results."""
 
+import copy
 import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from ruamel.yaml import YAML
 
 from fmf import Tree
 from fmf.plugins import Merger, Plugin
 from fmf.plugins.dictionary import DictionaryPlugin
 from fmf.plugins.fmf import FmfPlugin
 from fmf.utils import FileError, RootError
+
+
+class HierarchicalPlugin(Plugin):
+    """Opt into dictionary parsing without changing source or merger ownership."""
+
+    def __init__(self):
+        super().__init__()
+        self.dictionary = DictionaryPlugin()
+
+    def update(self, node, data):
+        self.dictionary.update(node, data)
 
 
 class ItemPlugin(Plugin):
@@ -255,12 +268,12 @@ def test_raw_merge_keys_survive_independent_collection(
 
     observations = []
 
-    class First(Plugin):
+    class First(HierarchicalPlugin):
         def grow(self, tree, path):
             observations.append(tree.find('/shared'))
             self.load(tree, {'/shared': first}, 'first-source')
 
-    class Second(Plugin):
+    class Second(HierarchicalPlugin):
         def grow(self, tree, path):
             observations.append(tree.find('/shared'))
             self.load(tree, {'/shared': second}, 'second-source')
@@ -280,11 +293,11 @@ def test_cross_plugin_numeric_and_nested_merges(metadata_root, collectors):
         'duration: 10\noptions: {list: [base], value: 3}\n')
     (metadata_root / 'shared.fmf').write_text('duration-: 2\noptions+: {list-: [base]}\n')
 
-    class First(Plugin):
+    class First(HierarchicalPlugin):
         def grow(self, tree, path):
             self.load(tree, {'/shared': {'duration+': 5, 'options+': {'list+': ['a']}}})
 
-    class Second(Plugin):
+    class Second(HierarchicalPlugin):
         def grow(self, tree, path):
             self.load(tree, {'/shared': {'duration-': 3, 'options+': {'list+': ['b']}}})
 
@@ -301,7 +314,7 @@ def test_plugin_controls_its_own_merger(metadata_root, collectors):
         def merge(self, node, data, source):
             data.update(source)
 
-    class Literal(Plugin):
+    class Literal(HierarchicalPlugin):
         merger_class = LiteralMerger
 
         def grow(self, tree, path):
@@ -368,7 +381,7 @@ def test_no_writer_reports_clear_error(tmp_path, monkeypatch):
 
 
 def test_virtual_source_keeps_collecting_ancestry(metadata_root, collectors):
-    class Virtual(Plugin):
+    class Virtual(HierarchicalPlugin):
         writable = True
 
         def grow(self, tree, path):
@@ -399,7 +412,7 @@ def test_fallback_refuses_to_reinterpret_another_plugins_operator_keys(metadata_
         def merge(self, node, data, source):
             data.update(source)
 
-    class Literal(Plugin):
+    class Literal(HierarchicalPlugin):
         merger_class = LiteralMerger
 
         def grow(self, tree, path):
@@ -411,3 +424,61 @@ def test_fallback_refuses_to_reinterpret_another_plugins_operator_keys(metadata_
         with tree.find('/literal'):
             pass
     assert not (metadata_root / 'literal.fmf').exists()
+
+
+def test_flat_plugin_does_not_interpret_dictionary_hierarchy(metadata_root, collectors):
+    class Flat(Plugin):
+        def grow(self, tree, path):
+            self.load(tree, {'/': {'custom': True}, '/literal': {'value': 1}})
+
+    collectors(Flat)
+    tree = Tree(str(metadata_root))
+    assert tree.get('/') == {'custom': True}
+    assert tree.get('/literal') == {'value': 1}
+    assert tree.find('/literal') is None
+    assert tree._directives == {}
+
+
+def test_fmf_dictionary_delegation_preserves_nested_ownership(metadata_root, collectors):
+    source = metadata_root / 'main.fmf'
+    source.write_text(
+        'tags: [base]\n'
+        '/one/two:\n'
+        '  tags+: [two]\n'
+        '  /three:\n'
+        '    /: {inherit: false}\n'
+        '    tags+: [three]\n')
+    original = YAML(typ="safe").load(source.read_text())
+    tree = Tree(str(metadata_root))
+    assert tree._raw_data == original
+    two = tree.find('/one/two')
+    three = tree.find('/one/two/three')
+    plugin = tree._loader.owner(tree)
+    assert isinstance(plugin, FmfPlugin)
+    assert isinstance(plugin.dictionary, DictionaryPlugin)
+    assert two._plugin is three._plugin is plugin
+    assert tree._loader.owner(three) is plugin
+    assert two.get('tags') == ['base', 'two']
+    assert three.get('tags') == ['three']
+    assert three._layers[0][1] == {'tags+': ['three']}
+    with three as data:
+        assert data['/'] == {'inherit': False}
+        data['tags+'].append('edited')
+    reloaded = Tree(str(metadata_root)).find('/one/two/three')
+    assert reloaded.get('tags') == ['three', 'edited']
+    assert source.read_text().count('tags+:') == 2
+    original['/one/two']['/three']['tags+'].append('edited')
+    assert YAML(typ="safe").load(source.read_text()) == original
+
+
+def test_dictionary_parsing_preserves_supplied_structure():
+    data = {
+        '/': {'select': False},
+        'tags': ['base'],
+        '/one/two': {'/': {'inherit': False}, 'tags+': ['child']},
+        }
+    original = copy.deepcopy(data)
+    tree = Tree(data)
+    assert data == original
+    assert tree._raw_data == original
+    assert tree.find('/one/two').get('tags') == ['child']

@@ -31,6 +31,10 @@ class FmfPlugin(Plugin):
         self.dictionary = DictionaryPlugin()
         self._symlinkdirs = []
 
+    def update(self, node, data):
+        """Interpret decoded YAML using the shared dictionary backend."""
+        self.dictionary.update(node, data)
+
     def initialize(self, tree, path):
         """
         Find metadata tree root, detect format version, check for config
