@@ -14,13 +14,13 @@ description = 'Flexible Metadata Format'
 readme = 'README.rst'
 license = 'GPL-2.0-or-later'
 license-files = { paths = ['LICENSE'] }
-requires-python = '>=3.9'
+requires-python = '>=3.12'
 classifiers = [
     'Natural Language :: English',
-    'Programming Language :: Python :: 3.9',
-    'Programming Language :: Python :: 3.10',
-    'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
+    'Programming Language :: Python :: 3.15',
     'Topic :: Utilities',
 ]
 keywords = [
@@ -91,7 +91,7 @@ template = "dev"
 description = "Run scripts with multiple Python versions"
 
 [[tool.hatch.envs.test.matrix]]
-python = ["3.9", "3.11", "3.12"]
+python = ["3.12"]
 
 [tool.hatch.envs.docs]
 features = ["docs"]
