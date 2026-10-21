@@ -1,0 +1,10 @@
+name: Sync github labels
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    uses: teemtee/tmt/.github/workflows/sync-lables.yml@main
+    permissions:
+      issues: write
