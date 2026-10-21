@@ -6,8 +6,6 @@ files_to_sync:
 upstream_package_name: fmf
 downstream_package_name: fmf
 
-# Epel9 fails to build because of too old version of setuptools_scm
-# Need to create archive with PKG-INFO
 actions:
   create-archive:
     - "hatch build -t sdist"
@@ -26,7 +24,6 @@ _:
   # Supported targets
   - targets: &targets
       - fedora-all
-      - epel-9
       - epel-10
 
 srpm_build_deps:
@@ -78,5 +75,4 @@ jobs:
     trigger: commit
     dist_git_branches:
       - fedora-branched
-      - epel-9
       - epel-10
