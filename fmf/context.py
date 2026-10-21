@@ -21,9 +21,7 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from typing import ClassVar, Generic, Optional, TypeVar, Union
-
-from fmf._compat.typing import TypeAlias
+from typing import ClassVar, Generic, Optional, TypeAlias, TypeVar, Union
 
 T = TypeVar("T")
 
