@@ -44,6 +44,10 @@ jobs:
   - job: tests
     trigger: pull_request
     targets: *targets
+    tf_extra_params:
+      settings:
+        pipeline:
+          type: tmt-multihost
 
   # Build commits merged to main (copr latest)
   - job: copr_build
