@@ -1,10 +1,26 @@
-# Run on localhost by default
-provision:
-    how: local
+prepare:
+  - how: install
+    package: fmf
+    # TODO: This order is just after testing-farm injects the artifact
+    # https://gitlab.com/testing-farm/gluetool-modules/-/merge_requests/1122
+    order: 60
 
 # Use the internal executor
 execute:
     how: tmt
+
+adjust:
+  # Enable epel on CentOS Stream
+  - prepare+:
+      - name: enable-epel
+        how: feature
+        epel: enabled
+        order: 10
+    when: distro == centos-stream
+  # Use the local provision method when running tests locally
+  - provision:
+        how: local
+    when: initiator is not defined or initiator == human
 
 # Install packages
 #prepare:
