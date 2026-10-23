@@ -1,6 +1,9 @@
 prepare:
   - how: install
     package: fmf
+    # TODO: This order is just after testing-farm injects the artifact
+    # https://gitlab.com/testing-farm/gluetool-modules/-/merge_requests/1122
+    order: 60
 
 # Use the internal executor
 execute:
