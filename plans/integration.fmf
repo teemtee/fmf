@@ -11,7 +11,7 @@ prepare+:
       - python3-pip
 enabled: false
 
-adjust:
+adjust+:
   - when: initiator == packit
     because: >
       We want to test against the tmt main branch
