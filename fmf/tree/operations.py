@@ -11,6 +11,10 @@ from fmf.utils import log
 class Merger:
     """Merge metadata dictionaries."""
 
+    def merge(self, data, source, name):
+        self.name = name
+        self._merge_special(data, source)
+
     def _merge_plus(self, data, key, value, prepend=False):
         """
         Handle extending attributes using the '+' suffix
@@ -172,6 +176,8 @@ ADJUST_CONTROL_KEYS = ['because', 'continue', 'when']
 class Adjuster:
     """Transform an already loaded tree for a particular context."""
 
+    _merger = Merger()
+
     def adjust(self, node, context, key='adjust', undecided='skip',
                case_sensitive=None, decision_callback=None, additional_rules=None,
                additional_rules_callback=None):
@@ -267,7 +273,7 @@ class Adjuster:
                             for key, value in rule.items()
                             if key not in ADJUST_CONTROL_KEYS
                             }
-                        node._merger.merge(node.data, apply_rule, node.name)
+                        self._merger.merge(node.data, apply_rule, node.name)
 
                         # First matching rule wins, skip the rest of this set unless continue
                         if not continue_:

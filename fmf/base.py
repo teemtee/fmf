@@ -17,6 +17,7 @@ from ruamel.yaml.error import YAMLError
 
 import fmf.context
 import fmf.utils as utils
+from fmf.tree.operations import Adjuster, Merger
 from fmf.utils import dict_to_yaml, log
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,6 +72,8 @@ class Tree:
     """
     Metadata Tree
     """
+
+    _merger = Merger()
 
     def __init__(self, data, name=None, parent=None):
         """
@@ -276,7 +279,7 @@ class Tree:
         else:
             self.sources = parent.sources + self.sources
             data = copy.deepcopy(parent.data)
-        self._merge_special(data, self.data)
+        self._merger.merge(data, self.data, self.name)
         self.data = data
 
     def inherit(self):
@@ -334,6 +337,48 @@ class Tree:
                 self.data[key] = value
         log.debug("Data for '{0}' updated.".format(self))
         log.data(pretty(self.data))
+
+    def adjust(
+            self,
+            context,
+            key='adjust',
+            undecided='skip',
+            case_sensitive: Optional[bool] = None,
+            decision_callback: Optional[AdjustCallback] = None,
+            additional_rules=None,
+            additional_rules_callback: Optional[ApplyRulesCallback] = None):
+        """
+        Adjust tree data based on provided context and rules
+
+        The 'context' should be an instance of the fmf.context.Context
+        class describing the environment context. By default, the key
+        'adjust' of each node is inspected for possible rules that
+        should be applied. Provide 'key' to use a custom key instead.
+
+        Optional 'undecided' parameter can be used to specify what
+        should happen when a rule condition cannot be decided because
+        context dimension is not defined. By default, such rules are
+        skipped. In order to raise the fmf.context.CannotDecide
+        exception in such cases use undecided='raise'.
+
+        Optional 'decision_callback' callback would be called for every adjust
+        rule inspected, with three arguments: current fmf node, current
+        adjust rule, and whether it was applied or not.
+
+        Optional 'additional_rules' parameter can be used to specify rules
+        that should be applied after those from the node itself.
+        These additional rules are processed even when an applied
+        rule defined in the node has ``continue: false`` set.
+
+        Optional 'additional_rules_callback' callback could be set to
+        limit nodes for which 'additional_rules' are processed. This
+        callback is called with the current fmf node as an argument and
+        should return 'True' to process 'additional_rules' or 'False' to
+        skip them.
+        """
+        return Adjuster().adjust(
+            self, context, key, undecided, case_sensitive,
+            decision_callback, additional_rules, additional_rules_callback)
 
     def get(self, name=None, default=None):
         """
