@@ -26,7 +26,6 @@ _:
   # Supported targets
   - targets: &targets
       - fedora-all
-      - epel-9
       - epel-10
 
 srpm_build_deps:
@@ -82,5 +81,4 @@ jobs:
     trigger: commit
     dist_git_branches:
       - fedora-branched
-      - epel-9
       - epel-10
