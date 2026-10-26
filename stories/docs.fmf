@@ -3,32 +3,32 @@ story:
     documentation at hand.
 
 /help:
-    requirement:
+    summary:
         Main command and all its subcommands should provide --help
     description:
         All available options should be easily discoverable.
-    examples: |
+    example: |
         fmf --help
         fmf ls --help
         fmf show --help
 
 /man:
-    requirement:
+    summary:
         There should be an 'fmf' man page availabe in the package
     description:
         Man page should contain brief introduction about the tool
         and a list of essential commands and options.
-    examples:
+    example:
         man fmf
 
 /examples:
-    requirement:
+    summary:
         A couple of instructive examples should be included in the
         package for easy first experimenting
     description:
         Examples should be stored under the /usr/share/doc
         directory.
-    examples: |
+    example: |
         cd /usr/share/doc/fmf/examples
         ls
         cd wget
