@@ -21,6 +21,7 @@ Table of Contents
     Features <features>
     Context <context>
     Examples <examples>
+    Plugins <plugins>
     Modules <modules>
     Contribute <contribute>
     Releases <releases>
