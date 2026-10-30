@@ -6,8 +6,6 @@ files_to_sync:
 upstream_package_name: fmf
 downstream_package_name: fmf
 
-# Epel9 fails to build because of too old version of setuptools_scm
-# Need to create archive with PKG-INFO
 actions:
   create-archive:
     - "hatch build -t sdist"
