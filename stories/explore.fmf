@@ -3,9 +3,9 @@ story:
     are present in the current tree.
 
 /names:
-    requirement: Show a brief list of object names
-    examples: fmf ls
+    summary: Show a brief list of object names
+    example: fmf ls
 
 /attributes:
-    requirement: Display all nodes including their attributes
-    examples: fmf show
+    summary: Display all nodes including their attributes
+    example: fmf show
