@@ -8,6 +8,9 @@
 fmf-1.8.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The minimal required Python version is now Python 3.12, the support
+for older Python versions has been dropped.
+
 fmf library consumers can define custom :ref:`context` dimension
 handling by extending :py:class:`fmf.context.ContextDimension` and
 :py:class:`fmf.context.Context`.
