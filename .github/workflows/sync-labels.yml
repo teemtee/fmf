@@ -5,6 +5,6 @@ on:
 
 jobs:
   sync:
-    uses: teemtee/tmt/.github/workflows/sync-lables.yml@main
+    uses: teemtee/tmt/.github/workflows/sync-labels.yml@main
     permissions:
       issues: write
