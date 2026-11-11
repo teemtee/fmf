@@ -1,0 +1,17 @@
+/base:
+  summary: test plans
+  execute:
+    how: tmt
+  provision:
+    how: minute
+  /plan0:
+    discover:
+      how: fmf
+  /plan1:
+    discover:
+      how: shell
+    report:
+      how: polarion
+    prepare:
+      name: some name
+      how: shell
