@@ -12,19 +12,20 @@ from pprint import pformat as pretty
 from typing import Any, Dict, Optional, Protocol
 
 from ruamel.yaml import YAML
-from ruamel.yaml.constructor import DuplicateKeyError
 from ruamel.yaml.error import YAMLError
 
 import fmf.context
 import fmf.utils as utils
-from fmf.utils import dict_to_yaml, log
+from fmf.plugin import Plugin
+# Re-export constants for backward compatibility
+from fmf.plugins.fmf import MAIN, SUFFIX
+from fmf.utils import log
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SUFFIX = ".fmf"
-MAIN = "main" + SUFFIX
+# SUFFIX and MAIN moved to fmf.plugins.fmf and re-exported above
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
 ADJUST_CONTROL_KEYS = ['because', 'continue', 'when']
 
@@ -93,6 +94,7 @@ class Tree:
         self.sources = list()
         self.root = None
         self.config = {}
+        self._plugins = None
         self.version = utils.VERSION
         self.original_data = dict()
         self._commit = None
@@ -121,6 +123,7 @@ class Tree:
         else:
             self.root = self.parent.root
             self.config = self.parent.config
+            self._plugins = self.parent._plugins
             self.name = os.path.join(self.parent.name, name)
 
         # Update data from a dictionary (handle empty nodes)
@@ -209,6 +212,8 @@ class Tree:
             log.debug("Config file not found.")
         except YAMLError as error:
             raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
+
+        self._plugins = Plugin.for_tree(self.config or {})
 
     def _merge_plus(self, data, key, value, prepend=False):
         """
@@ -716,35 +721,45 @@ class Tree:
             log.debug("Skipping '{0}' (not accessible).".format(path))
             return
 
-        # Investigate main.fmf as the first file (for correct inheritance)
-        filenames = sorted(
-            [filename for filename in filenames if filename.endswith(SUFFIX)])
-        try:
-            filenames.insert(0, filenames.pop(filenames.index(MAIN)))
-        except ValueError:
-            pass
+        if self._plugins is None:
+            self._plugins = Plugin.for_tree(self.config or {})
 
-        # Check every metadata file and load data (ignore hidden)
+        # Prioritize main.fmf first if it exists (for correct inheritance)
+        if MAIN in filenames:
+            filenames = sorted([f for f in filenames if f != MAIN])
+            filenames.insert(0, MAIN)
+        else:
+            filenames = sorted(filenames)
+
+        # Check every file and load data if a plugin can handle it
         for filename in filenames:
+            # Skip hidden files (unless enabled in config)
             if filename.startswith(".") and filename not in self.explore_include:
                 continue
+
             fullpath = os.path.abspath(os.path.join(dirpath, filename))
-            log.info("Checking file {0}".format(fullpath))
+
+            plugin = Plugin.for_file(filename, self._plugins)
+            if not plugin:
+                # No plugin can handle this file, skip silently
+                continue
+
+            # Read file using plugin
+            log.info(f"Processing '{fullpath}' with {type(plugin).__name__}")
             try:
-                with open(fullpath, encoding='utf-8') as datafile:
-                    # Workadound ruamel s390x read issue - fmf/issues/164
-                    content = datafile.read()
-                    data = YAML(typ="safe").load(content)
-            except (YAMLError, DuplicateKeyError) as error:
+                data = plugin.read(fullpath)
+            except Exception as error:
                 raise utils.FileError(
-                    f"Failed to parse '{fullpath}'.\n{error}")
+                    f"Failed to read '{fullpath}' with {type(plugin).__name__}.\n{error}")
+
             log.data(pretty(data))
-            # Handle main.fmf as data for self
+
+            # Handle main.fmf specially (backward compatibility)
             if filename == MAIN:
                 self.sources.append(fullpath)
                 self._raw_data = copy.deepcopy(data)
                 self.update(data)
-            # Handle other *.fmf files as children
+            # Handle other files as children
             else:
                 self.child(os.path.splitext(filename)[0], data, fullpath)
 
@@ -1007,11 +1022,14 @@ class Tree:
         raw data identify the dictionary corresponding to the current
         node, create if needed. Detect the raw data source filename.
 
-        Return tuple with the following three items:
+        Return tuple with the following four items:
 
         node_data ... dictionary containing raw data for the current node
         full_data ... full raw data from the closest parent node
         source ... file system path where the full raw data are stored
+        hierarchy ... virtual node names from the source node down to this
+                      node (empty when the node is itself file-backed), so a
+                      writer plugin knows where in the structure the node sits
         """
 
         # List of node names in the virtual hierarchy
@@ -1044,7 +1062,7 @@ class Tree:
             node_data = node_data[key]
 
         # The full raw data were read from the last source
-        return node_data, full_data, node.sources[-1]
+        return node_data, full_data, node.sources[-1], hierarchy
 
     def __enter__(self):
         """
@@ -1075,11 +1093,22 @@ class Tree:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
         Experimental: Store modified metadata to disk
+
+        Uses the plugin system to write data back to the source file.
+        Writer failures are reported without replacing the source format.
         """
 
-        _, full_data, source = self._locate_raw_data()
-        with open(source, "w", encoding='utf-8') as file:
-            file.write(dict_to_yaml(full_data))
+        _, full_data, source, hierarchy = self._locate_raw_data()
+
+        if self._plugins is None:
+            self._plugins = Plugin.for_tree(self.config or {})
+        plugin = Plugin.for_file(source, self._plugins)
+        if plugin is None:
+            raise utils.FileError(f"No plugin can write '{source}'")
+        try:
+            plugin.write(source, hierarchy, full_data, {}, {}, [])
+        except Exception as error:
+            raise utils.FileError(f"Failed to write '{source}': {error}") from error
 
     def __getitem__(self, key):
         """

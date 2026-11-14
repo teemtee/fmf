@@ -257,6 +257,8 @@ __ https://docs.python.org/3/library/re.html#regular-expression-syntax
             tag-: [two, three]
 
 
+.. _elasticity:
+
 Elasticity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
