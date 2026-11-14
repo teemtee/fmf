@@ -5,11 +5,8 @@ import tempfile
 import unittest
 from shutil import copytree, rmtree
 
-import pytest
-
 from fmf.base import Tree
 from fmf.context import Context
-from fmf.utils import GeneralError
 
 # Prepare path to examples
 PATH = os.path.dirname(os.path.realpath(__file__))
@@ -141,14 +138,15 @@ class TestModify(unittest.TestCase):
         self.assertIn('tester', node.data)
         self.assertNotIn('requirement', node.data)
 
-    def test_modify_unsupported_method(self):
-        """
-        Raise error for trees initialized from a dict
-        """
-
-        with pytest.raises(GeneralError, match='No raw data'):
-            with Tree(dict(x=1)) as data:
-                data['y'] = 2
+    def test_modify_dictionary(self):
+        """Dictionary edits stay in the owned raw data without filesystem I/O."""
+        original = dict(x=1)
+        tree = Tree(original)
+        with tree as data:
+            data['y'] = 2
+        self.assertEqual(tree._raw_data, dict(x=1, y=2))
+        self.assertEqual(original, dict(x=1))
+        self.assertEqual(tree.sources, [])
 
     def test_context_manager(self):
         """
