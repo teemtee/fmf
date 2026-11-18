@@ -39,16 +39,21 @@ class AdjustCallback(Protocol):
     A callback for per-rule notifications made by Tree.adjust()
 
     Function which will be called for every rule inspected by adjust().
-    It will be given three arguments: fmf tree being inspected,
-    current adjust rule, and whether the rule was skipped (``None``),
-    applied (``True``) or not applied (``False``).
+    It will be given the following arguments:
+
+    * fmf tree being inspected - **after ``adjust``** rule was applied,
+    * the current adjust rule,
+    * whether the rule was skipped (``None``), applied (``True``) or not
+      applied (``False``),
+    * and if the rule was applied, the original node content.
     """
 
     def __call__(
             self,
             node: 'Tree',
             rule: Dict[str, Any],
-            applied: Optional[bool]) -> None:
+            applied: Optional[bool],
+            before: Optional['Tree'] = None) -> None:
         pass
 
 
@@ -582,16 +587,22 @@ class Tree:
                 # Apply remaining rule attributes if context matches
                 try:
                     if context.matches(condition):
-                        if decision_callback:
-                            decision_callback(self, rule, True)
-
                         # Remove special keys (when, because...) from the rule
                         apply_rule = {
                             key: value
                             for key, value in rule.items()
                             if key not in ADJUST_CONTROL_KEYS
                             }
-                        self._merge_special(self.data, apply_rule)
+
+                        if decision_callback:
+                            node_before = self.copy()
+
+                            self._merge_special(self.data, apply_rule)
+
+                            decision_callback(self, rule, True, before=node_before)
+
+                        else:
+                            self._merge_special(self.data, apply_rule)
 
                         # First matching rule wins, skip the rest of this set unless continue
                         if not continue_:
