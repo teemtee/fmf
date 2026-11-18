@@ -2,7 +2,7 @@
 
 import copy
 import re
-from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Union
 
 import fmf.context
 
@@ -49,9 +49,16 @@ class ApplyRulesCallback(Protocol):
 class Merger:
     """Merge metadata dictionaries."""
 
-    def merge(self, node, parent=None):
+    def merge(self, node: 'Tree', parent: Optional['Tree'] = None) -> None:
         """
-        Merge parent data into node
+        Merge parent data into node.
+
+        Copies the parent's data dictionary as the base (``data``), then
+        merges the child node's raw data (``source``) on top of it using
+        ``_merge_special``, which handles the special ``+``/``-``/``~``
+        suffixes.  ``node.name`` is passed as ``name`` and used only in
+        error messages.  ``node`` is updated in-place.
+        ``parent`` defaults to ``node.parent`` when not provided.
         """
         if parent is None:
             parent = node.parent
@@ -60,11 +67,11 @@ class Merger:
         else:
             node.sources = parent.sources + node.sources
             data = copy.deepcopy(parent.data)
-        self.name = node.name
-        self._merge_special(data, node.data)
+        self._merge_special(data, node.data, node.name)
         node.data = data
 
-    def _merge_plus(self, data, key, value, prepend=False):
+    def _merge_plus(self, data: dict, key: str, value: Any, name: str,
+                    prepend: bool = False) -> None:
         """
         Handle extending attributes using the '+' suffix
         """
@@ -81,8 +88,8 @@ class Merger:
                 if not isinstance(list_item, dict):
                     raise utils.MergeError(
                         "MergeError: Item '{0}' in {1} must be a dictionary.".format(
-                            list_item, self.name))
-                self._merge_special(list_item, value)
+                            list_item, name))
+                self._merge_special(list_item, value, name)
             return
 
         # Parent is a dict and child is a list of dict
@@ -93,16 +100,16 @@ class Merger:
                 if not isinstance(list_item, dict):
                     raise utils.MergeError(
                         "MergeError: Item '{0}' in {1} must be a dictionary.".format(
-                            list_item, self.name))
+                            list_item, name))
                 result_dict = copy.deepcopy(data[key])
-                self._merge_special(result_dict, list_item)
+                self._merge_special(result_dict, list_item, name)
                 result_list.append(result_dict)
             data[key] = result_list
             return
 
         # Use the special merge for merging dictionaries
         if isinstance(data[key], dict) and isinstance(value, dict):
-            self._merge_special(data[key], value)
+            self._merge_special(data[key], value, name)
             return
 
         # Attempt to apply the plus operator
@@ -114,9 +121,9 @@ class Merger:
         except TypeError as error:
             raise utils.MergeError(
                 "MergeError: Key '{0}' in {1} ({2}).".format(
-                    key, self.name, str(error)))
+                    key, name, str(error)))
 
-    def _merge_regexp(self, data, key, value):
+    def _merge_regexp(self, data: dict, key: str, value: Any, name: str) -> None:
         """
         Handle substitution of current values
         """
@@ -133,15 +140,15 @@ class Merger:
                 except TypeError:
                     raise utils.MergeError(
                         "MergeError: Key '{0}' in {1} (not a string).".format(
-                            key, self.name))
+                            key, name))
             elif isinstance(data[key], str):
                 data[key] = re.sub(pattern, replacement, data[key])
             else:
                 raise utils.MergeError(
                     "MergeError: Key '{0}' in {1} (wrong type).".format(
-                        key, self.name))
+                        key, name))
 
-    def _merge_minus_regexp(self, data, key, value):
+    def _merge_minus_regexp(self, data: dict, key: str, value: Any, name: str) -> None:
         """
         Handle removing current values if they match regexp
         """
@@ -169,9 +176,9 @@ class Merger:
         else:
             raise utils.MergeError(
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
-                    key, self.name))
+                    key, name))
 
-    def _merge_minus(self, data, key, value):
+    def _merge_minus(self, data: dict, key: str, value: Any, name: str) -> None:
         """
         Handle reducing attributes using the '-' suffix
         """
@@ -195,41 +202,49 @@ class Merger:
         else:
             raise utils.MergeError(
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
-                    key, self.name))
+                    key, name))
 
-    def _merge_special(self, data, source):
+    def _merge_special(self, data: dict, source: dict, name: str) -> None:
         """
-        Merge source dict into data, handle special suffixes
+        Merge source dict into data, handle special suffixes.
+
+        ``data`` is the accumulated result dict (parent data) mutated in-place.
+        ``source`` is the raw child data being merged in.
+        ``name`` is the node name used only in error messages.
         """
 
         for key, value in source.items():
             # Handle special attribute merging
             if key.endswith('+'):
-                self._merge_plus(data, key.rstrip('+'), value)
+                self._merge_plus(data, key.rstrip('+'), value, name)
             elif key.endswith('+<'):
-                self._merge_plus(data, key.rstrip('+<'), value, prepend=True)
+                self._merge_plus(data, key.rstrip('+<'), value, name, prepend=True)
             elif key.endswith('-~'):
-                self._merge_minus_regexp(data, key.rstrip('-~'), value)
+                self._merge_minus_regexp(data, key.rstrip('-~'), value, name)
             elif key.endswith('-'):
-                self._merge_minus(data, key.rstrip('-'), value)
+                self._merge_minus(data, key.rstrip('-'), value, name)
             elif key.endswith('~'):
-                self._merge_regexp(data, key.rstrip('~'), value)
+                self._merge_regexp(data, key.rstrip('~'), value, name)
             # Otherwise just update the value
             else:
                 data[key] = value
 
 
-ADJUST_CONTROL_KEYS = ['because', 'continue', 'when']
-
-
 class Adjuster:
     """Transform an already loaded tree for a particular context."""
 
-    _merger = Merger()
+    CONTROL_KEYS: List[str] = ['because', 'continue', 'when']
 
-    def adjust(self, node, context, key='adjust', undecided='skip',
-               case_sensitive=None, decision_callback=None, additional_rules=None,
-               additional_rules_callback=None):
+    def adjust(
+            self,
+            node: 'Tree',
+            context: 'fmf.context.Context',
+            key: str = 'adjust',
+            undecided: str = 'skip',
+            case_sensitive: Optional[bool] = None,
+            decision_callback: Optional[AdjustCallback] = None,
+            additional_rules: Optional[Union[dict, list]] = None,
+            additional_rules_callback: Optional[ApplyRulesCallback] = None) -> None:
         """
         Adjust tree data based on provided context and rules
 
@@ -290,66 +305,11 @@ class Adjuster:
         elif isinstance(additional_rules, dict):
             additional_rules = [additional_rules]
 
-        def apply_rules(rule_set):
-            # 'continue' has to affect only its rule_set
-            for rule in rule_set:
-                # Rule must be a dictionary
-                if not isinstance(rule, dict):
-                    raise utils.FormatError("Adjust rule should be a dictionary.")
-
-                # Missing 'when' means always enabled rule
-                try:
-                    condition = rule['when']
-                except KeyError:
-                    condition = True
-
-                # The optional 'continue' key should be a bool
-                continue_ = rule.get('continue', True)
-                if not isinstance(continue_, bool):
-                    raise utils.FormatError(
-                        "The 'continue' value should be bool, "
-                        "got '{}'.".format(continue_))
-
-                # Apply remaining rule attributes if context matches
-                try:
-                    if context.matches(condition):
-                        if decision_callback:
-                            decision_callback(node, rule, True)
-
-                        # Remove special keys (when, because...) from the rule
-                        apply_rule = {
-                            key: value
-                            for key, value in rule.items()
-                            if key not in ADJUST_CONTROL_KEYS
-                            }
-                        self._merger.name = node.name
-                        self._merger._merge_special(node.data, apply_rule)
-
-                        # First matching rule wins, skip the rest of this set unless continue
-                        if not continue_:
-                            break
-                    else:
-                        if decision_callback:
-                            decision_callback(node, rule, False)
-                # Handle undecided rules as requested
-                except fmf.context.CannotDecide:
-                    if decision_callback:
-                        decision_callback(node, rule, None)
-
-                    if undecided == 'skip':
-                        continue
-                    elif undecided == 'raise':
-                        raise
-                    else:
-                        raise utils.GeneralError(
-                            "Invalid value for the 'undecided' parameter. Should "
-                            "be 'skip' or 'raise', got '{}'.".format(undecided))
-
         # Always process rules from 'key' (adjust)
-        apply_rules(rules)
+        self._apply_rules(rules, node, context, key, undecided, decision_callback)
         # Additional rules might be skipped depending on the callback
         if additional_rules_callback is None or additional_rules_callback(node):
-            apply_rules(additional_rules)
+            self._apply_rules(additional_rules, node, context, key, undecided, decision_callback)
 
         # Adjust all child nodes as well
         for child in node.children.values():
@@ -358,3 +318,67 @@ class Adjuster:
                         decision_callback=decision_callback,
                         additional_rules=additional_rules,
                         additional_rules_callback=additional_rules_callback)
+
+    def _apply_rules(
+            self,
+            rule_set: list,
+            node: 'Tree',
+            context: 'fmf.context.Context',
+            key: str,
+            undecided: str,
+            decision_callback: Optional[AdjustCallback]) -> None:
+        """
+        Apply a set of adjust rules to node.
+        """
+        # 'continue' has to affect only its rule_set
+        for rule in rule_set:
+            # Rule must be a dictionary
+            if not isinstance(rule, dict):
+                raise utils.FormatError("Adjust rule should be a dictionary.")
+
+            # Missing 'when' means always enabled rule
+            try:
+                condition = rule['when']
+            except KeyError:
+                condition = True
+
+            # The optional 'continue' key should be a bool
+            continue_ = rule.get('continue', True)
+            if not isinstance(continue_, bool):
+                raise utils.FormatError(
+                    "The 'continue' value should be bool, "
+                    "got '{}'.".format(continue_))
+
+            # Apply remaining rule attributes if context matches
+            try:
+                if context.matches(condition):
+                    if decision_callback:
+                        decision_callback(node, rule, True)
+
+                    # Remove special keys (when, because...) from the rule
+                    apply_rule = {
+                        k: v
+                        for k, v in rule.items()
+                        if k not in self.CONTROL_KEYS
+                        }
+                    node._merger._merge_special(node.data, apply_rule, node.name)
+
+                    # First matching rule wins, skip the rest of this set unless continue
+                    if not continue_:
+                        break
+                else:
+                    if decision_callback:
+                        decision_callback(node, rule, False)
+            # Handle undecided rules as requested
+            except fmf.context.CannotDecide:
+                if decision_callback:
+                    decision_callback(node, rule, None)
+
+                if undecided == 'skip':
+                    continue
+                elif undecided == 'raise':
+                    raise
+                else:
+                    raise utils.GeneralError(
+                        "Invalid value for the 'undecided' parameter. Should "
+                        "be 'skip' or 'raise', got '{}'.".format(undecided))
