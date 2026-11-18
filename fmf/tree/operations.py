@@ -1,3 +1,17 @@
+"""Operations for transforming in-memory metadata trees."""
+
+import copy
+import re
+from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol
+
+import fmf.context
+
+if TYPE_CHECKING:
+    from fmf.base import Tree
+import fmf.utils as utils
+from fmf.utils import log
+
+
 class AdjustCallback(Protocol):
     """
     A callback for per-rule notifications made by Tree.adjust()
@@ -33,6 +47,23 @@ class ApplyRulesCallback(Protocol):
 
 
 class Merger:
+    """Merge metadata dictionaries."""
+
+    def merge(self, node, parent=None):
+        """
+        Merge parent data into node
+        """
+        if parent is None:
+            parent = node.parent
+        if node._directives.get("inherit") is False or parent is None:
+            data = {}
+        else:
+            node.sources = parent.sources + node.sources
+            data = copy.deepcopy(parent.data)
+        self.name = node.name
+        self._merge_special(data, node.data)
+        node.data = data
+
     def _merge_plus(self, data, key, value, prepend=False):
         """
         Handle extending attributes using the '+' suffix
@@ -187,34 +218,18 @@ class Merger:
             else:
                 data[key] = value
 
-    def merge(self, parent=None):
-        """
-        Merge parent data
-        """
 
-        # Check parent
-        if parent is None:
-            parent = self.parent
-        if self._directives.get("inherit") is False or parent is None:
-            # Nothing to inherit
-            data = {}
-        else:
-            self.sources = parent.sources + self.sources
-            data = copy.deepcopy(parent.data)
-        self._merge_special(data, self.data)
-        self.data = data
+ADJUST_CONTROL_KEYS = ['because', 'continue', 'when']
 
 
 class Adjuster:
-    def adjust(
-            self,
-            context,
-            key='adjust',
-            undecided='skip',
-            case_sensitive: Optional[bool] = None,
-            decision_callback: Optional[AdjustCallback] = None,
-            additional_rules=None,
-            additional_rules_callback: Optional[ApplyRulesCallback] = None):
+    """Transform an already loaded tree for a particular context."""
+
+    _merger = Merger()
+
+    def adjust(self, node, context, key='adjust', undecided='skip',
+               case_sensitive=None, decision_callback=None, additional_rules=None,
+               additional_rules_callback=None):
         """
         Adjust tree data based on provided context and rules
 
@@ -256,7 +271,7 @@ class Adjuster:
 
         # Adjust rules should be a dictionary or a list of dictionaries
         try:
-            rules = self.data[key]
+            rules = node.data[key]
             log.debug("Applying adjust rules for '{}'.".format(self))
             log.data(rules)
             if isinstance(rules, dict):
@@ -265,7 +280,7 @@ class Adjuster:
                 raise utils.FormatError(
                     "Invalid adjust rule format in '{}'. "
                     "Should be a dictionary or a list of dictionaries, "
-                    "got '{}'.".format(self.name, type(rules).__name__))
+                    "got '{}'.".format(node.name, type(rules).__name__))
         except KeyError:
             rules = []
 
@@ -299,7 +314,7 @@ class Adjuster:
                 try:
                     if context.matches(condition):
                         if decision_callback:
-                            decision_callback(self, rule, True)
+                            decision_callback(node, rule, True)
 
                         # Remove special keys (when, because...) from the rule
                         apply_rule = {
@@ -307,18 +322,19 @@ class Adjuster:
                             for key, value in rule.items()
                             if key not in ADJUST_CONTROL_KEYS
                             }
-                        self._merge_special(self.data, apply_rule)
+                        self._merger.name = node.name
+                        self._merger._merge_special(node.data, apply_rule)
 
                         # First matching rule wins, skip the rest of this set unless continue
                         if not continue_:
                             break
                     else:
                         if decision_callback:
-                            decision_callback(self, rule, False)
+                            decision_callback(node, rule, False)
                 # Handle undecided rules as requested
                 except fmf.context.CannotDecide:
                     if decision_callback:
-                        decision_callback(self, rule, None)
+                        decision_callback(node, rule, None)
 
                     if undecided == 'skip':
                         continue
@@ -332,13 +348,13 @@ class Adjuster:
         # Always process rules from 'key' (adjust)
         apply_rules(rules)
         # Additional rules might be skipped depending on the callback
-        if additional_rules_callback is None or additional_rules_callback(self):
+        if additional_rules_callback is None or additional_rules_callback(node):
             apply_rules(additional_rules)
 
         # Adjust all child nodes as well
-        for child in self.children.values():
-            child.adjust(context, key, undecided,
-                         case_sensitive=case_sensitive,
-                         decision_callback=decision_callback,
-                         additional_rules=additional_rules,
-                         additional_rules_callback=additional_rules_callback)
+        for child in node.children.values():
+            self.adjust(child, context, key, undecided,
+                        case_sensitive=case_sensitive,
+                        decision_callback=decision_callback,
+                        additional_rules=additional_rules,
+                        additional_rules_callback=additional_rules_callback)

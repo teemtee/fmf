@@ -11,8 +11,9 @@ from ruamel.yaml import YAML
 
 import fmf.cli
 import fmf.utils as utils
-from fmf.base import ADJUST_CONTROL_KEYS, Tree
+from fmf.base import Tree
 from fmf.context import Context
+from fmf.tree.operations import ADJUST_CONTROL_KEYS
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants

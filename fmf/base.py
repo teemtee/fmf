@@ -9,7 +9,7 @@ import subprocess
 from io import open
 from pathlib import Path
 from pprint import pformat as pretty
-from typing import Any, Dict, Optional, Protocol
+from typing import Optional
 
 from ruamel.yaml import YAML
 from ruamel.yaml.constructor import DuplicateKeyError
@@ -17,6 +17,8 @@ from ruamel.yaml.error import YAMLError
 
 import fmf.context
 import fmf.utils as utils
+from fmf.tree.operations import (AdjustCallback, Adjuster, ApplyRulesCallback,
+                                 Merger)
 from fmf.utils import dict_to_yaml, log
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -26,7 +28,6 @@ from fmf.utils import dict_to_yaml, log
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
-ADJUST_CONTROL_KEYS = ['because', 'continue', 'when']
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -34,12 +35,13 @@ ADJUST_CONTROL_KEYS = ['because', 'continue', 'when']
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-
-
 class Tree:
     """
     Metadata Tree
     """
+
+    _merger = Merger()
+    _adjuster = Adjuster()
 
     def __init__(self, data, name=None, parent=None):
         """
@@ -178,7 +180,6 @@ class Tree:
         except YAMLError as error:
             raise utils.FileError(f"Failed to parse '{config_file_path}'.\n{error}")
 
-
     def _process_directives(self, directives):
         """
         Check and process special fmf directives
@@ -232,6 +233,11 @@ class Tree:
                 root, error))
         return root
 
+    def merge(self, parent=None):
+        """
+        Merge parent data
+        """
+        self._merger.merge(self, parent)
 
     def inherit(self):
         """
@@ -289,6 +295,47 @@ class Tree:
         log.debug("Data for '{0}' updated.".format(self))
         log.data(pretty(self.data))
 
+    def adjust(
+            self,
+            context,
+            key='adjust',
+            undecided='skip',
+            case_sensitive: Optional[bool] = None,
+            decision_callback: Optional[AdjustCallback] = None,
+            additional_rules=None,
+            additional_rules_callback: Optional[ApplyRulesCallback] = None):
+        """
+        Adjust tree data based on provided context and rules
+
+        The 'context' should be an instance of the fmf.context.Context
+        class describing the environment context. By default, the key
+        'adjust' of each node is inspected for possible rules that
+        should be applied. Provide 'key' to use a custom key instead.
+
+        Optional 'undecided' parameter can be used to specify what
+        should happen when a rule condition cannot be decided because
+        context dimension is not defined. By default, such rules are
+        skipped. In order to raise the fmf.context.CannotDecide
+        exception in such cases use undecided='raise'.
+
+        Optional 'decision_callback' callback would be called for every adjust
+        rule inspected, with three arguments: current fmf node, current
+        adjust rule, and whether it was applied or not.
+
+        Optional 'additional_rules' parameter can be used to specify rules
+        that should be applied after those from the node itself.
+        These additional rules are processed even when an applied
+        rule defined in the node has ``continue: false`` set.
+
+        Optional 'additional_rules_callback' callback could be set to
+        limit nodes for which 'additional_rules' are processed. This
+        callback is called with the current fmf node as an argument and
+        should return 'True' to process 'additional_rules' or 'False' to
+        skip them.
+        """
+        return self._adjuster.adjust(
+            self, context, key, undecided, case_sensitive,
+            decision_callback, additional_rules, additional_rules_callback)
 
     def get(self, name=None, default=None):
         """
