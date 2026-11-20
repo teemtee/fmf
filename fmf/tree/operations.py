@@ -2,7 +2,7 @@
 
 import copy
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Protocol, Union
 
 import fmf.context
 
@@ -10,6 +10,13 @@ if TYPE_CHECKING:
     from fmf.base import Tree
 import fmf.utils as utils
 from fmf.utils import log
+
+# TODO: Refine the adjust rule type using a TypedDict or a better construct
+AdjustRule = dict[str, Any]
+# One adjust rule or a list of adjust rules
+AdjustRules = Union[AdjustRule, List[AdjustRule]]
+# Dictionary with node metadata, arbitrary keys and values
+MergeData = dict[str, Any]
 
 
 class AdjustCallback(Protocol):
@@ -25,7 +32,7 @@ class AdjustCallback(Protocol):
     def __call__(
             self,
             node: 'Tree',
-            rule: Dict[str, Any],
+            rule: AdjustRule,
             applied: Optional[bool]) -> None:
         pass
 
@@ -51,14 +58,12 @@ class Merger:
 
     def merge(self, node: 'Tree', parent: Optional['Tree'] = None) -> None:
         """
-        Merge parent data into node.
+        Merge parent data into node
 
-        Copies the parent's data dictionary as the base (``data``), then
-        merges the child node's raw data (``source``) on top of it using
-        ``_merge_special``, which handles the special ``+``/``-``/``~``
-        suffixes.  ``node.name`` is passed as ``name`` and used only in
-        error messages.  ``node`` is updated in-place.
-        ``parent`` defaults to ``node.parent`` when not provided.
+        :param node: the node to merge data into, updated in-place;
+            its raw data are merged on top of the parent data
+        :param parent: the parent node to inherit data from,
+            defaults to ``node.parent`` when not provided
         """
         if parent is None:
             parent = node.parent
@@ -70,7 +75,7 @@ class Merger:
         self._merge_special(data, node.data, node.name)
         node.data = data
 
-    def _merge_plus(self, data: dict, key: str, value: Any, name: str,
+    def _merge_plus(self, data: MergeData, key: str, value: Any, name: str,
                     prepend: bool = False) -> None:
         """
         Handle extending attributes using the '+' suffix
@@ -123,7 +128,7 @@ class Merger:
                 "MergeError: Key '{0}' in {1} ({2}).".format(
                     key, name, str(error)))
 
-    def _merge_regexp(self, data: dict, key: str, value: Any, name: str) -> None:
+    def _merge_regexp(self, data: MergeData, key: str, value: Any, name: str) -> None:
         """
         Handle substitution of current values
         """
@@ -148,7 +153,7 @@ class Merger:
                     "MergeError: Key '{0}' in {1} (wrong type).".format(
                         key, name))
 
-    def _merge_minus_regexp(self, data: dict, key: str, value: Any, name: str) -> None:
+    def _merge_minus_regexp(self, data: MergeData, key: str, value: Any, name: str) -> None:
         """
         Handle removing current values if they match regexp
         """
@@ -178,7 +183,7 @@ class Merger:
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
                     key, name))
 
-    def _merge_minus(self, data: dict, key: str, value: Any, name: str) -> None:
+    def _merge_minus(self, data: MergeData, key: str, value: Any, name: str) -> None:
         """
         Handle reducing attributes using the '-' suffix
         """
@@ -204,13 +209,14 @@ class Merger:
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
                     key, name))
 
-    def _merge_special(self, data: dict, source: dict, name: str) -> None:
+    def _merge_special(self, data: MergeData, source: MergeData, name: str) -> None:
         """
-        Merge source dict into data, handle special suffixes.
+        Merge source dict into data, handle special suffixes
 
-        ``data`` is the accumulated result dict (parent data) mutated in-place.
-        ``source`` is the raw child data being merged in.
-        ``name`` is the node name used only in error messages.
+        :param data: the result dictionary accumulated so far
+            (based on the parent data), mutated in-place
+        :param source: the raw data being merged in
+        :param name: node name, used in error messages only
         """
 
         for key, value in source.items():
@@ -235,6 +241,10 @@ class Adjuster:
 
     CONTROL_KEYS: List[str] = ['because', 'continue', 'when']
 
+    # TODO: The adjust options (key, undecided, case_sensitive,
+    # decision_callback, additional_rules and additional_rules_callback)
+    # could be stored as Adjuster attributes instead of being passed
+    # on every call
     def adjust(
             self,
             node: 'Tree',
@@ -243,7 +253,7 @@ class Adjuster:
             undecided: str = 'skip',
             case_sensitive: Optional[bool] = None,
             decision_callback: Optional[AdjustCallback] = None,
-            additional_rules: Optional[Union[dict, list]] = None,
+            additional_rules: Optional[AdjustRules] = None,
             additional_rules_callback: Optional[ApplyRulesCallback] = None) -> None:
         """
         Adjust tree data based on provided context and rules
@@ -287,7 +297,7 @@ class Adjuster:
         # Adjust rules should be a dictionary or a list of dictionaries
         try:
             rules = node.data[key]
-            log.debug("Applying adjust rules for '{}'.".format(self))
+            log.debug("Applying adjust rules for '{}'.".format(node))
             log.data(rules)
             if isinstance(rules, dict):
                 rules = [rules]
@@ -306,10 +316,11 @@ class Adjuster:
             additional_rules = [additional_rules]
 
         # Always process rules from 'key' (adjust)
-        self._apply_rules(rules, node, context, key, undecided, decision_callback)
+        self._apply_rules(rules, node, context, undecided, decision_callback)
         # Additional rules might be skipped depending on the callback
         if additional_rules_callback is None or additional_rules_callback(node):
-            self._apply_rules(additional_rules, node, context, key, undecided, decision_callback)
+            self._apply_rules(
+                additional_rules, node, context, undecided, decision_callback)
 
         # Adjust all child nodes as well
         for child in node.children.values():
@@ -321,10 +332,9 @@ class Adjuster:
 
     def _apply_rules(
             self,
-            rule_set: list,
+            rule_set: List[AdjustRule],
             node: 'Tree',
             context: 'fmf.context.Context',
-            key: str,
             undecided: str,
             decision_callback: Optional[AdjustCallback]) -> None:
         """
@@ -357,9 +367,9 @@ class Adjuster:
 
                     # Remove special keys (when, because...) from the rule
                     apply_rule = {
-                        k: v
-                        for k, v in rule.items()
-                        if k not in self.CONTROL_KEYS
+                        key: value
+                        for key, value in rule.items()
+                        if key not in self.CONTROL_KEYS
                         }
                     node._merger._merge_special(node.data, apply_rule, node.name)
 

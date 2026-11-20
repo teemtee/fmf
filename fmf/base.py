@@ -28,6 +28,8 @@ from fmf.utils import dict_to_yaml, log
 SUFFIX = ".fmf"
 MAIN = "main" + SUFFIX
 IGNORED_DIRECTORIES = ['/dev', '/proc', '/sys']
+# Backwards-compatible alias for the Adjuster.CONTROL_KEYS class variable
+ADJUST_CONTROL_KEYS = Adjuster.CONTROL_KEYS
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
