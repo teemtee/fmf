@@ -2,21 +2,19 @@
 
 import copy
 import re
-from typing import TYPE_CHECKING, Any, List, Optional, Protocol, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol, Union
 
 import fmf.context
 
 if TYPE_CHECKING:
-    from fmf.base import Tree
+    import fmf.base
 import fmf.utils as utils
 from fmf.utils import log
 
 # TODO: Refine the adjust rule type using a TypedDict or a better construct
 AdjustRule = dict[str, Any]
 # One adjust rule or a list of adjust rules
-AdjustRules = Union[AdjustRule, List[AdjustRule]]
-# Dictionary with node metadata, arbitrary keys and values
-MergeData = dict[str, Any]
+AdjustRules = Union[AdjustRule, list[AdjustRule]]
 
 
 class AdjustCallback(Protocol):
@@ -31,7 +29,7 @@ class AdjustCallback(Protocol):
 
     def __call__(
             self,
-            node: 'Tree',
+            node: 'fmf.base.Tree',
             rule: AdjustRule,
             applied: Optional[bool]) -> None:
         pass
@@ -49,14 +47,14 @@ class ApplyRulesCallback(Protocol):
 
     def __call__(
             self,
-            node: 'Tree') -> bool:
+            node: 'fmf.base.Tree') -> bool:
         return True
 
 
 class Merger:
     """Merge metadata dictionaries."""
 
-    def merge(self, node: 'Tree', parent: Optional['Tree'] = None) -> None:
+    def merge(self, node: 'fmf.base.Tree', parent: Optional['fmf.base.Tree'] = None) -> None:
         """
         Merge parent data into node
 
@@ -75,8 +73,8 @@ class Merger:
         self._merge_special(data, node.data, node.name)
         node.data = data
 
-    def _merge_plus(self, data: MergeData, key: str, value: Any, name: str,
-                    prepend: bool = False) -> None:
+    def _merge_plus(self, data: dict[str, Any], key: str, value: Any,
+                    name: str, prepend: bool = False) -> None:
         """
         Handle extending attributes using the '+' suffix
         """
@@ -128,7 +126,8 @@ class Merger:
                 "MergeError: Key '{0}' in {1} ({2}).".format(
                     key, name, str(error)))
 
-    def _merge_regexp(self, data: MergeData, key: str, value: Any, name: str) -> None:
+    def _merge_regexp(self, data: dict[str, Any], key: str, value: Any,
+                      name: str) -> None:
         """
         Handle substitution of current values
         """
@@ -153,13 +152,14 @@ class Merger:
                     "MergeError: Key '{0}' in {1} (wrong type).".format(
                         key, name))
 
-    def _merge_minus_regexp(self, data: MergeData, key: str, value: Any, name: str) -> None:
+    def _merge_minus_regexp(self, data: dict[str, Any], key: str, value: Any,
+                            name: str) -> None:
         """
         Handle removing current values if they match regexp
         """
 
         # A bit faster but essentially `any`
-        def lazy_any_search(item, patterns):
+        def lazy_any_search(item: Any, patterns: list[str]) -> bool:
             for p in patterns:
                 if re.search(p, str(item)):
                     return True
@@ -183,7 +183,8 @@ class Merger:
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
                     key, name))
 
-    def _merge_minus(self, data: MergeData, key: str, value: Any, name: str) -> None:
+    def _merge_minus(self, data: dict[str, Any], key: str, value: Any,
+                     name: str) -> None:
         """
         Handle reducing attributes using the '-' suffix
         """
@@ -209,7 +210,8 @@ class Merger:
                 "MergeError: Key '{0}' in {1} (wrong type).".format(
                     key, name))
 
-    def _merge_special(self, data: MergeData, source: MergeData, name: str) -> None:
+    def _merge_special(self, data: dict[str, Any], source: dict[str, Any],
+                       name: str) -> None:
         """
         Merge source dict into data, handle special suffixes
 
@@ -239,7 +241,7 @@ class Merger:
 class Adjuster:
     """Transform an already loaded tree for a particular context."""
 
-    CONTROL_KEYS: List[str] = ['because', 'continue', 'when']
+    CONTROL_KEYS: ClassVar[list[str]] = ['because', 'continue', 'when']
 
     # TODO: The adjust options (key, undecided, case_sensitive,
     # decision_callback, additional_rules and additional_rules_callback)
@@ -247,7 +249,7 @@ class Adjuster:
     # on every call
     def adjust(
             self,
-            node: 'Tree',
+            node: 'fmf.base.Tree',
             context: 'fmf.context.Context',
             key: str = 'adjust',
             undecided: str = 'skip',
@@ -332,8 +334,8 @@ class Adjuster:
 
     def _apply_rules(
             self,
-            rule_set: List[AdjustRule],
-            node: 'Tree',
+            rule_set: list[AdjustRule],
+            node: 'fmf.base.Tree',
             context: 'fmf.context.Context',
             undecided: str,
             decision_callback: Optional[AdjustCallback]) -> None:
