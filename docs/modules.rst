@@ -37,6 +37,13 @@ base
     :members:
     :undoc-members:
 
+tree.operations
+---------------
+
+.. automodule:: fmf.tree.operations
+    :members:
+    :undoc-members:
+
 utils
 -----
 

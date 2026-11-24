@@ -11,8 +11,9 @@ from ruamel.yaml import YAML
 
 import fmf.cli
 import fmf.utils as utils
-from fmf.base import ADJUST_CONTROL_KEYS, Tree
+from fmf.base import Tree
 from fmf.context import Context
+from fmf.tree.operations import Adjuster
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -172,7 +173,7 @@ class TestTree:
         No special handling outside adjust
         """
 
-        child_data = {k: str(v) for v, k in enumerate(ADJUST_CONTROL_KEYS)}
+        child_data = {k: str(v) for v, k in enumerate(Adjuster.CONTROL_KEYS)}
         tree = Tree({
             'key': 'value',
             '/child': child_data
