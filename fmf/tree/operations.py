@@ -325,6 +325,9 @@ class Adjuster:
                 additional_rules, node, context, undecided, decision_callback)
 
         # Adjust all child nodes as well
+        # TODO: Reconsider whether to recurse through each child's own
+        # adjust() entry point instead of this Adjuster once tree
+        # operations are made extensible (issue #318)
         for child in node.children.values():
             self.adjust(child, context, key, undecided,
                         case_sensitive=case_sensitive,

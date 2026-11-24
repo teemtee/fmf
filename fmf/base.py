@@ -333,9 +333,15 @@ class Tree:
         should return 'True' to process 'additional_rules' or 'False' to
         skip them.
         """
-        return self._adjuster.adjust(
-            self, context, key, undecided, case_sensitive,
-            decision_callback, additional_rules, additional_rules_callback)
+        self._adjuster.adjust(
+            self,
+            context=context,
+            key=key,
+            undecided=undecided,
+            case_sensitive=case_sensitive,
+            decision_callback=decision_callback,
+            additional_rules=additional_rules,
+            additional_rules_callback=additional_rules_callback)
 
     def get(self, name=None, default=None):
         """
