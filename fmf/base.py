@@ -20,6 +20,7 @@ import fmf.utils as utils
 from fmf.tree.operations import (AdjustCallback, Adjuster, ApplyRulesCallback,
                                  Merger)
 from fmf.utils import dict_to_yaml, log
+from fmf.profile import Profile
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Constants
@@ -809,3 +810,7 @@ class Tree:
             return self.children[key[1:]]
         else:
             return self.data[key]
+
+    def apply_profile(self, profile: Profile) -> None:
+        profile.apply_rule(self)
+
